@@ -68,22 +68,25 @@ export default function ProductosPage() {
   async function saveProduct() {
     if (!form.name.trim() || !form.category_id || !form.costo) return;
     setSaving(true);
+    const payload: Record<string, unknown> = {
+      name: form.name,
+      description: form.description || null,
+      composition: form.composition || null,
+      category_id: form.category_id,
+      sizes_available: sizes,
+      costo: parseFloat(form.costo),
+      active: true,
+    };
+    if (supplierId) payload.supplier_id = supplierId;
+
     const { data, error } = await supabase
       .from("products")
-      .insert({
-        name: form.name,
-        description: form.description || null,
-        composition: form.composition || null,
-        category_id: form.category_id,
-        supplier_id: supplierId || null,
-        sizes_available: sizes,
-        costo: parseFloat(form.costo),
-        active: true,
-      })
+      .insert(payload)
       .select("id")
       .single();
     setSaving(false);
-    if (!error && data) {
+    if (error) { alert("Error: " + error.message); return; }
+    if (data) {
       setShowModal(false);
       router.push(`/admin/productos/${data.id}`);
     }

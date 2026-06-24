@@ -56,18 +56,20 @@ export default function NuevoProductoForm({
     const fd = new FormData(e.currentTarget);
     const sizes = fd.getAll("sizes") as string[];
 
+    const payload: Record<string, unknown> = {
+      name: fd.get("name") as string,
+      description: (fd.get("description") as string) || null,
+      composition: (fd.get("composition") as string) || null,
+      category_id: (fd.get("category_id") as string) || null,
+      sizes_available: sizes,
+      costo: parseFloat(fd.get("costo") as string),
+      active: true,
+    };
+    if (supplierId) payload.supplier_id = supplierId;
+
     const { data, error } = await supabase
       .from("products")
-      .insert({
-        name: fd.get("name") as string,
-        description: (fd.get("description") as string) || null,
-        composition: (fd.get("composition") as string) || null,
-        category_id: (fd.get("category_id") as string) || null,
-        supplier_id: supplierId || null,
-        sizes_available: sizes,
-        costo: parseFloat(fd.get("costo") as string),
-        active: true,
-      })
+      .insert(payload)
       .select("id")
       .single();
 
