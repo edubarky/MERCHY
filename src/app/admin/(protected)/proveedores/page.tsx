@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 import {
   PageHeader, AdminCard, Table, Td, Btn,
@@ -102,8 +103,8 @@ export default function ProveedoresPage() {
         )}
       </AdminCard>
 
-      {/* Modal */}
-      {showModal && (
+      {/* Modal — rendered at body level to escape overflow:hidden layout */}
+      {showModal && createPortal(
         <div
           className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
@@ -184,7 +185,7 @@ export default function ProveedoresPage() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -154,7 +155,7 @@ export default function NuevoProductoForm({
       </AdminCard>
 
       {/* Modal nuevo proveedor */}
-      {showModal && (
+      {showModal && createPortal(
         <div
           className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
@@ -233,7 +234,7 @@ export default function NuevoProductoForm({
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   );
 }
