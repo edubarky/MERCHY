@@ -31,6 +31,7 @@ export interface Product {
 export interface ProductVariant {
   id: string;
   product_id: string;
+  sku: string;
   color_name: string;
   color_hex: string;
   images: string[];
@@ -176,6 +177,77 @@ export interface OrderItem {
   customization_snapshot: CustomizationSnapshot | null;
   unit_price: number;
   total_price: number;
+}
+
+// ---- Admin entities ----
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  company: string | null;
+  rfc: string | null;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+}
+
+export interface ProductionStatus {
+  id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  active: boolean;
+}
+
+export interface Quote {
+  id: string;
+  token: string;
+  agent_id: string;
+  client_id: string | null;
+  items: CartItem[];
+  notes: string | null;
+  customer_email: string | null;
+  status: "active" | "viewed" | "converted" | "expired";
+  expires_at: string;
+  created_at: string;
+  client?: Client;
+  agent?: Profile;
+}
+
+export interface Project {
+  id: string;
+  project_number: string;
+  order_id: string | null;
+  quote_id: string | null;
+  agent_id: string | null;
+  client_id: string | null;
+  status_id: string | null;
+  product_description: string | null;
+  total_amount: number;
+  notes: string | null;
+  approved_at: string | null;
+  scheduled_delivery_at: string | null;
+  delivered_at: string | null;
+  created_at: string;
+  updated_at: string;
+  client?: Client;
+  agent?: Profile;
+  status?: ProductionStatus;
 }
 
 // ---- Profile ----

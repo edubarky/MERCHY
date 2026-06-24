@@ -6,6 +6,9 @@
   :root {
     --background: #f5f5f5;
     --foreground: #1a1a1a;
+    --teal: #00C9B8;
+    --teal-dark: #00a89a;
+    --teal-light: #e0faf8;
   }
 
   html {
