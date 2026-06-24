@@ -27,6 +27,7 @@ export default function NuevoProductoForm({
   const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
   const [supplierId, setSupplierId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const [showModal, setShowModal] = useState(false);
   const [supForm, setSupForm] = useState(EMPTY_SUPPLIER);
@@ -71,7 +72,8 @@ export default function NuevoProductoForm({
       .single();
 
     setSaving(false);
-    if (!error && data) router.push(`/admin/productos/${data.id}`);
+    if (error) { setError(error.message); return; }
+    if (data) router.push(`/admin/productos/${data.id}`);
   }
 
   return (
@@ -146,6 +148,7 @@ export default function NuevoProductoForm({
             <AdminInput name="costo" type="number" step="0.01" min="0" required placeholder="0.00" />
           </div>
 
+          {error && <p className="text-sm text-red-500 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
           <div className="pt-2 border-t border-ui-border flex justify-end">
             <Btn type="submit" disabled={saving}>
               {saving ? "Guardando..." : "Guardar y agregar colores →"}
