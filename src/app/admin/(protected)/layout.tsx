@@ -34,21 +34,21 @@ export default async function AdminProtectedLayout({
       />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top header */}
-        <header className="flex-shrink-0 h-12 bg-white border-b border-ui-border flex items-center justify-between px-5">
+        <header className="flex-shrink-0 h-16 bg-white border-b border-ui-border flex items-center justify-between px-6">
           <a
             href="/catalogo"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm font-medium text-ui-gray hover:text-primary transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-ui-border text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
             Ver catálogo
           </a>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <span className="text-sm text-ui-gray hidden sm:block">{profile.email}</span>
-            <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
               {initial}
             </div>
           </div>
