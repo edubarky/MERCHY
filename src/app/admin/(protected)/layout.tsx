@@ -22,16 +22,41 @@ export default async function AdminProtectedLayout({
     redirect("/");
   }
 
+  const userName = profile.full_name ?? profile.email ?? "Usuario";
+  const initial = userName.charAt(0).toUpperCase();
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <Sidebar
         role={profile.role as "agent" | "admin"}
-        userName={profile.full_name ?? profile.email ?? "Usuario"}
+        userName={userName}
         userEmail={profile.email ?? ""}
       />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top header */}
+        <header className="flex-shrink-0 h-12 bg-white border-b border-ui-border flex items-center justify-between px-5">
+          <a
+            href="/catalogo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-sm font-medium text-ui-gray hover:text-primary transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            Ver catálogo
+          </a>
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm text-ui-gray hidden sm:block">{profile.email}</span>
+            <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+              {initial}
+            </div>
+          </div>
+        </header>
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
