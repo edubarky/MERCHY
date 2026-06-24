@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import PublicHeader from "@/components/PublicHeader";
 import type { Product, ProductVariant, PriceTier } from "@/types";
 import ProductDetail from "./ProductDetail";
 
@@ -36,18 +37,7 @@ export default async function ProductoPage({ params }: { params: { id: string } 
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-ui-surface border-b border-ui-border">
-        <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <a href="/catalogo" className="inline-flex items-center gap-1.5 text-sm text-ui-gray hover:text-primary transition-colors">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Merchy
-          </a>
-        </div>
-      </div>
-
+      <PublicHeader />
       <ProductDetail
         product={safeProduct}
         priceTiers={(priceTiers ?? []) as PriceTier[]}

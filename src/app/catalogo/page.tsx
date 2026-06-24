@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
+import PublicHeader from "@/components/PublicHeader";
 import type { Product, Category, PriceTier } from "@/types";
 import ProductCard from "./components/ProductCard";
 import CategoryFilter from "./components/CategoryFilter";
@@ -73,7 +74,7 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Header */}
+      <PublicHeader />
       <div className="bg-ui-surface border-b border-ui-border">
         <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
           <h1 className="font-display font-bold text-2xl sm:text-3xl text-foreground">
