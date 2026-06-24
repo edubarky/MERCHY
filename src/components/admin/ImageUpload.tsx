@@ -36,7 +36,7 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
         .upload(path, file, { upsert: false });
 
       if (uploadError) {
-        setError("Error al subir una imagen.");
+        setError(`Error: ${uploadError.message}`);
         continue;
       }
 
