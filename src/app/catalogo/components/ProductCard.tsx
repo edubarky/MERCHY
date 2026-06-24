@@ -39,11 +39,6 @@ export default function ProductCard({ product, priceTiers }: Props) {
           </div>
         )}
 
-        {/* Badge */}
-        <span className="absolute top-2 left-2 bg-accent-orange text-white text-xs font-semibold px-2 py-0.5 rounded-pill">
-          Mejor precio por cantidad
-        </span>
-
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100">
           <span className="bg-primary text-white text-sm font-semibold px-5 py-2 rounded-pill shadow-md">
