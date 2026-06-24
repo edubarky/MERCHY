@@ -1,12 +1,13 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function PublicHeader() {
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-ui-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="font-display font-bold text-xl text-foreground hover:text-primary transition-colors">
-          Merchy
+        <Link href="/" className="flex items-center">
+          <Image src="/logo.png" alt="Merchy" width={120} height={40} className="h-9 w-auto" priority />
         </Link>
 
         {/* Nav */}
