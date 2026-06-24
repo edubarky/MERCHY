@@ -26,6 +26,9 @@ export default function EditProductoPage() {
   const [newVariant, setNewVariant] = useState({ color_name: "", color_hex: "#000000", stock_infinite: true, stock: 0 });
   const [addingVariant, setAddingVariant] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ color_name: "", color_hex: "#000000", stock_infinite: true, stock: 0 });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -87,6 +90,20 @@ export default function EditProductoPage() {
   async function toggleVariantActive(variantId: string, active: boolean) {
     await supabase.from("product_variants").update({ active: !active }).eq("id", variantId);
     setVariants((prev) => prev.map((v) => v.id === variantId ? { ...v, active: !active } : v));
+  }
+
+  function startEditVariant(v: any) {
+    setEditingId(v.id);
+    setEditForm({ color_name: v.color_name, color_hex: v.color_hex, stock_infinite: v.stock_infinite ?? true, stock: v.stock ?? 0 });
+  }
+
+  async function saveVariantEdit() {
+    if (!editingId) return;
+    setSavingEdit(true);
+    await supabase.from("product_variants").update(editForm).eq("id", editingId);
+    setVariants((prev) => prev.map((v) => v.id === editingId ? { ...v, ...editForm } : v));
+    setEditingId(null);
+    setSavingEdit(false);
   }
 
   if (!product) return <div className="p-6 text-ui-gray">Cargando...</div>;
@@ -187,8 +204,37 @@ export default function EditProductoPage() {
                     existingUrls={v.images ?? []}
                     onUpdate={(urls) => updateVariantImages(v.id, urls)}
                   />
+                  {editingId === v.id && (
+                    <div className="mt-3 pt-3 border-t border-ui-border space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <FieldLabel required>Nombre del color</FieldLabel>
+                          <AdminInput value={editForm.color_name} onChange={(e) => setEditForm((p) => ({ ...p, color_name: e.target.value }))} />
+                        </div>
+                        <div>
+                          <FieldLabel>Color</FieldLabel>
+                          <div className="flex items-center gap-2">
+                            <input type="color" value={editForm.color_hex} onChange={(e) => setEditForm((p) => ({ ...p, color_hex: e.target.value }))} className="w-10 h-10 rounded-lg border border-ui-border cursor-pointer" />
+                            <AdminInput value={editForm.color_hex} onChange={(e) => setEditForm((p) => ({ ...p, color_hex: e.target.value }))} className="font-mono text-sm" maxLength={7} />
+                          </div>
+                        </div>
+                      </div>
+                      <AdminToggle checked={editForm.stock_infinite} onChange={(val) => setEditForm((p) => ({ ...p, stock_infinite: val }))} label="Stock infinito" />
+                      {!editForm.stock_infinite && (
+                        <div className="w-32">
+                          <FieldLabel>Cantidad</FieldLabel>
+                          <AdminInput type="number" min="0" value={editForm.stock} onChange={(e) => setEditForm((p) => ({ ...p, stock: parseInt(e.target.value) || 0 }))} />
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Btn onClick={saveVariantEdit} disabled={savingEdit}>{savingEdit ? "Guardando..." : "Guardar cambios"}</Btn>
+                        <Btn variant="secondary" onClick={() => setEditingId(null)}>Cancelar</Btn>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1">
+                  <Btn variant="secondary" size="sm" onClick={() => startEditVariant(v)}>Editar</Btn>
                   <Btn variant="ghost" size="sm" onClick={() => toggleVariantActive(v.id, v.active)}>
                     {v.active ? "Desactivar" : "Activar"}
                   </Btn>
