@@ -10,44 +10,6 @@ export const metadata = {
   description: "Personaliza playeras, gorras, termos y más. Cotización instantánea. Entrega desde 1 pieza.",
 };
 
-const TRUST_ITEMS = [
-  {
-    icon: (
-      <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-      </svg>
-    ),
-    title: "Calidad premium",
-    desc: "Materiales que destacan",
-  },
-  {
-    icon: (
-      <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-    title: "Envíos rápidos",
-    desc: "A todo México",
-  },
-  {
-    icon: (
-      <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
-    title: "Diseños sin límites",
-    desc: "Tú imaginas, nosotros lo hacemos",
-  },
-  {
-    icon: (
-      <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-      </svg>
-    ),
-    title: "Atención experta",
-    desc: "Te acompañamos siempre",
-  },
-];
 
 const STATIC_CATEGORIES = [
   { name: "Bebidas", slug: "bebidas", emoji: "🥤" },
@@ -111,12 +73,8 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 flex flex-col lg:flex-row items-center gap-12">
           {/* Left */}
           <div className="flex-1 max-w-lg">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/70 border border-primary/30 text-xs font-semibold text-foreground mb-6">
-              <svg className="w-3.5 h-3.5 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              PERSONALIZA TU MARCA
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/Home/PERSONALIZA-TU-MARCA.svg" alt="Personaliza tu marca" className="h-[47px] w-auto mb-6" />
             <h1 className="font-display font-bold text-5xl lg:text-6xl leading-tight text-foreground">
               Imprime<br />lo que<br />
               <span className="text-primary">imaginas</span>
@@ -135,56 +93,29 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          {/* Right — diagram */}
-          <div className="flex-1 relative flex items-center justify-center min-h-[340px] w-full max-w-lg">
-            {/* White oval bg */}
-            <div className="absolute inset-0 bg-white/50 rounded-[50%] blur-sm" />
-
-            {/* Category chips */}
-            <div className="absolute top-4 left-4 flex flex-col gap-4 z-10">
-              {[
-                { icon: "👕", name: "Ropa", sub: "para tu equipo" },
-                { icon: "🎒", name: "Accesorios", sub: "que promocionan" },
-                { icon: "☕", name: "Artículos", sub: "para cada ocasión" },
-              ].map((item) => (
-                <div key={item.name} className="flex items-center gap-2 bg-white rounded-2xl px-4 py-2.5 shadow-sm border border-ui-border">
-                  <span className="text-xl">{item.icon}</span>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground leading-tight">{item.name}</p>
-                    <p className="text-[10px] text-ui-gray">{item.sub}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Product visuals placeholder */}
-            <div className="relative z-10 flex items-end gap-4 pt-12">
-              <div className="w-36 h-44 bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl flex items-center justify-center shadow-xl">
-                <span className="text-6xl">👕</span>
-              </div>
-              <div className="w-28 h-32 bg-white rounded-2xl flex items-center justify-center shadow-lg border border-ui-border mb-4">
-                <span className="text-5xl">☕</span>
-              </div>
-            </div>
+          {/* Right — Figma illustration */}
+          <div className="flex-1 flex items-center justify-center w-full max-w-lg">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/Home/Group 1157.svg" alt="Productos personalizados" className="w-full max-w-[711px] h-auto" />
           </div>
         </div>
       </section>
 
       {/* ── TRUST STRIP ── */}
-      <section className="bg-white border-b border-ui-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {TRUST_ITEMS.map((item) => (
-              <div key={item.title} className="flex items-center gap-3 p-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  {item.icon}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                  <p className="text-xs text-ui-gray">{item.desc}</p>
-                </div>
-              </div>
-            ))}
+      <section className="py-6 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-[23px] shadow-[0_4px_8px_rgba(0,0,0,0.1)] flex flex-wrap items-center justify-around gap-4 py-5 px-6 lg:px-10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/Home/CALIDAD-PREMIUM.svg" alt="Calidad premium" className="h-[60px] w-auto" />
+            <div className="hidden lg:block w-px h-9 bg-gray-200" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/Home/ENVIOS-RAPIDOS.svg" alt="Envíos rápidos" className="h-[60px] w-auto" />
+            <div className="hidden lg:block w-px h-9 bg-gray-200" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/Home/DISENOS-SIN-LIMITES.svg" alt="Diseños sin límites" className="h-[60px] w-auto" />
+            <div className="hidden lg:block w-px h-9 bg-gray-200" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/Home/ATENCION-EXPERTA.svg" alt="Atención experta" className="h-[60px] w-auto" />
           </div>
         </div>
       </section>
