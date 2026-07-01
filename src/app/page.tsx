@@ -69,18 +69,18 @@ export default async function HomePage() {
       <PublicHeader />
 
       {/* ── HERO ── */}
-      {/* altura dinámica: hasta 550px pero siempre deja el trust strip visible */}
-      <section className="relative overflow-hidden" style={{ height: "min(550px, calc(100vh - 188px))" }}>
-        {/* Figma background: fondo teal + curva blanca */}
+      {/* altura: hasta 510px, pero siempre deja el trust strip (124px) + header (64px) en pantalla */}
+      <section className="relative overflow-hidden" style={{ height: "min(510px, calc(100vh - 210px))" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/Home/FONDO.svg" alt="" aria-hidden="true"
           className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} />
 
-        <div className="relative z-10 max-w-[1280px] mx-auto px-6 lg:px-10 h-full flex flex-col lg:flex-row items-center gap-8 py-10 lg:py-0">
-          {/* Left */}
-          <div className="flex-shrink-0 lg:w-[420px]">
+        {/* Layout full-width sin max-w: columnas por % igual que en Figma */}
+        <div className="relative z-10 w-full h-full flex flex-col lg:flex-row">
+          {/* Izquierda: 40% del viewport */}
+          <div className="lg:w-[40%] flex flex-col justify-center pl-10 lg:pl-16 pr-6 py-10 lg:py-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Home/PERSONALIZA-TU-MARCA.svg" alt="Personaliza tu marca" className="h-[42px] w-auto mb-5" />
+            <img src="/Home/PERSONALIZA-TU-MARCA.svg" alt="Personaliza tu marca" className="h-[42px] w-auto mb-4" />
             <h1 className="font-display font-bold text-[60px] leading-[1.05] text-foreground">
               Imprime<br />lo que<br />
               <span className="text-primary">imaginas</span>
@@ -88,18 +88,17 @@ export default async function HomePage() {
             <p className="mt-3 text-ui-gray text-[15px] leading-relaxed">
               Productos personalizados<br />que hacen destacar tu marca.
             </p>
-            {/* Botón exportado de Figma — efecto vidrio */}
             <Link href="/catalogo" className="inline-block mt-5 hover:opacity-90 transition-opacity">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/Home/BOTON-VER-CATALOGO.svg" alt="Ver catálogo" className="h-[60px] w-auto" />
+              <img src="/Home/BOTON-VER-CATALOGO.svg" alt="Ver catálogo" className="h-[58px] w-auto" />
             </Link>
           </div>
 
-          {/* Right — Figma illustration */}
-          <div className="flex-1 flex items-center justify-center lg:justify-end h-full">
+          {/* Derecha: 60% del viewport — ilustración */}
+          <div className="lg:w-[60%] flex items-center justify-center h-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/Home/Group 1157.svg" alt="Productos personalizados"
-              className="w-full max-w-[680px] h-auto" />
+              className="w-full h-full object-contain" />
           </div>
         </div>
       </section>
