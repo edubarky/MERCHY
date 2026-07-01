@@ -75,30 +75,34 @@ export default async function HomePage() {
         <img src="/Home/FONDO.svg" alt="" aria-hidden="true"
           className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} />
 
-        {/* Layout full-width por %: izquierda=38% (área teal FONDO), derecha=62% (blob blanco FONDO) */}
-        <div className="relative z-10 w-full h-full flex flex-col lg:flex-row">
-          {/* Izquierda: 38% — coincide con donde el FONDO cambia de teal a blanco */}
-          <div className="lg:w-[38%] h-full flex flex-col justify-center pl-10 lg:pl-14 pr-4 py-10 lg:py-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Home/PERSONALIZA-TU-MARCA.svg" alt="Personaliza tu marca" className="h-[42px] w-auto mb-4" />
-            <h1 className="font-display font-bold text-[60px] leading-[1.05] text-foreground">
-              Imprime<br />lo que<br />
-              <span className="text-primary">imaginas</span>
-            </h1>
-            <p className="mt-3 text-ui-gray text-[15px] leading-relaxed">
-              Productos personalizados<br />que hacen destacar tu marca.
-            </p>
-            <Link href="/catalogo" className="inline-block mt-5 hover:opacity-90 transition-opacity">
+        {/* max-w-1280 centrado: a 1440px el blob blanco del FONDO empieza en x=551,
+            la columna derecha arranca en x=550 (margin80 + px10*2 = nope, solo left:
+            margin80 + padding40 + col430 = x550) — alineación casi perfecta */}
+        <div className="relative z-10 max-w-[1280px] mx-auto px-10 h-full flex flex-col lg:flex-row py-8 lg:py-0">
+          {/* Izquierda: ancho fijo 430px — centrado vertical y horizontal dentro del área teal */}
+          <div className="flex-shrink-0 lg:w-[430px] h-full flex flex-col justify-center items-center">
+            <div className="flex flex-col items-start">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/Home/BOTON-VER-CATALOGO.svg" alt="Ver catálogo" className="h-[58px] w-auto" />
-            </Link>
+              <img src="/Home/PERSONALIZA-TU-MARCA.svg" alt="Personaliza tu marca" className="h-[42px] w-auto mb-4" />
+              <h1 className="font-display font-bold text-[60px] leading-[1.05] text-foreground">
+                Imprime<br />lo que<br />
+                <span className="text-primary">imaginas</span>
+              </h1>
+              <p className="mt-3 text-ui-gray text-[15px] leading-relaxed">
+                Productos personalizados<br />que hacen destacar tu marca.
+              </p>
+              <Link href="/catalogo" className="inline-block mt-5 hover:opacity-90 transition-opacity">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Home/BOTON-VER-CATALOGO.svg" alt="Ver catálogo" className="h-[58px] w-auto" />
+              </Link>
+            </div>
           </div>
 
-          {/* Derecha: 62% — ilustración arranca en el borde del blob blanco del FONDO */}
-          <div className="lg:w-[62%] h-full flex items-center justify-start">
+          {/* Derecha: ilustración contenida dentro del hero, alineada al borde del blob blanco */}
+          <div className="flex-1 h-full flex items-center justify-start">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/Home/Group 1157.svg" alt="Productos personalizados"
-              className="h-full w-auto max-w-full" />
+              className="max-h-[360px] w-auto" />
           </div>
         </div>
       </section>
