@@ -29,7 +29,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-dm-sans)", "sans-serif"],
-        display: ["var(--font-outfit)", "sans-serif"],
+        display: ["var(--font-dm-sans)", "sans-serif"],
       },
       borderRadius: {
         pill: "9999px",
