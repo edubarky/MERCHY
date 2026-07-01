@@ -98,11 +98,11 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Derecha: ilustración contenida dentro del hero, alineada al borde del blob blanco */}
-          <div className="flex-1 h-full flex items-center justify-start">
+          {/* Derecha: ilustración centrada y contenida dentro del blob blanco */}
+          <div className="flex-1 h-full flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/Home/Group 1157.svg" alt="Productos personalizados"
-              className="max-h-[360px] w-auto" />
+              className="max-h-[300px] w-auto" />
           </div>
         </div>
       </section>
