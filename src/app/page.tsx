@@ -69,7 +69,8 @@ export default async function HomePage() {
       <PublicHeader />
 
       {/* ── HERO ── */}
-      <section className="relative overflow-hidden min-h-[460px] lg:h-[560px]">
+      {/* altura dinámica: hasta 550px pero siempre deja el trust strip visible */}
+      <section className="relative overflow-hidden" style={{ height: "min(550px, calc(100vh - 188px))" }}>
         {/* Figma background: fondo teal + curva blanca */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/Home/FONDO.svg" alt="" aria-hidden="true"
@@ -77,24 +78,20 @@ export default async function HomePage() {
 
         <div className="relative z-10 max-w-[1280px] mx-auto px-6 lg:px-10 h-full flex flex-col lg:flex-row items-center gap-8 py-10 lg:py-0">
           {/* Left */}
-          <div className="flex-shrink-0 lg:w-[400px]">
+          <div className="flex-shrink-0 lg:w-[420px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/Home/PERSONALIZA-TU-MARCA.svg" alt="Personaliza tu marca" className="h-[42px] w-auto mb-5" />
-            <h1 className="font-display font-bold text-[48px] leading-[1.1] text-foreground">
+            <h1 className="font-display font-bold text-[60px] leading-[1.05] text-foreground">
               Imprime<br />lo que<br />
               <span className="text-primary">imaginas</span>
             </h1>
-            <p className="mt-4 text-ui-gray text-[15px] leading-relaxed">
+            <p className="mt-3 text-ui-gray text-[15px] leading-relaxed">
               Productos personalizados<br />que hacen destacar tu marca.
             </p>
-            <Link
-              href="/catalogo"
-              className="inline-flex items-center gap-2 mt-6 px-7 py-3 rounded-full bg-accent-coral text-white font-semibold text-sm hover:opacity-90 transition-opacity"
-            >
-              Ver catálogo
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
+            {/* Botón exportado de Figma — efecto vidrio */}
+            <Link href="/catalogo" className="inline-block mt-5 hover:opacity-90 transition-opacity">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Home/BOTON-VER-CATALOGO.svg" alt="Ver catálogo" className="h-[60px] w-auto" />
             </Link>
           </div>
 
@@ -102,13 +99,13 @@ export default async function HomePage() {
           <div className="flex-1 flex items-center justify-center lg:justify-end h-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/Home/Group 1157.svg" alt="Productos personalizados"
-              className="w-full max-w-[680px] lg:h-[500px] lg:w-auto h-auto object-contain" />
+              className="w-full max-w-[680px] h-auto" />
           </div>
         </div>
       </section>
 
       {/* ── TRUST STRIP ── */}
-      <section className="py-6 px-4 sm:px-6 lg:px-8">
+      <section className="py-3 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-[23px] shadow-[0_4px_8px_rgba(0,0,0,0.1)] flex flex-wrap items-center justify-around gap-4 py-5 px-6 lg:px-10">
             {/* eslint-disable-next-line @next/next/no-img-element */}
