@@ -69,22 +69,27 @@ export default async function HomePage() {
       <PublicHeader />
 
       {/* ── HERO ── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#d4f5f3] via-[#e8faf9] to-[#f0fffe]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 flex flex-col lg:flex-row items-center gap-12">
+      <section className="relative overflow-hidden min-h-[460px] lg:h-[560px]">
+        {/* Figma background: fondo teal + curva blanca */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/Home/FONDO.svg" alt="" aria-hidden="true"
+          className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} />
+
+        <div className="relative z-10 max-w-[1280px] mx-auto px-6 lg:px-10 h-full flex flex-col lg:flex-row items-center gap-8 py-10 lg:py-0">
           {/* Left */}
-          <div className="flex-1 max-w-lg">
+          <div className="flex-shrink-0 lg:w-[400px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Home/PERSONALIZA-TU-MARCA.svg" alt="Personaliza tu marca" className="h-[47px] w-auto mb-6" />
-            <h1 className="font-display font-bold text-5xl lg:text-6xl leading-tight text-foreground">
+            <img src="/Home/PERSONALIZA-TU-MARCA.svg" alt="Personaliza tu marca" className="h-[42px] w-auto mb-5" />
+            <h1 className="font-display font-bold text-[48px] leading-[1.1] text-foreground">
               Imprime<br />lo que<br />
               <span className="text-primary">imaginas</span>
             </h1>
-            <p className="mt-5 text-ui-gray text-base leading-relaxed">
+            <p className="mt-4 text-ui-gray text-[15px] leading-relaxed">
               Productos personalizados<br />que hacen destacar tu marca.
             </p>
             <Link
               href="/catalogo"
-              className="inline-flex items-center gap-2 mt-8 px-7 py-3.5 rounded-full bg-accent-coral text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+              className="inline-flex items-center gap-2 mt-6 px-7 py-3 rounded-full bg-accent-coral text-white font-semibold text-sm hover:opacity-90 transition-opacity"
             >
               Ver catálogo
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -94,9 +99,10 @@ export default async function HomePage() {
           </div>
 
           {/* Right — Figma illustration */}
-          <div className="flex-1 flex items-center justify-center w-full max-w-lg">
+          <div className="flex-1 flex items-center justify-center lg:justify-end h-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Home/Group 1157.svg" alt="Productos personalizados" className="w-full max-w-[711px] h-auto" />
+            <img src="/Home/Group 1157.svg" alt="Productos personalizados"
+              className="w-full max-w-[680px] lg:h-[500px] lg:w-auto h-auto object-contain" />
           </div>
         </div>
       </section>

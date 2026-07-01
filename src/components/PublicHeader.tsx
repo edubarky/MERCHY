@@ -39,7 +39,7 @@ export default function PublicHeader() {
         </div>
 
         {/* Search */}
-        <div className="flex-1 max-w-md">
+        <div className="flex-1">
           <form action="/catalogo" method="get">
             <div className="relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ui-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
