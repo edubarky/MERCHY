@@ -78,7 +78,7 @@ export default async function HomePage() {
         {/* Layout full-width sin max-w: columnas por % igual que en Figma */}
         <div className="relative z-10 w-full h-full flex flex-col lg:flex-row">
           {/* Izquierda: 40% del viewport */}
-          <div className="lg:w-[40%] flex flex-col justify-center pl-10 lg:pl-16 pr-6 py-10 lg:py-0">
+          <div className="lg:w-[40%] h-full flex flex-col justify-center pl-10 lg:pl-16 pr-6 py-10 lg:py-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/Home/PERSONALIZA-TU-MARCA.svg" alt="Personaliza tu marca" className="h-[42px] w-auto mb-4" />
             <h1 className="font-display font-bold text-[60px] leading-[1.05] text-foreground">
@@ -98,7 +98,7 @@ export default async function HomePage() {
           <div className="lg:w-[60%] flex items-center justify-center h-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/Home/Group 1157.svg" alt="Productos personalizados"
-              className="w-full h-full object-contain" />
+              className="max-h-[390px] w-auto max-w-full" />
           </div>
         </div>
       </section>
