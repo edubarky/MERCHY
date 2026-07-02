@@ -70,7 +70,7 @@ export default async function HomePage() {
 
       {/* ── HERO ── */}
       {/* altura: hasta 510px, pero siempre deja el trust strip (124px) + header (64px) en pantalla */}
-      <section className="relative overflow-hidden" style={{ height: "min(510px, calc(100vh - 210px))" }}>
+      <section className="relative overflow-hidden bg-[#E3FAF7]" style={{ height: "min(510px, calc(100vh - 210px))" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/Home/FONDO.svg" alt="" aria-hidden="true"
           className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} />
@@ -108,7 +108,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── TRUST STRIP ── */}
-      <section className="py-3 px-4 sm:px-6 lg:px-8">
+      <section className="py-3 px-4 sm:px-6 lg:px-8 -mt-10 relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-[23px] shadow-[0_4px_8px_rgba(0,0,0,0.1)] flex flex-wrap items-center justify-around gap-4 py-5 px-6 lg:px-10">
             {/* eslint-disable-next-line @next/next/no-img-element */}
