@@ -69,8 +69,8 @@ export default async function HomePage() {
       <PublicHeader />
 
       {/* ── HERO ── */}
-      {/* altura: hasta 510px, pero siempre deja el trust strip (124px) + header (64px) en pantalla */}
-      <section className="relative overflow-hidden bg-[#E3FAF7]" style={{ height: "min(510px, calc(100vh - 210px))" }}>
+      {/* altura: hasta 540px, pero siempre deja el trust strip (124px) + header (64px) en pantalla */}
+      <section className="relative overflow-hidden bg-[#E3FAF7]" style={{ height: "min(540px, calc(100vh - 210px))" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/Home/FONDO.svg" alt="" aria-hidden="true"
           className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} />
