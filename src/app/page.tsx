@@ -12,9 +12,24 @@ export const metadata = {
 
 
 const STATIC_CATEGORIES = [
-  { name: "Bebidas", slug: "bebidas", emoji: "🥤" },
-  { name: "Textiles", slug: "textiles", emoji: "👕" },
-  { name: "Deportivo", slug: "deportivo", emoji: "⚽" },
+  {
+    name: "Bebidas",
+    slug: "bebidas",
+    asset: "/Home/Barra%20de%20Productos/BEBIDAS.svg",
+    badge: "🥤",
+  },
+  {
+    name: "Textiles",
+    slug: "textiles",
+    asset: "/Home/Barra%20de%20Productos/TEXTILES.svg",
+    badge: "👕",
+  },
+  {
+    name: "Deportivo",
+    slug: "deportivo",
+    asset: "/Home/Barra%20de%20Productos/DEPORTIVO.svg",
+    badge: "⚽",
+  },
 ];
 
 const WHAT_WE_OFFER = [
@@ -130,54 +145,61 @@ export default async function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {STATIC_CATEGORIES.map((cat) => (
-            <div key={cat.slug} className="relative bg-white rounded-card overflow-hidden shadow-sm border border-ui-border group flex flex-col min-h-[260px]">
-              <div className="p-5 pb-2">
-                <h3 className="font-display font-bold text-xl text-foreground">{cat.name}</h3>
-                <div className="w-8 h-0.5 bg-primary mt-1.5 rounded-full" />
+            <Link
+              key={cat.slug}
+              href={`/catalogo?categoria=${cat.slug}`}
+              className="group relative overflow-hidden rounded-[2rem] border border-ui-border bg-white shadow-[0_10px_35px_rgba(0,0,0,0.08)] transition-transform hover:-translate-y-1 hover:shadow-[0_14px_45px_rgba(0,0,0,0.12)]"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(87,224,217,0.14),transparent_38%)]" />
+              <div className="absolute right-4 top-4 w-14 h-14 rounded-full bg-white/80 shadow-sm flex items-center justify-center text-primary text-xl">
+                {cat.badge}
               </div>
-              {/* Product image area */}
-              <div className="flex-1 flex items-end justify-center px-4 pb-0 relative overflow-hidden">
-                <div className="w-full h-32 flex items-center justify-center">
-                  <span className="text-7xl opacity-80">{cat.emoji}</span>
+              <div className="relative flex h-full flex-col p-6 pt-8">
+                <div className="mb-4">
+                  <h3 className="font-display font-bold text-2xl text-foreground">{cat.name}</h3>
+                  <div className="mt-2 h-1.5 w-10 rounded-full bg-primary" />
+                </div>
+                <div className="relative flex flex-1 items-center justify-center py-6">
+                  <div className="absolute inset-x-4 bottom-0 h-32 rounded-full bg-teal-100/70 blur-2xl" />
+                  <div className="relative z-10 w-full max-w-[220px] mx-auto">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={cat.asset} alt={`${cat.name} category`} className="w-full h-auto" />
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-center">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-primary text-white px-4 py-2 text-sm font-semibold transition-colors group-hover:bg-primary-dark">
+                    Explorar
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 7l10 10M7 17V7h10" />
+                    </svg>
+                  </span>
                 </div>
               </div>
-              {/* Explorar button */}
-              <div className="p-4 pt-0">
-                <Link
-                  href={`/catalogo?categoria=${cat.slug}`}
-                  className="flex items-center gap-2 w-full justify-center py-2.5 rounded-full bg-primary text-white text-sm font-semibold hover:bg-primary-dark transition-colors group-hover:shadow-md"
-                >
-                  Explorar
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 7l10 10M7 17V7h10" />
-                  </svg>
-                </Link>
-              </div>
-            </div>
+            </Link>
           ))}
 
           {/* Todas las categorías */}
-          <div className="relative bg-gradient-to-br from-primary to-primary-dark rounded-card overflow-hidden shadow-sm flex flex-col min-h-[260px]">
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
+          <Link
+            href="/catalogo"
+            className="group relative overflow-hidden rounded-[2rem] border border-ui-border bg-gradient-to-br from-primary to-primary-dark shadow-[0_10px_35px_rgba(0,0,0,0.08)] transition-transform hover:-translate-y-1 hover:shadow-[0_14px_45px_rgba(0,0,0,0.12)]"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(255,255,255,0.25),transparent_35%)]" />
+            <div className="relative flex h-full flex-col items-center justify-center gap-4 p-8 text-center text-white">
+              <div className="flex h-14 w-14 items-center justify-center rounded-[1rem] bg-white/20 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Home/Barra%20de%20Productos/CATEGOROIAS.svg" alt="Todas las categorías" className="h-8 w-8" />
               </div>
               <div>
-                <h3 className="font-display font-bold text-xl text-white leading-tight">Todas las<br />categorías</h3>
-                <p className="text-white/80 text-xs mt-2">Explora todo nuestro catálogo de productos</p>
+                <h3 className="font-display font-bold text-2xl leading-tight">Todas las<br />categorías</h3>
+                <p className="mt-2 text-sm text-white/80">Explora todo nuestro catálogo de productos</p>
               </div>
-              <Link
-                href="/catalogo"
-                className="mt-2 w-10 h-10 rounded-full bg-white flex items-center justify-center hover:scale-105 transition-transform shadow-md"
-              >
-                <svg className="w-5 h-5 text-primary-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-primary transition-transform group-hover:scale-105">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-              </Link>
+              </span>
             </div>
-          </div>
+          </Link>
         </div>
       </section>
 
