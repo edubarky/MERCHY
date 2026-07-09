@@ -193,6 +193,38 @@ export default async function HomePage() {
                     </span>
                   </div>
                 </>
+              ) : cat.slug === "textiles" ? (
+                <>
+                  <div className="relative z-10 p-8 pb-0">
+                    <h3 className="font-display font-bold text-3xl text-foreground">{cat.name}</h3>
+                    <div className="mt-3 h-1.5 w-12 rounded-full bg-primary" />
+                  </div>
+
+                  {/* zona de producto: sin padding lateral propio, para usar casi todo el ancho real de la tarjeta */}
+                  <div className="relative z-10" style={{ marginTop: "22px" }}>
+                    {/* círculos decorativos: anillo parcial a la izquierda, mancha grande y sutil a la derecha detrás de la camiseta */}
+                    <div className="absolute rounded-full" style={{ top: "70px", left: "-55px", height: "110px", width: "110px", background: "radial-gradient(circle, rgba(255,255,255,0) 30%, rgba(45,212,191,0.16) 50%, rgba(45,212,191,0.16) 68%, rgba(255,255,255,0) 92%)" }} />
+                    <div className="absolute rounded-full" style={{ top: "10px", right: "-90px", height: "230px", width: "230px", background: "radial-gradient(circle, rgba(45,212,191,0.13) 0%, rgba(45,212,191,0.07) 45%, rgba(255,255,255,0) 78%)" }} />
+
+                    {/* camiseta + gorra + pedestal: ancho ~90% de la tarjeta completa, alto automático (sin recorte) */}
+                    <div className="relative z-10 mx-auto" style={{ width: "90%", aspectRatio: "324.7 / 409.6" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={cat.asset} alt={`${cat.name} category`} className="h-full w-full" />
+                    </div>
+
+                    {/* botón: tamaño independiente del ancho de la imagen, superpuesto sobre la mitad inferior del frente del pedestal */}
+                    <span
+                      className="absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)] transition-transform duration-200 group-hover:-translate-y-0.5"
+                      style={{ bottom: "18px", width: "76%", height: "54px" }}
+                    >
+                      Explorar
+                      <svg className="w-6 h-6 flex-none" viewBox="0 0 21.44 27.48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path transform="translate(-140.562 -13)" fill="currentColor" d="M149.427 13C149.468 13 149.555 13.0213 149.601 13.026C152.629 13.329 154.716 16.5941 153.876 19.8204C153.552 19.4734 153.149 19.283 152.702 19.2603C153.056 17.5526 152.351 15.8413 151.031 14.9653C149.655 14.053 147.897 14.2459 146.714 15.3963C145.525 16.5526 145.154 18.3967 145.798 20.0072L145.797 22.3215C144.681 21.2083 144.127 19.6277 144.224 18.0186C144.383 15.3882 146.287 13.2574 148.689 13.0249C148.748 13.0193 148.796 13.0193 148.838 13H149.427H149.427Z" />
+                        <path transform="translate(-140.562 -13)" fill="currentColor" d="M161.966 33.2179C161.798 36.8498 160.771 39.3606 157.291 40.1694C156.127 40.4399 154.924 40.4771 153.74 40.4312C152.953 40.4004 152.196 40.3058 151.43 40.1005C150.497 39.8504 149.668 39.3783 148.924 38.7255C148.757 38.5787 148.589 38.4768 148.431 38.3051L144.646 34.1905L141.642 30.923C140.562 29.7474 140.956 27.8433 141.999 26.8906C142.854 26.1093 144.426 26.1368 145.163 26.9304L146.745 28.6325V18.4379C146.745 17.5163 147.171 16.6882 147.855 16.2071C148.566 15.7075 149.475 15.6366 150.235 16.0598C151.002 16.4865 151.505 17.3367 151.51 18.2782L151.523 21.082C152.901 20.3164 154.393 21.0213 154.882 22.5528C155.59 22.0927 156.426 22.0185 157.151 22.3898C157.746 22.6945 158.167 23.2479 158.391 23.9398C159.311 23.2832 160.623 23.4358 161.356 24.3269C161.705 24.7514 161.988 25.3146 161.989 25.9178L162 32.3739C162.001 32.669 161.979 32.9311 161.966 33.2179ZM159.866 25.1185C159.51 25.0485 159.17 25.1261 158.899 25.3809C158.67 25.5969 158.511 25.9332 158.511 26.304L158.515 29.0867C158.516 29.5362 158.3 29.9218 157.867 29.9109C157.451 29.9003 157.241 29.5225 157.242 29.0867L157.244 24.9889C157.244 24.2829 156.625 23.8287 156.081 23.8242C155.538 23.8197 155.03 24.3112 155.025 24.9435L155.002 28.4583C155 28.8747 154.609 29.1318 154.27 29.071C153.884 29.0022 153.735 28.658 153.735 28.2441V23.589C153.735 23.2767 153.629 22.9748 153.423 22.7715C153.072 22.4265 152.553 22.3234 152.125 22.5595C151.81 22.7331 151.539 23.098 151.538 23.5075L151.53 27.132C151.529 27.5734 151.329 27.9526 150.915 27.9713C150.479 27.9915 150.242 27.6221 150.242 27.1654L150.233 18.5322C150.233 17.9607 149.775 17.5104 149.307 17.4552C148.62 17.3743 148.028 17.9422 148.027 18.6902L148.026 31.9793L144.474 28.1337C144.178 27.8137 143.7 27.8016 143.302 27.9178C142.958 28.0181 142.658 28.313 142.489 28.7162C142.308 29.1464 142.336 29.7006 142.666 30.0596L146.435 34.165L149.139 37.1094C150.278 38.3499 151.68 38.854 153.258 38.9991C154.004 39.0677 154.732 39.0727 155.48 39.0276C156.491 38.9669 157.555 38.7725 158.465 38.283C159.372 37.7955 160.024 36.9579 160.336 35.9063C160.511 35.3174 160.607 34.7251 160.656 34.1034C160.685 33.7321 160.712 33.3705 160.715 32.9953L160.725 31.5903L160.727 26.281C160.727 25.687 160.407 25.2252 159.865 25.1188L159.866 25.1185Z" />
+                      </svg>
+                    </span>
+                  </div>
+                </>
               ) : (
                 <div className="relative z-10 flex h-full flex-col p-8">
                   <div className="mb-5">
