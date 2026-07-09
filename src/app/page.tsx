@@ -171,8 +171,8 @@ export default async function HomePage() {
                   {/* zona de producto: sin padding lateral propio, para poder usar casi todo el ancho real de la tarjeta */}
                   <div className="relative z-10" style={{ marginTop: "28px" }}>
                     {/* círculos decorativos: uno asoma por la izquierda, uno grande por la derecha */}
-                    <div className="absolute rounded-full bg-teal-300" style={{ top: "80px", left: "-62px", height: "123px", width: "123px", opacity: 0.1 }} />
-                    <div className="absolute rounded-full bg-teal-300" style={{ top: "50px", right: "-62px", height: "123px", width: "123px", opacity: 0.1 }} />
+                    <div className="absolute rounded-full" style={{ top: "124px", left: "-65px", height: "130px", width: "130px", background: "radial-gradient(circle, rgba(255,255,255,0) 30%, rgba(45,212,191,0.16) 50%, rgba(45,212,191,0.16) 68%, rgba(255,255,255,0) 92%)" }} />
+                    <div className="absolute rounded-full" style={{ top: "65px", right: "-95px", height: "210px", width: "210px", background: "radial-gradient(circle, rgba(45,212,191,0.14) 0%, rgba(45,212,191,0.08) 45%, rgba(255,255,255,0) 78%)" }} />
 
                     {/* botella + termo + pedestal: ancho ~92% de la tarjeta completa, alto automático (sin recorte) */}
                     <div className="relative z-10 mx-auto" style={{ width: "92%", aspectRatio: "289.7 / 409.6" }}>
