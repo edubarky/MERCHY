@@ -282,19 +282,33 @@ export default async function HomePage() {
           {/* Todas las categorías */}
           <Link
             href="/catalogo"
-            className="group relative overflow-hidden rounded-[2.5rem] border border-ui-border bg-gradient-to-br from-primary to-primary-dark shadow-[0_30px_80px_rgba(0,0,0,0.12)] transition-transform hover:-translate-y-1 hover:shadow-[0_30px_90px_rgba(0,0,0,0.16)] min-h-[440px]"
+            className="group relative overflow-hidden rounded-[2.5rem] border border-white/60 bg-gradient-to-br from-[#dcf6f3] via-[#e9faf8] to-[#c9eeea] shadow-[0_30px_80px_rgba(0,0,0,0.12)] transition-transform hover:-translate-y-1 hover:shadow-[0_30px_90px_rgba(0,0,0,0.16)] min-h-[440px]"
           >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(255,255,255,0.25),transparent_35%)]" />
-            <div className="relative z-10 flex h-full flex-col items-center justify-center gap-5 p-8 text-center text-white">
-              <div className="flex h-14 w-14 items-center justify-center rounded-[1rem] bg-white/20 shadow-[0_12px_40px_rgba(31,199,188,0.15)]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/Home/Barra de Productos/CATEGOROIAS.svg" alt="Todas las categorías" className="h-8 w-8" />
+            {/* formas circulares abstractas de fondo */}
+            <div className="absolute -left-14 top-6 h-52 w-52 rounded-full border border-white/50 bg-white/10" />
+            <div className="absolute -right-16 top-1/3 h-64 w-64 rounded-full border border-white/40 bg-white/10" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(255,255,255,0.35),transparent_35%)]" />
+
+            {/* panel interior translúcido */}
+            <div className="absolute inset-3 rounded-[2rem] border border-white/60 bg-white/20 backdrop-blur-[2px]" />
+
+            <div className="relative z-10 flex h-full flex-col items-center justify-center gap-5 p-8 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-[0_12px_30px_rgba(31,199,188,0.18)]">
+                <div className="grid grid-cols-3 gap-[5px]">
+                  <span className="h-[7px] w-[7px] rounded-full bg-primary" />
+                  <span className="h-[7px] w-[7px] rounded-full bg-primary" />
+                  <span className="h-[7px] w-[7px] rounded-full bg-primary" />
+                  <span className="h-[7px] w-[7px] rounded-full bg-primary" />
+                  <span className="h-[7px] w-[7px] rounded-full bg-ui-gray/40" />
+                  <span className="h-[7px] w-[7px] rounded-full bg-accent-coral" />
+                </div>
               </div>
-              <div>
-                <h3 className="font-display font-bold text-3xl leading-tight">Todas las<br />categorías</h3>
-                <p className="mt-2 text-sm text-white/80">Explora todo nuestro catálogo de productos</p>
+              <div className="w-full text-left">
+                <h3 className="font-display font-bold text-3xl leading-tight text-foreground">Todas las<br />categorías</h3>
+                <div className="mt-3 h-1.5 w-12 rounded-full bg-primary" />
+                <p className="mt-4 text-sm text-ui-gray">Explora todo nuestro catálogo de productos</p>
               </div>
-              <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-primary transition-transform group-hover:scale-105 shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
+              <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-accent-coral transition-transform group-hover:scale-105 shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
