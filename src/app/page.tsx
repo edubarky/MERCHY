@@ -17,7 +17,7 @@ const STATIC_CATEGORIES = [
     slug: "bebidas",
     asset: "/Home/Barra%20de%20Productos/BEBIDAS.svg",
     badge: (
-      <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
         <path d="M10 2h4" />
         <path d="M9.5 2v3.2c0 .5-.2 1-.6 1.4L7.6 8c-.7.7-1.1 1.6-1.1 2.6V19a2 2 0 002 2h7a2 2 0 002-2v-8.4c0-1-.4-1.9-1.1-2.6L15 6.6a2 2 0 01-.6-1.4V2" />
         <path d="M7.5 13h9" />
@@ -163,11 +163,7 @@ export default async function HomePage() {
               className="group relative overflow-hidden rounded-[2.5rem] border border-ui-border bg-white shadow-[0_30px_80px_rgba(0,0,0,0.12)] transition-transform hover:-translate-y-1 hover:shadow-[0_30px_90px_rgba(0,0,0,0.16)] min-h-[440px]"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(87,224,217,0.18),transparent_38%)]" />
-              <div
-                className={`absolute z-10 flex items-center justify-center rounded-full bg-white/85 border border-teal-100 shadow-[0_12px_40px_rgba(31,199,188,0.15)] text-primary ${
-                  cat.slug === "bebidas" ? "right-5 top-5 h-16 w-16" : "right-6 top-6 h-14 w-14"
-                }`}
-              >
+              <div className="absolute right-6 top-6 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-white/85 border border-teal-100 shadow-[0_12px_40px_rgba(31,199,188,0.15)] text-primary">
                 {cat.badge}
               </div>
 
@@ -180,12 +176,12 @@ export default async function HomePage() {
 
                   {/* zona de producto: sin padding lateral propio, para poder usar casi todo el ancho real de la tarjeta */}
                   <div className="relative z-10" style={{ marginTop: "28px" }}>
-                    {/* círculos decorativos: uno asoma por la izquierda, uno grande por la derecha */}
-                    <div className="absolute rounded-full" style={{ top: "124px", left: "-65px", height: "130px", width: "130px", background: "radial-gradient(circle, rgba(255,255,255,0) 30%, rgba(45,212,191,0.16) 50%, rgba(45,212,191,0.16) 68%, rgba(255,255,255,0) 92%)" }} />
-                    <div className="absolute rounded-full" style={{ top: "65px", right: "-95px", height: "210px", width: "210px", background: "radial-gradient(circle, rgba(45,212,191,0.14) 0%, rgba(45,212,191,0.08) 45%, rgba(255,255,255,0) 78%)" }} />
+                    {/* círculos decorativos: uno asoma por la izquierda, uno grande por la derecha (escalados junto con la composición) */}
+                    <div className="absolute rounded-full" style={{ top: "107px", left: "-56px", height: "112px", width: "112px", background: "radial-gradient(circle, rgba(255,255,255,0) 30%, rgba(45,212,191,0.16) 50%, rgba(45,212,191,0.16) 68%, rgba(255,255,255,0) 92%)" }} />
+                    <div className="absolute rounded-full" style={{ top: "56px", right: "-82px", height: "180px", width: "180px", background: "radial-gradient(circle, rgba(45,212,191,0.14) 0%, rgba(45,212,191,0.08) 45%, rgba(255,255,255,0) 78%)" }} />
 
-                    {/* botella + termo + pedestal: ancho ~92% de la tarjeta completa, alto automático (sin recorte) */}
-                    <div className="relative z-10 mx-auto" style={{ width: "92%", aspectRatio: "289.7 / 409.6" }}>
+                    {/* botella + termo + pedestal: ancho reducido a 78.5% de la tarjeta completa para que el alto total de la tarjeta iguale a Textiles (440px), alto automático (sin recorte) */}
+                    <div className="relative z-10 mx-auto" style={{ width: "78.5%", aspectRatio: "289.7 / 409.6" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={cat.asset} alt={`${cat.name} category`} className="h-full w-full" />
                     </div>
@@ -193,7 +189,7 @@ export default async function HomePage() {
                     {/* botón: tamaño independiente del ancho de la imagen, superpuesto sobre la mitad inferior del frente del pedestal */}
                     <span
                       className="absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)] transition-transform duration-200 group-hover:-translate-y-0.5"
-                      style={{ bottom: "36px", width: "78%", height: "58px" }}
+                      style={{ bottom: "31px", width: "78%", height: "50px" }}
                     >
                       Explorar
                       <svg className="w-6 h-6 flex-none" viewBox="0 0 21.44 27.48" fill="none" xmlns="http://www.w3.org/2000/svg">
