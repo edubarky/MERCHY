@@ -17,7 +17,7 @@ const STATIC_CATEGORIES = [
     slug: "bebidas",
     asset: "/Home/Barra%20de%20Productos/BEBIDAS.svg",
     badge: (
-      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
         <path d="M10 2h4" />
         <path d="M9.5 2v3.2c0 .5-.2 1-.6 1.4L7.6 8c-.7.7-1.1 1.6-1.1 2.6V19a2 2 0 002 2h7a2 2 0 002-2v-8.4c0-1-.4-1.9-1.1-2.6L15 6.6a2 2 0 01-.6-1.4V2" />
         <path d="M7.5 13h9" />
@@ -163,7 +163,11 @@ export default async function HomePage() {
               className="group relative overflow-hidden rounded-[2.5rem] border border-ui-border bg-white shadow-[0_30px_80px_rgba(0,0,0,0.12)] transition-transform hover:-translate-y-1 hover:shadow-[0_30px_90px_rgba(0,0,0,0.16)] min-h-[440px]"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(87,224,217,0.18),transparent_38%)]" />
-              <div className="absolute right-6 top-6 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-white/85 border border-teal-100 shadow-[0_12px_40px_rgba(31,199,188,0.15)] text-primary">
+              <div
+                className={`absolute z-10 flex items-center justify-center rounded-full bg-white/85 border border-teal-100 shadow-[0_12px_40px_rgba(31,199,188,0.15)] text-primary ${
+                  cat.slug === "bebidas" ? "right-5 top-5 h-16 w-16" : "right-6 top-6 h-14 w-14"
+                }`}
+              >
                 {cat.badge}
               </div>
 
