@@ -361,7 +361,7 @@ export default async function HomePage() {
 
               {/* botón: solo ligeramente más grande que el badge, mismo eje central */}
               <span
-                className="flex items-center justify-center rounded-full bg-white text-accent-coral transition-transform group-hover:scale-105 shadow-[0_8px_20px_rgba(0,0,0,0.14)]"
+                className="flex items-center justify-center rounded-full bg-white text-accent-coral shadow-[0_8px_20px_rgba(0,0,0,0.14)] transition-[background-color,color,box-shadow,transform] duration-[800ms] ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:-translate-y-0.5 group-hover:bg-primary group-hover:text-white group-hover:shadow-[0_8px_20px_rgba(0,0,0,0.14),0_0_26px_rgba(87,224,217,0.28)]"
                 style={{ height: "66px", width: "66px" }}
               >
                 <svg style={{ width: "30px", height: "30px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
