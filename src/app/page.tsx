@@ -204,7 +204,7 @@ export default async function HomePage() {
 
                   {/* botón: posición y tamaño compartidos con Textiles/Deportivo, relativos a la tarjeta (no a la imagen), para quedar perfectamente alineados */}
                   <span
-                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary/35 text-lg font-medium text-foreground transition-[background-color,box-shadow] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_6px_14px_rgba(0,0,0,0.08),0_8px_24px_rgba(87,224,217,0.14),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(87,224,217,0.4)] hover:bg-accent-coral/35 hover:shadow-[0_6px_14px_rgba(0,0,0,0.08),0_8px_24px_rgba(255,116,101,0.16),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(255,116,101,0.4)]"
+                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary/35 text-lg font-medium text-[#3D3D3D] transition-[background-color,box-shadow] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_6px_14px_rgba(0,0,0,0.08),0_16px_34px_rgba(87,224,217,0.15),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(87,224,217,0.4)] hover:bg-accent-coral/35 hover:shadow-[0_6px_14px_rgba(0,0,0,0.08),0_16px_34px_rgba(255,116,101,0.17),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(255,116,101,0.4)]"
                     style={{
                       bottom: "21px",
                       width: "222px",
@@ -252,7 +252,7 @@ export default async function HomePage() {
 
                   {/* botón: posición y tamaño compartidos con Bebidas/Deportivo, relativos a la tarjeta (no a la imagen), para quedar perfectamente alineados */}
                   <span
-                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary/35 text-lg font-medium text-foreground transition-[background-color,box-shadow] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_6px_14px_rgba(0,0,0,0.08),0_8px_24px_rgba(87,224,217,0.14),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(87,224,217,0.4)] hover:bg-accent-coral/35 hover:shadow-[0_6px_14px_rgba(0,0,0,0.08),0_8px_24px_rgba(255,116,101,0.16),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(255,116,101,0.4)]"
+                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary/35 text-lg font-medium text-[#3D3D3D] transition-[background-color,box-shadow] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_6px_14px_rgba(0,0,0,0.08),0_16px_34px_rgba(87,224,217,0.15),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(87,224,217,0.4)] hover:bg-accent-coral/35 hover:shadow-[0_6px_14px_rgba(0,0,0,0.08),0_16px_34px_rgba(255,116,101,0.17),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(255,116,101,0.4)]"
                     style={{
                       bottom: "21px",
                       width: "222px",
@@ -300,7 +300,7 @@ export default async function HomePage() {
 
                   {/* botón: posición y tamaño compartidos con Bebidas/Textiles, relativos a la tarjeta (no a la imagen), para quedar perfectamente alineados */}
                   <span
-                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary/35 text-lg font-medium text-foreground transition-[background-color,box-shadow] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_6px_14px_rgba(0,0,0,0.08),0_8px_24px_rgba(87,224,217,0.14),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(87,224,217,0.4)] hover:bg-accent-coral/35 hover:shadow-[0_6px_14px_rgba(0,0,0,0.08),0_8px_24px_rgba(255,116,101,0.16),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(255,116,101,0.4)]"
+                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary/35 text-lg font-medium text-[#3D3D3D] transition-[background-color,box-shadow] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_6px_14px_rgba(0,0,0,0.08),0_16px_34px_rgba(87,224,217,0.15),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(87,224,217,0.4)] hover:bg-accent-coral/35 hover:shadow-[0_6px_14px_rgba(0,0,0,0.08),0_16px_34px_rgba(255,116,101,0.17),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(255,116,101,0.4)]"
                     style={{
                       bottom: "21px",
                       width: "222px",
