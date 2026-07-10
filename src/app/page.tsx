@@ -204,18 +204,32 @@ export default async function HomePage() {
 
                   {/* botón: posición y tamaño compartidos con Textiles/Deportivo, relativos a la tarjeta (no a la imagen), para quedar perfectamente alineados */}
                   <span
-                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)]"
+                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)] transition-shadow duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] hover:shadow-[0_18px_35px_rgba(30,203,194,0.28),0_8px_24px_rgba(255,116,101,0.14),inset_0_1px_0_rgba(255,255,255,0.20)]"
                     style={{ bottom: "21px", width: "222px", height: "52px" }}
                   >
-                    {/* capa coral: entra deslizándose desde el borde derecho con un límite difuminado (mask), hasta cubrir el botón por completo */}
+                    {/* capa glass coral: entra deslizándose desde el borde derecho con una zona de mezcla amplia y difuminada (mask) y un leve blur/saturate tipo cristal, hasta cubrir el botón conservando translucidez */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-y-0 z-0 translate-x-full bg-accent-coral transition-transform duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/btn:translate-x-0"
+                      className="pointer-events-none absolute inset-y-0 z-0 translate-x-full transition-transform duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0"
                       style={{
-                        left: "-96px",
-                        width: "calc(100% + 96px)",
-                        WebkitMaskImage: "linear-gradient(to right, transparent 0px, transparent 14px, black 84px, black 100%)",
-                        maskImage: "linear-gradient(to right, transparent 0px, transparent 14px, black 84px, black 100%)",
+                        left: "-190px",
+                        width: "calc(100% + 190px)",
+                        background: "rgba(255,116,101,0.86)",
+                        backdropFilter: "blur(6px) saturate(150%)",
+                        WebkitBackdropFilter: "blur(6px) saturate(150%)",
+                        WebkitMaskImage:
+                          "linear-gradient(to right, transparent 0px, transparent 10px, rgba(0,0,0,0.12) 60px, rgba(0,0,0,0.5) 120px, black 175px, black 100%)",
+                        maskImage:
+                          "linear-gradient(to right, transparent 0px, transparent 10px, rgba(0,0,0,0.12) 60px, rgba(0,0,0,0.5) 120px, black 175px, black 100%)",
+                      }}
+                    />
+                    {/* reflejo glass: banda diagonal amplia y muy tenue que aparece junto con la transición, sin desplazarse (evita el efecto "shine" genérico) */}
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 z-[1] opacity-0 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-100"
+                      style={{
+                        background:
+                          "linear-gradient(115deg, transparent 15%, rgba(255,255,255,0.09) 45%, rgba(255,255,255,0.13) 55%, transparent 85%)",
                       }}
                     />
                     <span className="relative z-10">Explorar</span>
@@ -249,18 +263,32 @@ export default async function HomePage() {
 
                   {/* botón: posición y tamaño compartidos con Bebidas/Deportivo, relativos a la tarjeta (no a la imagen), para quedar perfectamente alineados */}
                   <span
-                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)]"
+                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)] transition-shadow duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] hover:shadow-[0_18px_35px_rgba(30,203,194,0.28),0_8px_24px_rgba(255,116,101,0.14),inset_0_1px_0_rgba(255,255,255,0.20)]"
                     style={{ bottom: "21px", width: "222px", height: "52px" }}
                   >
-                    {/* capa coral: entra deslizándose desde el borde derecho con un límite difuminado (mask), hasta cubrir el botón por completo */}
+                    {/* capa glass coral: entra deslizándose desde el borde derecho con una zona de mezcla amplia y difuminada (mask) y un leve blur/saturate tipo cristal, hasta cubrir el botón conservando translucidez */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-y-0 z-0 translate-x-full bg-accent-coral transition-transform duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/btn:translate-x-0"
+                      className="pointer-events-none absolute inset-y-0 z-0 translate-x-full transition-transform duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0"
                       style={{
-                        left: "-96px",
-                        width: "calc(100% + 96px)",
-                        WebkitMaskImage: "linear-gradient(to right, transparent 0px, transparent 14px, black 84px, black 100%)",
-                        maskImage: "linear-gradient(to right, transparent 0px, transparent 14px, black 84px, black 100%)",
+                        left: "-190px",
+                        width: "calc(100% + 190px)",
+                        background: "rgba(255,116,101,0.86)",
+                        backdropFilter: "blur(6px) saturate(150%)",
+                        WebkitBackdropFilter: "blur(6px) saturate(150%)",
+                        WebkitMaskImage:
+                          "linear-gradient(to right, transparent 0px, transparent 10px, rgba(0,0,0,0.12) 60px, rgba(0,0,0,0.5) 120px, black 175px, black 100%)",
+                        maskImage:
+                          "linear-gradient(to right, transparent 0px, transparent 10px, rgba(0,0,0,0.12) 60px, rgba(0,0,0,0.5) 120px, black 175px, black 100%)",
+                      }}
+                    />
+                    {/* reflejo glass: banda diagonal amplia y muy tenue que aparece junto con la transición, sin desplazarse (evita el efecto "shine" genérico) */}
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 z-[1] opacity-0 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-100"
+                      style={{
+                        background:
+                          "linear-gradient(115deg, transparent 15%, rgba(255,255,255,0.09) 45%, rgba(255,255,255,0.13) 55%, transparent 85%)",
                       }}
                     />
                     <span className="relative z-10">Explorar</span>
@@ -294,18 +322,32 @@ export default async function HomePage() {
 
                   {/* botón: posición y tamaño compartidos con Bebidas/Textiles, relativos a la tarjeta (no a la imagen), para quedar perfectamente alineados */}
                   <span
-                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)]"
+                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)] transition-shadow duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] hover:shadow-[0_18px_35px_rgba(30,203,194,0.28),0_8px_24px_rgba(255,116,101,0.14),inset_0_1px_0_rgba(255,255,255,0.20)]"
                     style={{ bottom: "21px", width: "222px", height: "52px" }}
                   >
-                    {/* capa coral: entra deslizándose desde el borde derecho con un límite difuminado (mask), hasta cubrir el botón por completo */}
+                    {/* capa glass coral: entra deslizándose desde el borde derecho con una zona de mezcla amplia y difuminada (mask) y un leve blur/saturate tipo cristal, hasta cubrir el botón conservando translucidez */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-y-0 z-0 translate-x-full bg-accent-coral transition-transform duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/btn:translate-x-0"
+                      className="pointer-events-none absolute inset-y-0 z-0 translate-x-full transition-transform duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0"
                       style={{
-                        left: "-96px",
-                        width: "calc(100% + 96px)",
-                        WebkitMaskImage: "linear-gradient(to right, transparent 0px, transparent 14px, black 84px, black 100%)",
-                        maskImage: "linear-gradient(to right, transparent 0px, transparent 14px, black 84px, black 100%)",
+                        left: "-190px",
+                        width: "calc(100% + 190px)",
+                        background: "rgba(255,116,101,0.86)",
+                        backdropFilter: "blur(6px) saturate(150%)",
+                        WebkitBackdropFilter: "blur(6px) saturate(150%)",
+                        WebkitMaskImage:
+                          "linear-gradient(to right, transparent 0px, transparent 10px, rgba(0,0,0,0.12) 60px, rgba(0,0,0,0.5) 120px, black 175px, black 100%)",
+                        maskImage:
+                          "linear-gradient(to right, transparent 0px, transparent 10px, rgba(0,0,0,0.12) 60px, rgba(0,0,0,0.5) 120px, black 175px, black 100%)",
+                      }}
+                    />
+                    {/* reflejo glass: banda diagonal amplia y muy tenue que aparece junto con la transición, sin desplazarse (evita el efecto "shine" genérico) */}
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 z-[1] opacity-0 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-100"
+                      style={{
+                        background:
+                          "linear-gradient(115deg, transparent 15%, rgba(255,255,255,0.09) 45%, rgba(255,255,255,0.13) 55%, transparent 85%)",
                       }}
                     />
                     <span className="relative z-10">Explorar</span>
