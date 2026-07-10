@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 type StaticCategory = {
   name: string;
@@ -10,29 +8,20 @@ type StaticCategory = {
   badge: ReactNode;
 };
 
-// Tailwind necesita ver el nombre de clase COMPLETO como texto literal en el código fuente para
-// poder generar el CSS; una clase armada por interpolación en tiempo de ejecución (p. ej.
-// `shadow-[${base}]`) nunca aparece como string completo en el archivo y Tailwind no la genera.
-// Por eso aquí se usan dos strings completos y estáticos, elegidos por un ternario en tiempo de
-// ejecución, en vez de concatenar los valores del box-shadow dinámicamente.
-const CARD_SHADOW_NORMAL =
-  "shadow-[0_30px_80px_rgba(0,0,0,0.12)] hover:shadow-[0_30px_90px_rgba(0,0,0,0.16)]";
-const CARD_SHADOW_SELECTED =
-  "shadow-[0_30px_80px_rgba(0,0,0,0.12),0_0_0_1.75px_rgba(87,224,217,0.9),0_0_0_7px_rgba(87,224,217,0.12),inset_0_0_0_1px_rgba(255,255,255,0.4)] hover:shadow-[0_30px_90px_rgba(0,0,0,0.16),0_0_0_1.75px_rgba(87,224,217,0.9),0_0_0_7px_rgba(87,224,217,0.12),inset_0_0_0_1px_rgba(255,255,255,0.4)]";
+// feedback de clic (:active) puro CSS: aparece al instante al presionar y se retira al soltar,
+// sin estado de React ni selección persistente. active: se ordena después de hover: en el orden
+// de variantes de Tailwind, así que gana cuando ambos aplican (cursor sobre la tarjeta + clic).
+const CARD_ACTIVE_RING =
+  "active:shadow-[0_30px_80px_rgba(0,0,0,0.12),0_0_0_1.5px_rgba(87,224,217,0.9),0_0_20px_4px_rgba(87,224,217,0.12),inset_0_0_0_1px_rgba(255,255,255,0.35)]";
 
 export default function CategoryCardsGrid({ categories }: { categories: StaticCategory[] }) {
-  const [selected, setSelected] = useState<string | null>(null);
-
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-start">
       {categories.map((cat) => (
         <Link
           key={cat.slug}
           href={`/catalogo?categoria=${cat.slug}`}
-          onClick={() => setSelected(cat.slug)}
-          className={`group relative overflow-hidden rounded-[2.5rem] border border-ui-border bg-white transition-[transform,box-shadow] duration-300 hover:-translate-y-1 has-[.group\/btn:hover]:!translate-y-0 min-h-[440px] ${
-            selected === cat.slug ? CARD_SHADOW_SELECTED : CARD_SHADOW_NORMAL
-          }`}
+          className={`group relative overflow-hidden rounded-[2.5rem] border border-ui-border bg-white shadow-[0_30px_80px_rgba(0,0,0,0.12)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 has-[.group\/btn:hover]:!translate-y-0 hover:shadow-[0_30px_90px_rgba(0,0,0,0.16)] min-h-[440px] ${CARD_ACTIVE_RING}`}
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(87,224,217,0.18),transparent_38%)]" />
           <div className="absolute right-6 top-6 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-white/85 border border-teal-100 shadow-[0_12px_40px_rgba(31,199,188,0.15)] text-primary">
@@ -190,10 +179,7 @@ export default function CategoryCardsGrid({ categories }: { categories: StaticCa
       {/* Todas las categorías */}
       <Link
         href="/catalogo"
-        onClick={() => setSelected("todas")}
-        className={`group relative overflow-hidden rounded-[2.5rem] border border-white/60 bg-gradient-to-br from-[#dcf6f3] via-[#e9faf8] to-[#c9eeea] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 min-h-[440px] ${
-          selected === "todas" ? CARD_SHADOW_SELECTED : CARD_SHADOW_NORMAL
-        }`}
+        className={`group relative overflow-hidden rounded-[2.5rem] border border-white/60 bg-gradient-to-br from-[#dcf6f3] via-[#e9faf8] to-[#c9eeea] shadow-[0_30px_80px_rgba(0,0,0,0.12)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_30px_90px_rgba(0,0,0,0.16)] min-h-[440px] ${CARD_ACTIVE_RING}`}
       >
         {/* formas circulares abstractas de fondo */}
         <div className="absolute -left-14 top-6 h-52 w-52 rounded-full border border-white/50 bg-white/10" />
