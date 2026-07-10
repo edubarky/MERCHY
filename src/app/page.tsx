@@ -209,28 +209,26 @@ export default async function HomePage() {
                       bottom: "21px",
                       width: "222px",
                       height: "52px",
-                      background: "rgba(255,255,255,0.55)",
-                      backdropFilter: "blur(8px) saturate(130%)",
-                      WebkitBackdropFilter: "blur(8px) saturate(130%)",
+                      background: "rgba(255,255,255,0.6)",
+                      backdropFilter: "blur(10px) saturate(140%)",
+                      WebkitBackdropFilter: "blur(10px) saturate(140%)",
                     }}
                   >
-                    {/* capa 3a: presencia turquesa difusa (estado normal), concentrada del lado del icono, se desvanece en hover */}
+                    {/* capa de color flotante: un único degradado turquesa->coral, más ancho que el botón, que se DESPLAZA de izquierda a derecha (background-position) para que a mitad de la transición se vea la mezcla de ambos colores dentro del cristal, en vez de solo aparecer/desvanecerse en su sitio */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 opacity-100 transition-opacity duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
+                      className="pointer-events-none absolute inset-0 z-0 bg-no-repeat transition-[background-position] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:[background-position:100%_0%]"
                       style={{
-                        background:
-                          "radial-gradient(circle at 82% 50%, rgba(87,224,217,0.42) 0%, rgba(87,224,217,0.20) 35%, transparent 70%)",
+                        backgroundImage:
+                          "linear-gradient(90deg, rgba(87,224,217,0.4) 0%, rgba(87,224,217,0.4) 30%, rgba(255,116,101,0.44) 70%, rgba(255,116,101,0.44) 100%)",
+                        backgroundSize: "300% 100%",
                       }}
                     />
-                    {/* capa 3b: color coral difuso que entra desde el lateral del icono y se expande progresivamente por debajo del cristal, sin llegar a ser un relleno sólido */}
+                    {/* brillo especular: banda superior blanca muy tenue, constante, para reforzar la sensación de cristal */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 origin-right scale-90 translate-x-10 opacity-0 transition-[opacity,transform] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:scale-100 group-hover/btn:opacity-100"
-                      style={{
-                        background:
-                          "radial-gradient(circle at 78% 50%, rgba(255,116,101,0.5) 0%, rgba(255,116,101,0.24) 40%, transparent 72%)",
-                      }}
+                      className="pointer-events-none absolute inset-0 z-[1]"
+                      style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 55%)" }}
                     />
                     <span className="relative z-10 text-foreground">Explorar</span>
                     <span className="relative z-10 inline-flex flex-none items-center justify-center">
@@ -276,28 +274,26 @@ export default async function HomePage() {
                       bottom: "21px",
                       width: "222px",
                       height: "52px",
-                      background: "rgba(255,255,255,0.55)",
-                      backdropFilter: "blur(8px) saturate(130%)",
-                      WebkitBackdropFilter: "blur(8px) saturate(130%)",
+                      background: "rgba(255,255,255,0.6)",
+                      backdropFilter: "blur(10px) saturate(140%)",
+                      WebkitBackdropFilter: "blur(10px) saturate(140%)",
                     }}
                   >
-                    {/* capa 3a: presencia turquesa difusa (estado normal), concentrada del lado del icono, se desvanece en hover */}
+                    {/* capa de color flotante: un único degradado turquesa->coral, más ancho que el botón, que se DESPLAZA de izquierda a derecha (background-position) para que a mitad de la transición se vea la mezcla de ambos colores dentro del cristal, en vez de solo aparecer/desvanecerse en su sitio */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 opacity-100 transition-opacity duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
+                      className="pointer-events-none absolute inset-0 z-0 bg-no-repeat transition-[background-position] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:[background-position:100%_0%]"
                       style={{
-                        background:
-                          "radial-gradient(circle at 82% 50%, rgba(87,224,217,0.42) 0%, rgba(87,224,217,0.20) 35%, transparent 70%)",
+                        backgroundImage:
+                          "linear-gradient(90deg, rgba(87,224,217,0.4) 0%, rgba(87,224,217,0.4) 30%, rgba(255,116,101,0.44) 70%, rgba(255,116,101,0.44) 100%)",
+                        backgroundSize: "300% 100%",
                       }}
                     />
-                    {/* capa 3b: color coral difuso que entra desde el lateral del icono y se expande progresivamente por debajo del cristal, sin llegar a ser un relleno sólido */}
+                    {/* brillo especular: banda superior blanca muy tenue, constante, para reforzar la sensación de cristal */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 origin-right scale-90 translate-x-10 opacity-0 transition-[opacity,transform] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:scale-100 group-hover/btn:opacity-100"
-                      style={{
-                        background:
-                          "radial-gradient(circle at 78% 50%, rgba(255,116,101,0.5) 0%, rgba(255,116,101,0.24) 40%, transparent 72%)",
-                      }}
+                      className="pointer-events-none absolute inset-0 z-[1]"
+                      style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 55%)" }}
                     />
                     <span className="relative z-10 text-foreground">Explorar</span>
                     <span className="relative z-10 inline-flex flex-none items-center justify-center">
@@ -343,28 +339,26 @@ export default async function HomePage() {
                       bottom: "21px",
                       width: "222px",
                       height: "52px",
-                      background: "rgba(255,255,255,0.55)",
-                      backdropFilter: "blur(8px) saturate(130%)",
-                      WebkitBackdropFilter: "blur(8px) saturate(130%)",
+                      background: "rgba(255,255,255,0.6)",
+                      backdropFilter: "blur(10px) saturate(140%)",
+                      WebkitBackdropFilter: "blur(10px) saturate(140%)",
                     }}
                   >
-                    {/* capa 3a: presencia turquesa difusa (estado normal), concentrada del lado del icono, se desvanece en hover */}
+                    {/* capa de color flotante: un único degradado turquesa->coral, más ancho que el botón, que se DESPLAZA de izquierda a derecha (background-position) para que a mitad de la transición se vea la mezcla de ambos colores dentro del cristal, en vez de solo aparecer/desvanecerse en su sitio */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 opacity-100 transition-opacity duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
+                      className="pointer-events-none absolute inset-0 z-0 bg-no-repeat transition-[background-position] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:[background-position:100%_0%]"
                       style={{
-                        background:
-                          "radial-gradient(circle at 82% 50%, rgba(87,224,217,0.42) 0%, rgba(87,224,217,0.20) 35%, transparent 70%)",
+                        backgroundImage:
+                          "linear-gradient(90deg, rgba(87,224,217,0.4) 0%, rgba(87,224,217,0.4) 30%, rgba(255,116,101,0.44) 70%, rgba(255,116,101,0.44) 100%)",
+                        backgroundSize: "300% 100%",
                       }}
                     />
-                    {/* capa 3b: color coral difuso que entra desde el lateral del icono y se expande progresivamente por debajo del cristal, sin llegar a ser un relleno sólido */}
+                    {/* brillo especular: banda superior blanca muy tenue, constante, para reforzar la sensación de cristal */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 origin-right scale-90 translate-x-10 opacity-0 transition-[opacity,transform] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:scale-100 group-hover/btn:opacity-100"
-                      style={{
-                        background:
-                          "radial-gradient(circle at 78% 50%, rgba(255,116,101,0.5) 0%, rgba(255,116,101,0.24) 40%, transparent 72%)",
-                      }}
+                      className="pointer-events-none absolute inset-0 z-[1]"
+                      style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 55%)" }}
                     />
                     <span className="relative z-10 text-foreground">Explorar</span>
                     <span className="relative z-10 inline-flex flex-none items-center justify-center">
