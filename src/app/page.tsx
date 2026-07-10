@@ -301,38 +301,39 @@ export default async function HomePage() {
             {/* panel interior translúcido */}
             <div className="absolute inset-3 rounded-[2rem] border border-white/60 bg-white/20 backdrop-blur-[2px]" />
 
-            <div className="relative z-10 h-full">
-              {/* badge: tamaño y posición tomados del SVG original (círculo r=36.5 centrado, top≈65px) */}
+            {/* composición completa: un único eje central vía flex-col + items-center, sin coordenadas manuales por elemento */}
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-8">
+              {/* badge: tamaño medio, notablemente más chico que el botón pero ya no diminuto */}
               <div
-                className="absolute flex items-center justify-center rounded-full bg-white shadow-[0_4px_8px_rgba(0,0,0,0.13)]"
-                style={{ top: "79.5px", left: "50%", transform: "translateX(-50%)", height: "44px", width: "44px" }}
+                className="flex items-center justify-center rounded-full bg-white shadow-[0_4px_8px_rgba(0,0,0,0.13)]"
+                style={{ height: "58px", width: "58px" }}
               >
-                <div className="grid grid-cols-3 gap-[2px]">
-                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
-                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
-                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
-                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
-                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
-                  <span className="h-[4px] w-[4px] rounded-full bg-ui-gray/40" />
-                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
-                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
-                  <span className="h-[4px] w-[4px] rounded-full bg-accent-coral" />
+                <div className="grid grid-cols-3 gap-[3px]">
+                  <span className="h-[6px] w-[6px] rounded-full bg-primary" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-primary" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-primary" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-primary" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-primary" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-ui-gray/40" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-primary" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-primary" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-accent-coral" />
                 </div>
               </div>
 
-              {/* bloque de texto: título, línea y descripción centrados horizontalmente sobre el mismo eje que la tarjeta */}
-              <div style={{ position: "absolute", left: "48px", top: "172px", width: "194px" }}>
+              {/* bloque de texto: título, línea y descripción, centrados por el mismo eje flex */}
+              <div className="text-center">
                 <h3 className="mx-auto w-fit font-display font-bold text-center text-foreground" style={{ fontSize: "27px", lineHeight: "32px" }}>Todas las<br />categorías</h3>
                 <div className="mx-auto rounded-full bg-primary" style={{ marginTop: "8px", height: "3px", width: "42px" }} />
                 <p className="mx-auto w-fit text-center font-medium text-foreground" style={{ marginTop: "28px", fontSize: "15px", lineHeight: "17px" }}>Explora todo nuestro<br />catálogo de productos</p>
               </div>
 
-              {/* botón: centrado horizontalmente, movido hacia abajo con separación clara respecto al bloque de texto */}
+              {/* botón: solo ligeramente más grande que el badge, mismo eje central */}
               <span
-                className="absolute flex items-center justify-center rounded-full bg-white text-accent-coral transition-transform group-hover:scale-105 shadow-[0_8px_20px_rgba(0,0,0,0.14)]"
-                style={{ top: "328px", left: "50%", transform: "translateX(-50%)", height: "58px", width: "58px" }}
+                className="flex items-center justify-center rounded-full bg-white text-accent-coral transition-transform group-hover:scale-105 shadow-[0_8px_20px_rgba(0,0,0,0.14)]"
+                style={{ height: "66px", width: "66px" }}
               >
-                <svg style={{ width: "26px", height: "26px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg style={{ width: "30px", height: "30px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </span>
