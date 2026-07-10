@@ -167,16 +167,7 @@ export default async function HomePage() {
               className="group relative overflow-hidden rounded-[2.5rem] border border-ui-border bg-white shadow-[0_30px_80px_rgba(0,0,0,0.12)] transition-transform hover:-translate-y-1 has-[.group\/btn:hover]:!translate-y-0 hover:shadow-[0_30px_90px_rgba(0,0,0,0.16)] min-h-[440px]"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(87,224,217,0.18),transparent_38%)]" />
-              <div
-                className={
-                  cat.slug === "deportivo"
-                    ? "absolute right-6 top-6 z-10 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-teal-50/70 border border-teal-300 text-primary"
-                    : "absolute right-6 top-6 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-white/85 border border-teal-100 shadow-[0_12px_40px_rgba(31,199,188,0.15)] text-primary"
-                }
-              >
-                {cat.slug === "deportivo" && (
-                  <div className="absolute bottom-0 left-1/2 h-4 w-8 -translate-x-1/2 rounded-full bg-teal-300 opacity-70 blur-md" />
-                )}
+              <div className="absolute right-6 top-6 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-white/85 border border-teal-100 shadow-[0_12px_40px_rgba(31,199,188,0.15)] text-primary">
                 {cat.badge}
               </div>
 
