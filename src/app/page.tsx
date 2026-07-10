@@ -189,8 +189,7 @@ export default async function HomePage() {
 
                   {/* zona de producto: sin padding lateral propio, para poder usar casi todo el ancho real de la tarjeta */}
                   <div className="relative z-10" style={{ marginTop: "28px" }}>
-                    {/* círculos decorativos: uno asoma por la izquierda, uno grande por la derecha (escalados junto con la composición) */}
-                    <div className="absolute rounded-full" style={{ top: "107px", left: "-56px", height: "112px", width: "112px", background: "radial-gradient(circle, rgba(255,255,255,0) 30%, rgba(45,212,191,0.16) 50%, rgba(45,212,191,0.16) 68%, rgba(255,255,255,0) 92%)" }} />
+                    {/* círculo decorativo grande por la derecha (escalado junto con la composición) */}
                     <div className="absolute rounded-full" style={{ top: "56px", right: "-82px", height: "180px", width: "180px", background: "radial-gradient(circle, rgba(45,212,191,0.14) 0%, rgba(45,212,191,0.08) 45%, rgba(255,255,255,0) 78%)" }} />
 
                     {/* botella + termo + pedestal: ancho reducido a 78.5% de la tarjeta completa para que el alto total de la tarjeta iguale a Textiles (440px), alto automático (sin recorte) */}
@@ -224,8 +223,7 @@ export default async function HomePage() {
 
                   {/* zona de producto: sin padding lateral propio, para usar casi todo el ancho real de la tarjeta */}
                   <div className="relative z-10" style={{ marginTop: "22px" }}>
-                    {/* círculos decorativos: anillo parcial a la izquierda, mancha grande y sutil a la derecha detrás de la camiseta */}
-                    <div className="absolute rounded-full" style={{ top: "70px", left: "-55px", height: "110px", width: "110px", background: "radial-gradient(circle, rgba(255,255,255,0) 30%, rgba(45,212,191,0.16) 50%, rgba(45,212,191,0.16) 68%, rgba(255,255,255,0) 92%)" }} />
+                    {/* mancha decorativa grande y sutil a la derecha detrás de la camiseta */}
                     <div className="absolute rounded-full" style={{ top: "10px", right: "-90px", height: "230px", width: "230px", background: "radial-gradient(circle, rgba(45,212,191,0.13) 0%, rgba(45,212,191,0.07) 45%, rgba(255,255,255,0) 78%)" }} />
 
                     {/* camiseta + gorra + pedestal: ancho ~90% de la tarjeta completa, alto automático (sin recorte) */}
