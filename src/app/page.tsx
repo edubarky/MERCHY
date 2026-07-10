@@ -204,64 +204,21 @@ export default async function HomePage() {
 
                   {/* botón: posición y tamaño compartidos con Textiles/Deportivo, relativos a la tarjeta (no a la imagen), para quedar perfectamente alineados */}
                   <span
-                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full text-lg font-semibold transition-shadow duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_8px_20px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.4),inset_0_0_0_1px_rgba(87,224,217,0.35)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.4),inset_0_0_0_1px_rgba(255,116,101,0.35)]"
+                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary/35 text-lg font-semibold text-white transition-[background-color,box-shadow] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_6px_14px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(87,224,217,0.4)] hover:bg-accent-coral/35 hover:shadow-[0_6px_14px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(255,116,101,0.4)]"
                     style={{
                       bottom: "21px",
                       width: "222px",
                       height: "52px",
-                      background: "rgba(255,255,255,0.5)",
                       backdropFilter: "blur(10px) saturate(140%)",
                       WebkitBackdropFilter: "blur(10px) saturate(140%)",
                     }}
                   >
-                    {/* capa de color independiente: nube turquesa con núcleo definido y caída corta (no un fundido largo tipo degradado), parcialmente fuera del borde derecho; se desvanece en hover */}
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute z-0 rounded-full opacity-100 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
-                      style={{
-                        width: "76px",
-                        height: "76px",
-                        left: "calc(90% - 38px)",
-                        top: "calc(50% - 38px)",
-                        background:
-                          "radial-gradient(circle, rgba(87,224,217,0.4) 0%, rgba(87,224,217,0.3) 35%, rgba(87,224,217,0.1) 55%, transparent 72%)",
-                        filter: "blur(5px)",
-                      }}
-                    />
-                    {/* capa de color independiente: nube coral con el mismo núcleo definido, entra desplazándose desde la derecha y se desvanece-in en hover, sin cubrir el lado izquierdo del botón */}
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute z-0 rounded-full translate-x-8 opacity-0 transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:opacity-100"
-                      style={{
-                        width: "76px",
-                        height: "76px",
-                        left: "calc(90% - 38px)",
-                        top: "calc(50% - 38px)",
-                        background:
-                          "radial-gradient(circle, rgba(255,116,101,0.38) 0%, rgba(255,116,101,0.28) 35%, rgba(255,116,101,0.09) 55%, transparent 72%)",
-                        filter: "blur(5px)",
-                      }}
-                    />
-                    {/* brillo especular: reflejo localizado en la parte superior, no un degradado que cubra todo el botón */}
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute z-[1] rounded-full"
-                      style={{
-                        width: "70%",
-                        height: "20px",
-                        left: "50%",
-                        top: "4px",
-                        transform: "translateX(-50%)",
-                        background: "rgba(255,255,255,0.4)",
-                        filter: "blur(10px)",
-                      }}
-                    />
-                    <span className="relative z-10 text-foreground">Explorar</span>
+                    <span className="relative z-10">Explorar</span>
                     <span className="relative z-10 inline-flex flex-none items-center justify-center">
-                      {/* círculo del icono: turquesa en normal, coral en hover */}
+                      {/* círculo del icono: turquesa (más intenso que la superficie) en normal, coral (más intenso que la superficie) en hover */}
                       <span
                         aria-hidden="true"
-                        className="pointer-events-none absolute rounded-full bg-primary transition-colors duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:bg-accent-coral"
+                        className="pointer-events-none absolute rounded-full bg-primary-dark transition-colors duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:bg-accent-coral"
                         style={{ width: "34px", height: "34px", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
                       />
                       <svg className="relative w-6 h-6 text-white" viewBox="0 0 21.44 27.48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -295,64 +252,21 @@ export default async function HomePage() {
 
                   {/* botón: posición y tamaño compartidos con Bebidas/Deportivo, relativos a la tarjeta (no a la imagen), para quedar perfectamente alineados */}
                   <span
-                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full text-lg font-semibold transition-shadow duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_8px_20px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.4),inset_0_0_0_1px_rgba(87,224,217,0.35)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.4),inset_0_0_0_1px_rgba(255,116,101,0.35)]"
+                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary/35 text-lg font-semibold text-white transition-[background-color,box-shadow] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_6px_14px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(87,224,217,0.4)] hover:bg-accent-coral/35 hover:shadow-[0_6px_14px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(255,116,101,0.4)]"
                     style={{
                       bottom: "21px",
                       width: "222px",
                       height: "52px",
-                      background: "rgba(255,255,255,0.5)",
                       backdropFilter: "blur(10px) saturate(140%)",
                       WebkitBackdropFilter: "blur(10px) saturate(140%)",
                     }}
                   >
-                    {/* capa de color independiente: nube turquesa con núcleo definido y caída corta (no un fundido largo tipo degradado), parcialmente fuera del borde derecho; se desvanece en hover */}
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute z-0 rounded-full opacity-100 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
-                      style={{
-                        width: "76px",
-                        height: "76px",
-                        left: "calc(90% - 38px)",
-                        top: "calc(50% - 38px)",
-                        background:
-                          "radial-gradient(circle, rgba(87,224,217,0.4) 0%, rgba(87,224,217,0.3) 35%, rgba(87,224,217,0.1) 55%, transparent 72%)",
-                        filter: "blur(5px)",
-                      }}
-                    />
-                    {/* capa de color independiente: nube coral con el mismo núcleo definido, entra desplazándose desde la derecha y se desvanece-in en hover, sin cubrir el lado izquierdo del botón */}
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute z-0 rounded-full translate-x-8 opacity-0 transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:opacity-100"
-                      style={{
-                        width: "76px",
-                        height: "76px",
-                        left: "calc(90% - 38px)",
-                        top: "calc(50% - 38px)",
-                        background:
-                          "radial-gradient(circle, rgba(255,116,101,0.38) 0%, rgba(255,116,101,0.28) 35%, rgba(255,116,101,0.09) 55%, transparent 72%)",
-                        filter: "blur(5px)",
-                      }}
-                    />
-                    {/* brillo especular: reflejo localizado en la parte superior, no un degradado que cubra todo el botón */}
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute z-[1] rounded-full"
-                      style={{
-                        width: "70%",
-                        height: "20px",
-                        left: "50%",
-                        top: "4px",
-                        transform: "translateX(-50%)",
-                        background: "rgba(255,255,255,0.4)",
-                        filter: "blur(10px)",
-                      }}
-                    />
-                    <span className="relative z-10 text-foreground">Explorar</span>
+                    <span className="relative z-10">Explorar</span>
                     <span className="relative z-10 inline-flex flex-none items-center justify-center">
-                      {/* círculo del icono: turquesa en normal, coral en hover */}
+                      {/* círculo del icono: turquesa (más intenso que la superficie) en normal, coral (más intenso que la superficie) en hover */}
                       <span
                         aria-hidden="true"
-                        className="pointer-events-none absolute rounded-full bg-primary transition-colors duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:bg-accent-coral"
+                        className="pointer-events-none absolute rounded-full bg-primary-dark transition-colors duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:bg-accent-coral"
                         style={{ width: "34px", height: "34px", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
                       />
                       <svg className="relative w-6 h-6 text-white" viewBox="0 0 21.44 27.48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -386,64 +300,21 @@ export default async function HomePage() {
 
                   {/* botón: posición y tamaño compartidos con Bebidas/Textiles, relativos a la tarjeta (no a la imagen), para quedar perfectamente alineados */}
                   <span
-                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full text-lg font-semibold transition-shadow duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_8px_20px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.4),inset_0_0_0_1px_rgba(87,224,217,0.35)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.4),inset_0_0_0_1px_rgba(255,116,101,0.35)]"
+                    className="group/btn absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary/35 text-lg font-semibold text-white transition-[background-color,box-shadow] duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] shadow-[0_6px_14px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(87,224,217,0.4)] hover:bg-accent-coral/35 hover:shadow-[0_6px_14px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(255,116,101,0.4)]"
                     style={{
                       bottom: "21px",
                       width: "222px",
                       height: "52px",
-                      background: "rgba(255,255,255,0.5)",
                       backdropFilter: "blur(10px) saturate(140%)",
                       WebkitBackdropFilter: "blur(10px) saturate(140%)",
                     }}
                   >
-                    {/* capa de color independiente: nube turquesa con núcleo definido y caída corta (no un fundido largo tipo degradado), parcialmente fuera del borde derecho; se desvanece en hover */}
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute z-0 rounded-full opacity-100 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
-                      style={{
-                        width: "76px",
-                        height: "76px",
-                        left: "calc(90% - 38px)",
-                        top: "calc(50% - 38px)",
-                        background:
-                          "radial-gradient(circle, rgba(87,224,217,0.4) 0%, rgba(87,224,217,0.3) 35%, rgba(87,224,217,0.1) 55%, transparent 72%)",
-                        filter: "blur(5px)",
-                      }}
-                    />
-                    {/* capa de color independiente: nube coral con el mismo núcleo definido, entra desplazándose desde la derecha y se desvanece-in en hover, sin cubrir el lado izquierdo del botón */}
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute z-0 rounded-full translate-x-8 opacity-0 transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:opacity-100"
-                      style={{
-                        width: "76px",
-                        height: "76px",
-                        left: "calc(90% - 38px)",
-                        top: "calc(50% - 38px)",
-                        background:
-                          "radial-gradient(circle, rgba(255,116,101,0.38) 0%, rgba(255,116,101,0.28) 35%, rgba(255,116,101,0.09) 55%, transparent 72%)",
-                        filter: "blur(5px)",
-                      }}
-                    />
-                    {/* brillo especular: reflejo localizado en la parte superior, no un degradado que cubra todo el botón */}
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute z-[1] rounded-full"
-                      style={{
-                        width: "70%",
-                        height: "20px",
-                        left: "50%",
-                        top: "4px",
-                        transform: "translateX(-50%)",
-                        background: "rgba(255,255,255,0.4)",
-                        filter: "blur(10px)",
-                      }}
-                    />
-                    <span className="relative z-10 text-foreground">Explorar</span>
+                    <span className="relative z-10">Explorar</span>
                     <span className="relative z-10 inline-flex flex-none items-center justify-center">
-                      {/* círculo del icono: turquesa en normal, coral en hover */}
+                      {/* círculo del icono: turquesa (más intenso que la superficie) en normal, coral (más intenso que la superficie) en hover */}
                       <span
                         aria-hidden="true"
-                        className="pointer-events-none absolute rounded-full bg-primary transition-colors duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:bg-accent-coral"
+                        className="pointer-events-none absolute rounded-full bg-primary-dark transition-colors duration-[1100ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:bg-accent-coral"
                         style={{ width: "34px", height: "34px", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
                       />
                       <svg className="relative w-6 h-6 text-white" viewBox="0 0 21.44 27.48" fill="none" xmlns="http://www.w3.org/2000/svg">
