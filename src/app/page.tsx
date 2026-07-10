@@ -320,19 +320,19 @@ export default async function HomePage() {
                 </div>
               </div>
 
-              {/* bloque de texto: mismo borde izquierdo para título, línea y descripción, bloque centrado como grupo */}
+              {/* bloque de texto: título, línea y descripción centrados horizontalmente sobre el mismo eje que la tarjeta */}
               <div style={{ position: "absolute", left: "48px", top: "172px", width: "194px" }}>
-                <h3 className="font-display font-bold text-foreground" style={{ fontSize: "27px", lineHeight: "32px" }}>Todas las<br />categorías</h3>
-                <div className="rounded-full bg-primary" style={{ marginTop: "8px", height: "3px", width: "42px" }} />
-                <p className="font-medium text-foreground" style={{ marginTop: "28px", fontSize: "15px", lineHeight: "17px" }}>Explora todo nuestro<br />catálogo de productos</p>
+                <h3 className="mx-auto w-fit font-display font-bold text-center text-foreground" style={{ fontSize: "27px", lineHeight: "32px" }}>Todas las<br />categorías</h3>
+                <div className="mx-auto rounded-full bg-primary" style={{ marginTop: "8px", height: "3px", width: "42px" }} />
+                <p className="mx-auto w-fit text-center font-medium text-foreground" style={{ marginTop: "28px", fontSize: "15px", lineHeight: "17px" }}>Explora todo nuestro<br />catálogo de productos</p>
               </div>
 
               {/* botón: centrado horizontalmente, movido hacia abajo con separación clara respecto al bloque de texto */}
               <span
                 className="absolute flex items-center justify-center rounded-full bg-white text-accent-coral transition-transform group-hover:scale-105 shadow-[0_8px_20px_rgba(0,0,0,0.14)]"
-                style={{ top: "335px", left: "50%", transform: "translateX(-50%)", height: "44px", width: "44px" }}
+                style={{ top: "332px", left: "50%", transform: "translateX(-50%)", height: "50px", width: "50px" }}
               >
-                <svg style={{ width: "20px", height: "20px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg style={{ width: "22px", height: "22px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </span>
