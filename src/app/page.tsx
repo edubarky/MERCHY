@@ -199,6 +199,9 @@ export default async function HomePage() {
                       <img src={cat.asset} alt={`${cat.name} category`} className="h-full w-full" />
                     </div>
 
+                    {/* difumina la franja plana del pedestal fotografiado que quedaba visible bajo el botón */}
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[15] bg-gradient-to-b from-transparent to-white" style={{ height: "42px" }} />
+
                     {/* botón: tamaño independiente del ancho de la imagen, superpuesto sobre la mitad inferior del frente del pedestal */}
                     <span
                       className="absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)] transition-transform duration-200 group-hover:-translate-y-0.5"
@@ -231,6 +234,9 @@ export default async function HomePage() {
                       <img src={cat.asset} alt={`${cat.name} category`} className="h-full w-full" />
                     </div>
 
+                    {/* difumina la franja plana del pedestal fotografiado que quedaba visible bajo el botón */}
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[15] bg-gradient-to-b from-transparent to-white" style={{ height: "28px" }} />
+
                     {/* botón: tamaño independiente del ancho de la imagen, superpuesto sobre la mitad inferior del frente del pedestal */}
                     <span
                       className="absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)] transition-transform duration-200 group-hover:-translate-y-0.5"
@@ -261,6 +267,9 @@ export default async function HomePage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={cat.asset} alt={`${cat.name} category`} className="h-full w-full" />
                     </div>
+
+                    {/* difumina la franja plana del pedestal fotografiado que quedaba visible bajo el botón */}
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[15] bg-gradient-to-b from-transparent to-white" style={{ height: "29px" }} />
 
                     {/* botón: tamaño independiente del ancho de la imagen, superpuesto sobre la mitad inferior del frente del pedestal */}
                     <span
