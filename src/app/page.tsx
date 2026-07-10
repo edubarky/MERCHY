@@ -305,18 +305,18 @@ export default async function HomePage() {
               {/* badge: tamaño y posición tomados del SVG original (círculo r=36.5 centrado, top≈65px) */}
               <div
                 className="absolute flex items-center justify-center rounded-full bg-white shadow-[0_4px_8px_rgba(0,0,0,0.13)]"
-                style={{ top: "65px", left: "50%", transform: "translateX(-50%)", height: "73px", width: "73px" }}
+                style={{ top: "79.5px", left: "50%", transform: "translateX(-50%)", height: "44px", width: "44px" }}
               >
-                <div className="grid grid-cols-3 gap-[4px]">
-                  <span className="h-[7px] w-[7px] rounded-full bg-primary" />
-                  <span className="h-[7px] w-[7px] rounded-full bg-primary" />
-                  <span className="h-[7px] w-[7px] rounded-full bg-primary" />
-                  <span className="h-[7px] w-[7px] rounded-full bg-primary" />
-                  <span className="h-[7px] w-[7px] rounded-full bg-primary" />
-                  <span className="h-[7px] w-[7px] rounded-full bg-ui-gray/40" />
-                  <span className="h-[7px] w-[7px] rounded-full bg-primary" />
-                  <span className="h-[7px] w-[7px] rounded-full bg-primary" />
-                  <span className="h-[7px] w-[7px] rounded-full bg-accent-coral" />
+                <div className="grid grid-cols-3 gap-[2px]">
+                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
+                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
+                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
+                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
+                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
+                  <span className="h-[4px] w-[4px] rounded-full bg-ui-gray/40" />
+                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
+                  <span className="h-[4px] w-[4px] rounded-full bg-primary" />
+                  <span className="h-[4px] w-[4px] rounded-full bg-accent-coral" />
                 </div>
               </div>
 
@@ -330,9 +330,9 @@ export default async function HomePage() {
               {/* botón: centrado horizontalmente, movido hacia abajo con separación clara respecto al bloque de texto */}
               <span
                 className="absolute flex items-center justify-center rounded-full bg-white text-accent-coral transition-transform group-hover:scale-105 shadow-[0_8px_20px_rgba(0,0,0,0.14)]"
-                style={{ top: "332px", left: "50%", transform: "translateX(-50%)", height: "50px", width: "50px" }}
+                style={{ top: "328px", left: "50%", transform: "translateX(-50%)", height: "58px", width: "58px" }}
               >
-                <svg style={{ width: "22px", height: "22px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg style={{ width: "26px", height: "26px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </span>
