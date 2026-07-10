@@ -214,29 +214,47 @@ export default async function HomePage() {
                       WebkitBackdropFilter: "blur(10px) saturate(140%)",
                     }}
                   >
-                    {/* capa de color flotante: mancha turquesa difusa y localizada junto al icono (estado normal); el lado izquierdo del botón queda blanco/transparente */}
+                    {/* capa de color independiente: nube turquesa con núcleo definido y caída corta (no un fundido largo tipo degradado), parcialmente fuera del borde derecho; se desvanece en hover */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 opacity-100 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
+                      className="pointer-events-none absolute z-0 rounded-full opacity-100 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
                       style={{
-                        backgroundImage:
-                          "radial-gradient(circle at 72% 40%, rgba(87,224,217,0.5) 0%, rgba(87,224,217,0.24) 30%, transparent 58%), radial-gradient(circle at 82% 64%, rgba(87,224,217,0.4) 0%, transparent 52%)",
+                        width: "76px",
+                        height: "76px",
+                        left: "calc(90% - 38px)",
+                        top: "calc(50% - 38px)",
+                        background:
+                          "radial-gradient(circle, rgba(87,224,217,0.4) 0%, rgba(87,224,217,0.3) 35%, rgba(87,224,217,0.1) 55%, transparent 72%)",
+                        filter: "blur(5px)",
                       }}
                     />
-                    {/* capa de color flotante: mancha coral que entra desplazándose desde la derecha y se instala junto al icono, sin cubrir el lado izquierdo del botón */}
+                    {/* capa de color independiente: nube coral con el mismo núcleo definido, entra desplazándose desde la derecha y se desvanece-in en hover, sin cubrir el lado izquierdo del botón */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 translate-x-16 opacity-0 transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:opacity-100"
+                      className="pointer-events-none absolute z-0 rounded-full translate-x-8 opacity-0 transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:opacity-100"
                       style={{
-                        backgroundImage:
-                          "radial-gradient(circle at 72% 40%, rgba(255,116,101,0.46) 0%, rgba(255,116,101,0.2) 30%, transparent 58%), radial-gradient(circle at 82% 64%, rgba(255,116,101,0.36) 0%, transparent 52%)",
+                        width: "76px",
+                        height: "76px",
+                        left: "calc(90% - 38px)",
+                        top: "calc(50% - 38px)",
+                        background:
+                          "radial-gradient(circle, rgba(255,116,101,0.38) 0%, rgba(255,116,101,0.28) 35%, rgba(255,116,101,0.09) 55%, transparent 72%)",
+                        filter: "blur(5px)",
                       }}
                     />
-                    {/* brillo especular: banda superior blanca extremadamente sutil, constante, para reforzar la sensación de cristal */}
+                    {/* brillo especular: reflejo localizado en la parte superior, no un degradado que cubra todo el botón */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-[1]"
-                      style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 50%)" }}
+                      className="pointer-events-none absolute z-[1] rounded-full"
+                      style={{
+                        width: "70%",
+                        height: "20px",
+                        left: "50%",
+                        top: "4px",
+                        transform: "translateX(-50%)",
+                        background: "rgba(255,255,255,0.4)",
+                        filter: "blur(10px)",
+                      }}
                     />
                     <span className="relative z-10 text-foreground">Explorar</span>
                     <span className="relative z-10 inline-flex flex-none items-center justify-center">
@@ -287,29 +305,47 @@ export default async function HomePage() {
                       WebkitBackdropFilter: "blur(10px) saturate(140%)",
                     }}
                   >
-                    {/* capa de color flotante: mancha turquesa difusa y localizada junto al icono (estado normal); el lado izquierdo del botón queda blanco/transparente */}
+                    {/* capa de color independiente: nube turquesa con núcleo definido y caída corta (no un fundido largo tipo degradado), parcialmente fuera del borde derecho; se desvanece en hover */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 opacity-100 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
+                      className="pointer-events-none absolute z-0 rounded-full opacity-100 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
                       style={{
-                        backgroundImage:
-                          "radial-gradient(circle at 72% 40%, rgba(87,224,217,0.5) 0%, rgba(87,224,217,0.24) 30%, transparent 58%), radial-gradient(circle at 82% 64%, rgba(87,224,217,0.4) 0%, transparent 52%)",
+                        width: "76px",
+                        height: "76px",
+                        left: "calc(90% - 38px)",
+                        top: "calc(50% - 38px)",
+                        background:
+                          "radial-gradient(circle, rgba(87,224,217,0.4) 0%, rgba(87,224,217,0.3) 35%, rgba(87,224,217,0.1) 55%, transparent 72%)",
+                        filter: "blur(5px)",
                       }}
                     />
-                    {/* capa de color flotante: mancha coral que entra desplazándose desde la derecha y se instala junto al icono, sin cubrir el lado izquierdo del botón */}
+                    {/* capa de color independiente: nube coral con el mismo núcleo definido, entra desplazándose desde la derecha y se desvanece-in en hover, sin cubrir el lado izquierdo del botón */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 translate-x-16 opacity-0 transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:opacity-100"
+                      className="pointer-events-none absolute z-0 rounded-full translate-x-8 opacity-0 transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:opacity-100"
                       style={{
-                        backgroundImage:
-                          "radial-gradient(circle at 72% 40%, rgba(255,116,101,0.46) 0%, rgba(255,116,101,0.2) 30%, transparent 58%), radial-gradient(circle at 82% 64%, rgba(255,116,101,0.36) 0%, transparent 52%)",
+                        width: "76px",
+                        height: "76px",
+                        left: "calc(90% - 38px)",
+                        top: "calc(50% - 38px)",
+                        background:
+                          "radial-gradient(circle, rgba(255,116,101,0.38) 0%, rgba(255,116,101,0.28) 35%, rgba(255,116,101,0.09) 55%, transparent 72%)",
+                        filter: "blur(5px)",
                       }}
                     />
-                    {/* brillo especular: banda superior blanca extremadamente sutil, constante, para reforzar la sensación de cristal */}
+                    {/* brillo especular: reflejo localizado en la parte superior, no un degradado que cubra todo el botón */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-[1]"
-                      style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 50%)" }}
+                      className="pointer-events-none absolute z-[1] rounded-full"
+                      style={{
+                        width: "70%",
+                        height: "20px",
+                        left: "50%",
+                        top: "4px",
+                        transform: "translateX(-50%)",
+                        background: "rgba(255,255,255,0.4)",
+                        filter: "blur(10px)",
+                      }}
                     />
                     <span className="relative z-10 text-foreground">Explorar</span>
                     <span className="relative z-10 inline-flex flex-none items-center justify-center">
@@ -360,29 +396,47 @@ export default async function HomePage() {
                       WebkitBackdropFilter: "blur(10px) saturate(140%)",
                     }}
                   >
-                    {/* capa de color flotante: mancha turquesa difusa y localizada junto al icono (estado normal); el lado izquierdo del botón queda blanco/transparente */}
+                    {/* capa de color independiente: nube turquesa con núcleo definido y caída corta (no un fundido largo tipo degradado), parcialmente fuera del borde derecho; se desvanece en hover */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 opacity-100 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
+                      className="pointer-events-none absolute z-0 rounded-full opacity-100 transition-opacity duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:opacity-0"
                       style={{
-                        backgroundImage:
-                          "radial-gradient(circle at 72% 40%, rgba(87,224,217,0.5) 0%, rgba(87,224,217,0.24) 30%, transparent 58%), radial-gradient(circle at 82% 64%, rgba(87,224,217,0.4) 0%, transparent 52%)",
+                        width: "76px",
+                        height: "76px",
+                        left: "calc(90% - 38px)",
+                        top: "calc(50% - 38px)",
+                        background:
+                          "radial-gradient(circle, rgba(87,224,217,0.4) 0%, rgba(87,224,217,0.3) 35%, rgba(87,224,217,0.1) 55%, transparent 72%)",
+                        filter: "blur(5px)",
                       }}
                     />
-                    {/* capa de color flotante: mancha coral que entra desplazándose desde la derecha y se instala junto al icono, sin cubrir el lado izquierdo del botón */}
+                    {/* capa de color independiente: nube coral con el mismo núcleo definido, entra desplazándose desde la derecha y se desvanece-in en hover, sin cubrir el lado izquierdo del botón */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-0 translate-x-16 opacity-0 transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:opacity-100"
+                      className="pointer-events-none absolute z-0 rounded-full translate-x-8 opacity-0 transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover/btn:translate-x-0 group-hover/btn:opacity-100"
                       style={{
-                        backgroundImage:
-                          "radial-gradient(circle at 72% 40%, rgba(255,116,101,0.46) 0%, rgba(255,116,101,0.2) 30%, transparent 58%), radial-gradient(circle at 82% 64%, rgba(255,116,101,0.36) 0%, transparent 52%)",
+                        width: "76px",
+                        height: "76px",
+                        left: "calc(90% - 38px)",
+                        top: "calc(50% - 38px)",
+                        background:
+                          "radial-gradient(circle, rgba(255,116,101,0.38) 0%, rgba(255,116,101,0.28) 35%, rgba(255,116,101,0.09) 55%, transparent 72%)",
+                        filter: "blur(5px)",
                       }}
                     />
-                    {/* brillo especular: banda superior blanca extremadamente sutil, constante, para reforzar la sensación de cristal */}
+                    {/* brillo especular: reflejo localizado en la parte superior, no un degradado que cubra todo el botón */}
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 z-[1]"
-                      style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 50%)" }}
+                      className="pointer-events-none absolute z-[1] rounded-full"
+                      style={{
+                        width: "70%",
+                        height: "20px",
+                        left: "50%",
+                        top: "4px",
+                        transform: "translateX(-50%)",
+                        background: "rgba(255,255,255,0.4)",
+                        filter: "blur(10px)",
+                      }}
                     />
                     <span className="relative z-10 text-foreground">Explorar</span>
                     <span className="relative z-10 inline-flex flex-none items-center justify-center">
