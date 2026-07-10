@@ -205,7 +205,7 @@ export default async function HomePage() {
                     {/* botón: tamaño independiente del ancho de la imagen, superpuesto sobre la mitad inferior del frente del pedestal */}
                     <span
                       className="absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)] transition-transform duration-200 group-hover:-translate-y-0.5"
-                      style={{ bottom: "31px", width: "78%", height: "50px" }}
+                      style={{ bottom: "18.61px", width: "78%", height: "50px" }}
                     >
                       Explorar
                       <svg className="w-6 h-6 flex-none" viewBox="0 0 21.44 27.48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -274,7 +274,7 @@ export default async function HomePage() {
                     {/* botón: tamaño independiente del ancho de la imagen, superpuesto sobre la mitad inferior del frente del pedestal */}
                     <span
                       className="absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-primary to-primary-dark text-white text-lg font-semibold shadow-[0_18px_35px_rgba(30,203,194,0.28)] transition-transform duration-200 group-hover:-translate-y-0.5"
-                      style={{ bottom: "18px", width: "76%", height: "52px" }}
+                      style={{ bottom: "17.5px", width: "76%", height: "52px" }}
                     >
                       Explorar
                       <svg className="w-6 h-6 flex-none" viewBox="0 0 21.44 27.48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -330,9 +330,9 @@ export default async function HomePage() {
               {/* botón: pequeño, centrado horizontalmente, debajo de la descripción */}
               <span
                 className="absolute flex items-center justify-center rounded-full bg-white text-accent-coral transition-transform group-hover:scale-105 shadow-[0_8px_20px_rgba(0,0,0,0.14)]"
-                style={{ top: "309px", left: "50%", transform: "translateX(-50%)", height: "34px", width: "34px" }}
+                style={{ top: "304px", left: "50%", transform: "translateX(-50%)", height: "44px", width: "44px" }}
               >
-                <svg style={{ width: "16px", height: "16px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg style={{ width: "20px", height: "20px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </span>
