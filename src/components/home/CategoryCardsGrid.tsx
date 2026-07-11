@@ -8,11 +8,15 @@ type StaticCategory = {
   badge: ReactNode;
 };
 
-// feedback de clic (:active) puro CSS: aparece al instante al presionar y se retira al soltar,
-// sin estado de React ni selección persistente. active: se ordena después de hover: en el orden
-// de variantes de Tailwind, así que gana cuando ambos aplican (cursor sobre la tarjeta + clic).
-const CARD_ACTIVE_RING =
-  "active:shadow-[0_30px_80px_rgba(0,0,0,0.12),0_0_0_1.5px_rgba(87,224,217,0.9),0_0_20px_4px_rgba(87,224,217,0.12),inset_0_0_0_1px_rgba(255,255,255,0.35)]";
+// marco turquesa al pasar el cursor por CUALQUIER parte de la tarjeta (hover directo del <Link>,
+// no group-hover), sin useState ni JS: incluye la sombra de elevación existente + un borde
+// turquesa de 2px + halo exterior difuso de baja opacidad + reflejo interior translúcido, todo en
+// un único hover:shadow-[...] (no puede repartirse en dos utilidades hover:shadow separadas,
+// ya que ambas fijarían la misma propiedad box-shadow y la última pisaría a la primera).
+// Entrada 250ms (definida en la propia regla :hover) / salida 350ms (definida en la regla base),
+// aprovechando que la transición usada es siempre la de la regla del estado de DESTINO.
+const CARD_HOVER_RING =
+  "hover:shadow-[0_30px_90px_rgba(0,0,0,0.16),0_0_0_2px_rgba(87,224,217,0.9),0_0_24px_6px_rgba(87,224,217,0.14),inset_0_0_0_1px_rgba(255,255,255,0.35)]";
 
 export default function CategoryCardsGrid({ categories }: { categories: StaticCategory[] }) {
   return (
@@ -21,7 +25,7 @@ export default function CategoryCardsGrid({ categories }: { categories: StaticCa
         <Link
           key={cat.slug}
           href={`/catalogo?categoria=${cat.slug}`}
-          className={`group relative overflow-hidden rounded-[2.5rem] border border-ui-border bg-white shadow-[0_30px_80px_rgba(0,0,0,0.12)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 has-[.group\/btn:hover]:!translate-y-0 hover:shadow-[0_30px_90px_rgba(0,0,0,0.16)] min-h-[440px] ${CARD_ACTIVE_RING}`}
+          className={`group relative overflow-hidden rounded-[2.5rem] border border-ui-border bg-white shadow-[0_30px_80px_rgba(0,0,0,0.12)] transition-[transform,box-shadow] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:duration-[250ms] hover:-translate-y-1 has-[.group\/btn:hover]:!translate-y-0 min-h-[440px] ${CARD_HOVER_RING}`}
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(87,224,217,0.18),transparent_38%)]" />
           <div className="absolute right-6 top-6 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-white/85 border border-teal-100 shadow-[0_12px_40px_rgba(31,199,188,0.15)] text-primary">
@@ -179,7 +183,7 @@ export default function CategoryCardsGrid({ categories }: { categories: StaticCa
       {/* Todas las categorías */}
       <Link
         href="/catalogo"
-        className={`group relative overflow-hidden rounded-[2.5rem] border border-white/60 bg-gradient-to-br from-[#dcf6f3] via-[#e9faf8] to-[#c9eeea] shadow-[0_30px_80px_rgba(0,0,0,0.12)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_30px_90px_rgba(0,0,0,0.16)] min-h-[440px] ${CARD_ACTIVE_RING}`}
+        className={`group relative overflow-hidden rounded-[2.5rem] border border-white/60 bg-gradient-to-br from-[#dcf6f3] via-[#e9faf8] to-[#c9eeea] shadow-[0_30px_80px_rgba(0,0,0,0.12)] transition-[transform,box-shadow] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:duration-[250ms] hover:-translate-y-1 min-h-[440px] ${CARD_HOVER_RING}`}
       >
         {/* formas circulares abstractas de fondo */}
         <div className="absolute -left-14 top-6 h-52 w-52 rounded-full border border-white/50 bg-white/10" />
