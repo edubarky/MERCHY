@@ -2,6 +2,7 @@ import Link from "next/link";
 import PublicHeader from "@/components/PublicHeader";
 import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
+import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product, PriceTier } from "@/types";
@@ -172,8 +173,7 @@ export default async function HomePage() {
           <svg
             viewBox="0 0 714 753"
             className="w-full h-auto block"
-            role="img"
-            aria-label="Destaca tu diseño con nuestros productos. Obtén calidad que resalte tu identidad. Diseño premium, acabados de alta calidad. Todo en uno, diseña, cotiza y compra. 100% personalizable, hazlo a tu manera."
+            aria-label="Destaca tu diseño con nuestros productos. Obtén calidad que resalte tu identidad."
           >
             <defs>
               <clipPath id="destacaCardClip">
@@ -207,13 +207,12 @@ export default async function HomePage() {
                 width="418"
                 height="68"
               />
-              <image
-                href="/Home/DESTACA%20TU%20DISE%C3%91O/ICONOS%20Y%20TEXTO.svg"
-                x="362"
-                y="504"
-                width="270"
-                height="239"
-              />
+              {/* bloque de beneficios: reconstruido como 3 componentes Flexbox independientes (línea + círculo + icono + título + descripción) en vez de la imagen SVG plana; vive en un foreignObject para heredar el mismo escalado proporcional (viewBox) que el resto de la composición, así nunca se estira de forma independiente */}
+              <foreignObject x="362" y="504" width="300" height="239">
+                <div style={{ width: "100%", height: "100%" }}>
+                  <DestacaFeatures />
+                </div>
+              </foreignObject>
             </g>
           </svg>
         </div>
