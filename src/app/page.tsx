@@ -168,13 +168,46 @@ export default async function HomePage() {
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           <FavoritosSection products={safeProducts} priceTiers={safeTiers} categories={safeCategories} />
 
-          {/* Destaca tu diseño: reproducción exacta del diseño de Figma vía el SVG exportado completo (fondo, títulos, íconos e imagen de producto ya vienen compuestos en el archivo) */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/Home/DESTACA%20TU%20DISE%C3%91O/DESTACA%20TU%20DISE%C3%91O%20CON%20NUESTROS%20PRODUCTOS.svg"
-            alt="Destaca tu diseño con nuestros productos. Obtén calidad que resalte tu identidad."
-            className="w-full h-auto"
-          />
+          {/* Destaca tu diseño: composición de las 5 capas exportadas de Figma (Rectangle 33 = tarjeta base, IMAGEN DE PRODUCTOS, título, subtítulo, ICONOS Y TEXTO), posicionadas con % sobre el marco de referencia de Rectangle 33 (714x753) para escalar de forma proporcional */}
+          <div className="relative w-full" style={{ aspectRatio: "714 / 753" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/Home/DESTACA%20TU%20DISE%C3%91O/Rectangle%2033.svg"
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full"
+            />
+            {/* imagen de producto: alineada por su borde inferior con el borde inferior de Rectangle 33 (fix de Figma para que el pedestal no sobresalga) */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/Home/DESTACA%20TU%20DISE%C3%91O/IMAGEN%20DE%20PRODUCTOS.svg"
+              alt=""
+              aria-hidden="true"
+              className="absolute z-[1]"
+              style={{ left: "-11.204%", top: "20.717%", width: "111.905%", height: "79.283%" }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/Home/DESTACA%20TU%20DISE%C3%91O/Destaca%20tu%20dise%C3%B1o%20con%20nuestros%20productos.svg"
+              alt="Destaca tu diseño con nuestros productos"
+              className="absolute z-[2]"
+              style={{ left: "14.986%", top: "10.624%", width: "70.028%", height: "13.147%" }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/Home/DESTACA%20TU%20DISE%C3%91O/Obt%C3%A9n%20calidad%20que%20resalte%20tu%20identidad..svg"
+              alt="Obtén calidad que resalte tu identidad"
+              className="absolute z-[2]"
+              style={{ left: "14.986%", top: "27.357%", width: "58.543%", height: "9.030%" }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/Home/DESTACA%20TU%20DISE%C3%91O/ICONOS%20Y%20TEXTO.svg"
+              alt="Diseño premium, acabados de alta calidad. Todo en uno, diseña, cotiza y compra. 100% personalizable, hazlo a tu manera."
+              className="absolute z-[2]"
+              style={{ left: "50.700%", top: "50.199%", width: "34.314%", height: "31.740%" }}
+            />
+          </div>
         </div>
       </section>
 
