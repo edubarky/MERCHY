@@ -169,7 +169,7 @@ export default async function HomePage() {
           <FavoritosSection products={safeProducts} priceTiers={safeTiers} categories={safeCategories} />
 
           {/* Destaca tu diseño: composición de las 5 capas exportadas de Figma (Rectangle 33 = tarjeta base, IMAGEN DE PRODUCTOS, título, subtítulo, ICONOS Y TEXTO), posicionadas con % sobre el marco de referencia de Rectangle 33 (714x753) para escalar de forma proporcional */}
-          <div className="relative w-full" style={{ aspectRatio: "714 / 753" }}>
+          <div className="relative w-full overflow-hidden" style={{ aspectRatio: "714 / 753" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/Home/DESTACA%20TU%20DISE%C3%91O/Rectangle%2033.svg"
