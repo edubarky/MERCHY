@@ -168,46 +168,54 @@ export default async function HomePage() {
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           <FavoritosSection products={safeProducts} priceTiers={safeTiers} categories={safeCategories} />
 
-          {/* Destaca tu diseño: composición de las 5 capas exportadas de Figma (Rectangle 33 = tarjeta base, IMAGEN DE PRODUCTOS, título, subtítulo, ICONOS Y TEXTO), posicionadas con % sobre el marco de referencia de Rectangle 33 (714x753) para escalar de forma proporcional */}
-          <div className="relative w-full overflow-hidden" style={{ aspectRatio: "714 / 753" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/Home/DESTACA%20TU%20DISE%C3%91O/Rectangle%2033.svg"
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 h-full w-full"
-            />
-            {/* imagen de producto: alineada por su borde inferior con el borde inferior de Rectangle 33 (fix de Figma para que el pedestal no sobresalga) */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/Home/DESTACA%20TU%20DISE%C3%91O/IMAGEN%20DE%20PRODUCTOS.svg"
-              alt=""
-              aria-hidden="true"
-              className="absolute z-[1]"
-              style={{ left: "-11.204%", top: "20.717%", width: "111.905%", height: "79.283%" }}
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/Home/DESTACA%20TU%20DISE%C3%91O/Destaca%20tu%20dise%C3%B1o%20con%20nuestros%20productos.svg"
-              alt="Destaca tu diseño con nuestros productos"
-              className="absolute z-[2]"
-              style={{ left: "14.986%", top: "10.624%", width: "70.028%", height: "13.147%" }}
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/Home/DESTACA%20TU%20DISE%C3%91O/Obt%C3%A9n%20calidad%20que%20resalte%20tu%20identidad..svg"
-              alt="Obtén calidad que resalte tu identidad"
-              className="absolute z-[2]"
-              style={{ left: "14.986%", top: "27.357%", width: "58.543%", height: "9.030%" }}
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/Home/DESTACA%20TU%20DISE%C3%91O/ICONOS%20Y%20TEXTO.svg"
-              alt="Diseño premium, acabados de alta calidad. Todo en uno, diseña, cotiza y compra. 100% personalizable, hazlo a tu manera."
-              className="absolute z-[2]"
-              style={{ left: "50.700%", top: "50.199%", width: "34.314%", height: "31.740%" }}
-            />
-          </div>
+          {/* Destaca tu diseño: composición de las 5 capas exportadas de Figma, montadas dentro de un único SVG maestro con el viewBox nativo de Rectangle 33 (714x753). Cada capa usa sus coordenadas y tamaño exactos de Figma (escala 1:1, sin estirar), y un clipPath con el path real de Rectangle 33 (esquina superior izq. de 150px, esquinas inferiores de 6px, superior derecha recta) recorta todo el contenido exactamente a la forma de la tarjeta, para que nada sobresalga sin depender de un overflow:hidden rectangular */}
+          <svg
+            viewBox="0 0 714 753"
+            className="w-full h-auto block"
+            role="img"
+            aria-label="Destaca tu diseño con nuestros productos. Obtén calidad que resalte tu identidad. Diseño premium, acabados de alta calidad. Todo en uno, diseña, cotiza y compra. 100% personalizable, hazlo a tu manera."
+          >
+            <defs>
+              <clipPath id="destacaCardClip">
+                <path d="M0 150C0 67.1573 67.1573 0 150 0H714V747C714 750.314 711.314 753 708 753H6C2.68629 753 0 750.314 0 747V150Z" />
+              </clipPath>
+            </defs>
+            <g clipPath="url(#destacaCardClip)">
+              <path
+                d="M0 150C0 67.1573 67.1573 0 150 0H714V747C714 750.314 711.314 753 708 753H6C2.68629 753 0 750.314 0 747V150Z"
+                fill="white"
+              />
+              {/* imagen de producto: alineada por su borde inferior con el borde inferior de Rectangle 33 (fix de Figma para que el pedestal no sobresalga) */}
+              <image
+                href="/Home/DESTACA%20TU%20DISE%C3%91O/IMAGEN%20DE%20PRODUCTOS.svg"
+                x="-80"
+                y="156"
+                width="799"
+                height="597"
+              />
+              <image
+                href="/Home/DESTACA%20TU%20DISE%C3%91O/Destaca%20tu%20dise%C3%B1o%20con%20nuestros%20productos.svg"
+                x="107"
+                y="80"
+                width="500"
+                height="99"
+              />
+              <image
+                href="/Home/DESTACA%20TU%20DISE%C3%91O/Obt%C3%A9n%20calidad%20que%20resalte%20tu%20identidad..svg"
+                x="107"
+                y="206"
+                width="418"
+                height="68"
+              />
+              <image
+                href="/Home/DESTACA%20TU%20DISE%C3%91O/ICONOS%20Y%20TEXTO.svg"
+                x="362"
+                y="378"
+                width="245"
+                height="239"
+              />
+            </g>
+          </svg>
         </div>
       </section>
 
