@@ -27,15 +27,18 @@ function PaletteIcon() {
 
 type Feature = {
   icon: ReactNode;
-  lineWidth: number;
   title: string;
   description: ReactNode;
 };
 
+// Longitud de línea compartida por los tres bloques (tomada del primer bloque,
+// "Diseño premium", como referencia única) para que los tres círculos queden
+// alineados en una sola columna vertical y los tres textos inicien en la misma X.
+const LINE_WIDTH = 42.5;
+
 const FEATURES: Feature[] = [
   {
     icon: <BadgeIcon />,
-    lineWidth: 42.5,
     title: "Diseño premium",
     description: (
       <>
@@ -45,13 +48,11 @@ const FEATURES: Feature[] = [
   },
   {
     icon: <CheckIcon />,
-    lineWidth: 82,
     title: "Todo en uno",
     description: "Diseña, cotiza y compra.",
   },
   {
     icon: <PaletteIcon />,
-    lineWidth: 49.5,
     title: "100% personalizable",
     description: (
       <>
@@ -64,9 +65,10 @@ const FEATURES: Feature[] = [
 // Cada fila es un componente independiente (línea + círculo + icono + título + descripción)
 // alineado únicamente con Flexbox: display:flex + align-items:center en la fila, y
 // display:flex + flex-direction:column + justify-content:center en el bloque de texto.
-// No hay left/top ni coordenadas manuales por elemento; el ancho de la línea es el único
-// valor que varía por fila (igual que en Figma, donde cada línea conecta con un punto
-// distinto de la botella), y los tres círculos comparten exactamente el mismo tamaño.
+// No hay left/top ni coordenadas manuales por elemento, y las tres filas comparten
+// exactamente la misma geometría (LINE_WIDTH, tamaño de círculo, gap al texto), por lo
+// que los tres círculos quedan alineados en una sola columna y los tres bloques de texto
+// inician en la misma X, formando una retícula perfectamente alineada.
 export default function DestacaFeatures() {
   return (
     <div className="flex h-full w-full flex-col justify-center gap-[58px]">
@@ -74,7 +76,7 @@ export default function DestacaFeatures() {
         <div key={feature.title} className="flex items-center">
           <span
             className="h-0.5 shrink-0 rounded-full bg-[#BBEEEC]"
-            style={{ width: `${feature.lineWidth}px` }}
+            style={{ width: `${LINE_WIDTH}px` }}
             aria-hidden="true"
           />
           <span className="relative flex h-[36.5px] w-[36.5px] shrink-0 items-center justify-center rounded-full border-[0.5px] border-[#7FDED9] bg-[#BBEEEC]">
