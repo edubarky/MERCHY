@@ -185,11 +185,11 @@ export default async function HomePage() {
                 d="M0 150C0 67.1573 67.1573 0 150 0H714V747C714 750.314 711.314 753 708 753H6C2.68629 753 0 750.314 0 747V150Z"
                 fill="white"
               />
-              {/* imagen de producto: alineada por su borde inferior con el borde inferior de Rectangle 33 (fix de Figma para que el pedestal no sobresalga) */}
+              {/* grupo pedestal+productos+glow+iconos desplazado 111px hacia abajo como una sola unidad (sin reescalar) para anclar el contenido visible real (el asset tiene ~117px de relleno transparente bajo el pedestal) contra el borde inferior real de Rectangle 33, dejando solo un margen pequeño; el título/subtítulo NO se mueve */}
               <image
                 href="/Home/DESTACA%20TU%20DISE%C3%91O/IMAGEN%20DE%20PRODUCTOS.svg"
                 x="-80"
-                y="156"
+                y="267"
                 width="799"
                 height="597"
               />
@@ -210,7 +210,7 @@ export default async function HomePage() {
               <image
                 href="/Home/DESTACA%20TU%20DISE%C3%91O/ICONOS%20Y%20TEXTO.svg"
                 x="362"
-                y="378"
+                y="489"
                 width="245"
                 height="239"
               />
