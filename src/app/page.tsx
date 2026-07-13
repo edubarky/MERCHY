@@ -168,35 +168,13 @@ export default async function HomePage() {
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           <FavoritosSection products={safeProducts} priceTiers={safeTiers} categories={safeCategories} />
 
-          {/* Destaca tu diseño */}
-          <div className="flex flex-col gap-6 lg:pl-4 pt-2">
-            <div>
-              <h2 className="font-display font-bold text-3xl text-foreground leading-tight">
-                Destaca tu diseño con{" "}
-                <span className="text-primary">nuestros productos</span>
-              </h2>
-              <p className="mt-3 text-foreground font-medium">
-                Obtén <strong>calidad</strong> que resalte tu identidad.
-              </p>
-            </div>
-            {/* Feature image placeholder */}
-            <div className="relative w-full h-64 bg-gradient-to-br from-gray-100 to-gray-200 rounded-card overflow-hidden flex items-center justify-center">
-              <span className="text-8xl">🧴</span>
-              {/* Callouts */}
-              <div className="absolute right-4 top-6 flex flex-col gap-3">
-                {[
-                  { title: "Diseño premium", desc: "Acabados de alta calidad." },
-                  { title: "Todo en uno", desc: "Diseña, cotiza y compra." },
-                  { title: "100% personalizable", desc: "Hazlo a tu manera." },
-                ].map((f) => (
-                  <div key={f.title} className="bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm border border-ui-border">
-                    <p className="text-xs font-semibold text-primary">{f.title}</p>
-                    <p className="text-[10px] text-ui-gray">{f.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          {/* Destaca tu diseño: reproducción exacta del diseño de Figma vía el SVG exportado completo (fondo, títulos, íconos e imagen de producto ya vienen compuestos en el archivo) */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/Home/DESTACA%20TU%20DISE%C3%91O/DESTACA%20TU%20DISE%C3%91O%20CON%20NUESTROS%20PRODUCTOS.svg"
+            alt="Destaca tu diseño con nuestros productos. Obtén calidad que resalte tu identidad."
+            className="w-full h-auto"
+          />
         </div>
       </section>
 
