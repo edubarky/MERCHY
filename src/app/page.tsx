@@ -211,7 +211,7 @@ export default async function HomePage() {
                 href="/Home/DESTACA%20TU%20DISE%C3%91O/ICONOS%20Y%20TEXTO.svg"
                 x="362"
                 y="504"
-                width="245"
+                width="270"
                 height="239"
               />
             </g>
