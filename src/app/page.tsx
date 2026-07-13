@@ -207,8 +207,8 @@ export default async function HomePage() {
                 width="418"
                 height="68"
               />
-              {/* bloque de beneficios: reconstruido como 3 componentes Flexbox independientes (línea + círculo + icono + título + descripción) en vez de la imagen SVG plana; vive en un foreignObject para heredar el mismo escalado proporcional (viewBox) que el resto de la composición, así nunca se estira de forma independiente */}
-              <foreignObject x="362" y="504" width="300" height="239">
+              {/* bloque de beneficios: componentes Flexbox (línea + círculo + icono + título + descripción) montados en un foreignObject para heredar el mismo escalado proporcional (viewBox) que el resto de la composición. x desplazado +28px (362->390) para mover TODO el bloque como un solo grupo hacia la derecha, igual que en Figma */}
+              <foreignObject x="390" y="504" width="300" height="239">
                 <div style={{ width: "100%", height: "100%" }}>
                   <DestacaFeatures />
                 </div>

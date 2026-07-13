@@ -31,10 +31,10 @@ type Feature = {
   description: ReactNode;
 };
 
-// Longitud de línea compartida por los tres bloques (tomada del primer bloque,
-// "Diseño premium", como referencia única) para que los tres círculos queden
-// alineados en una sola columna vertical y los tres textos inicien en la misma X.
-const LINE_WIDTH = 42.5;
+// Longitud de línea compartida por los tres bloques (alargada respecto a la versión
+// anterior, que quedaba corta) para que los tres círculos queden alineados en una sola
+// columna vertical y los tres textos inicien en la misma X.
+const LINE_WIDTH = 65;
 
 const FEATURES: Feature[] = [
   {
