@@ -27,18 +27,30 @@ function PaletteIcon() {
 
 type Feature = {
   icon: ReactNode;
+  /** desplazamiento del icono dentro del círculo (left,top en px), fijo por icono, copiado del bbox real del SVG de Figma */
+  iconOffset: { left: number; top: number };
   title: string;
   description: ReactNode;
 };
 
-// Longitud de línea compartida por los tres bloques (alargada respecto a la versión
-// anterior, que quedaba corta) para que los tres círculos queden alineados en una sola
-// columna vertical y los tres textos inicien en la misma X.
-const LINE_WIDTH = 65;
+// ── Geometría de referencia (tomada del PRIMER beneficio, "Diseño premium", del SVG
+// original de Figma) ── Los otros dos beneficios son copias EXACTAS de estos mismos
+// valores; lo único que cambia entre beneficios es la traslación vertical (ROW_HEIGHT).
+// No hay flexbox, no hay justify-content/space-between, no hay cálculo de distribución:
+// cada elemento tiene su left/top fijo, repetido tal cual en los tres bloques.
+const LINE_WIDTH = 65; // longitud de línea, igual en los tres beneficios
+const LINE_HEIGHT = 2;
+const CIRCLE_SIZE = 36.5; // diámetro, igual en los tres beneficios
+const LINE_TOP = (CIRCLE_SIZE - LINE_HEIGHT) / 2; // centra la línea sobre el eje del círculo
+const CIRCLE_LEFT = LINE_WIDTH; // la línea termina exactamente en el borde izquierdo del círculo
+const CIRCLE_TO_TEXT_GAP = 20; // mismo espacio círculo→texto en los tres beneficios
+const TEXT_LEFT = CIRCLE_LEFT + CIRCLE_SIZE + CIRCLE_TO_TEXT_GAP; // misma coordenada X en los tres títulos y descripciones
+const ROW_HEIGHT = 94.5; // misma separación vertical entre los tres beneficios
 
 const FEATURES: Feature[] = [
   {
     icon: <BadgeIcon />,
+    iconOffset: { left: 9.75, top: 8.75 },
     title: "Diseño premium",
     description: (
       <>
@@ -48,11 +60,13 @@ const FEATURES: Feature[] = [
   },
   {
     icon: <CheckIcon />,
+    iconOffset: { left: 9.25, top: 9.04 },
     title: "Todo en uno",
     description: "Diseña, cotiza y compra.",
   },
   {
     icon: <PaletteIcon />,
+    iconOffset: { left: 7.75, top: 7.75 },
     title: "100% personalizable",
     description: (
       <>
@@ -62,34 +76,38 @@ const FEATURES: Feature[] = [
   },
 ];
 
-// Cada fila es un componente independiente (línea + círculo + icono + título + descripción)
-// alineado únicamente con Flexbox: display:flex + align-items:center en la fila, y
-// display:flex + flex-direction:column + justify-content:center en el bloque de texto.
-// No hay left/top ni coordenadas manuales por elemento, y las tres filas comparten
-// exactamente la misma geometría (LINE_WIDTH, tamaño de círculo, gap al texto), por lo
-// que los tres círculos quedan alineados en una sola columna y los tres bloques de texto
-// inician en la misma X, formando una retícula perfectamente alineada.
 export default function DestacaFeatures() {
   return (
-    <div className="flex h-full w-full flex-col justify-center gap-[58px]">
-      {FEATURES.map((feature) => (
-        <div key={feature.title} className="flex items-center">
+    <div className="relative h-full w-full">
+      {FEATURES.map((feature, i) => (
+        <div
+          key={feature.title}
+          className="absolute left-0"
+          style={{ top: `${i * ROW_HEIGHT}px`, width: "100%", height: `${CIRCLE_SIZE}px` }}
+        >
           <span
-            className="h-0.5 shrink-0 rounded-full bg-[#BBEEEC]"
-            style={{ width: `${LINE_WIDTH}px` }}
+            className="absolute rounded-full bg-[#BBEEEC]"
+            style={{ left: 0, top: `${LINE_TOP}px`, width: `${LINE_WIDTH}px`, height: `${LINE_HEIGHT}px` }}
             aria-hidden="true"
           />
-          <span className="relative flex h-[36.5px] w-[36.5px] shrink-0 items-center justify-center rounded-full border-[0.5px] border-[#7FDED9] bg-[#BBEEEC]">
-            <span className="absolute -inset-1 -z-10 rounded-full bg-[#7FDED9]/20 blur-[2px]" aria-hidden="true" />
-            {feature.icon}
+          <span
+            className="absolute rounded-full border-[0.5px] border-[#7FDED9] bg-[#BBEEEC]"
+            style={{ left: `${CIRCLE_LEFT}px`, top: 0, width: `${CIRCLE_SIZE}px`, height: `${CIRCLE_SIZE}px` }}
+          >
+            <span
+              className="absolute rounded-full bg-[#7FDED9]/20 blur-[2px]"
+              style={{ left: -4, top: -4, right: -4, bottom: -4 }}
+              aria-hidden="true"
+            />
+            <span className="absolute" style={{ left: `${feature.iconOffset.left}px`, top: `${feature.iconOffset.top}px` }}>
+              {feature.icon}
+            </span>
           </span>
-          <div className="flex flex-col justify-center gap-1 whitespace-nowrap pl-5">
-            <span className="font-sans text-base font-bold leading-none text-[#02BBBC]">
-              {feature.title}
-            </span>
-            <span className="font-sans text-[13px] leading-tight text-[#3C3C3C]">
+          <div className="absolute whitespace-nowrap" style={{ left: `${TEXT_LEFT}px`, top: 0 }}>
+            <div className="font-sans text-base font-bold leading-none text-[#02BBBC]">{feature.title}</div>
+            <div className="font-sans text-[13px] leading-tight text-[#3C3C3C]" style={{ marginTop: "4px" }}>
               {feature.description}
-            </span>
+            </div>
           </div>
         </div>
       ))}
