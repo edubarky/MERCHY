@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 function BadgeIcon() {
@@ -28,7 +28,7 @@ function PaletteIcon() {
   );
 }
 
-type FeatureIcon = {
+type FeatureContent = {
   render: ReactNode;
   /** tamaño natural del icono (para centrarlo dentro del círculo automáticamente) */
   size: { width: number; height: number };
@@ -36,7 +36,7 @@ type FeatureIcon = {
   description: ReactNode;
 };
 
-const FEATURE_ICONS: FeatureIcon[] = [
+const FEATURE_CONTENT: FeatureContent[] = [
   {
     render: <BadgeIcon />,
     size: { width: 17, height: 19 },
@@ -65,78 +65,195 @@ const FEATURE_ICONS: FeatureIcon[] = [
   },
 ];
 
-// Espacio interno reservado arriba de cada fila (dentro del foreignObject) para que
-// TEXT_TOP pueda ir muy negativo sin recortarse contra el borde del foreignObject.
-const ROW_TOP_OFFSET = 300;
-// Contenedor del foreignObject: muy generoso a propósito para que los rangos ampliados
-// de los controles (ver SLIDERS) quepan sin recortarse; no es editable, es solo el lienzo.
-const FO_WIDTH = 1200;
-const FO_HEIGHT = 1000;
-
-// Tamaño real de la tarjeta (el viewBox del <svg> maestro en page.tsx, "Rectangle 33").
-// Cualquier círculo cuyo top/bottom quede fuera de este rango en Y se recorta y
-// desaparece, aunque en el editor la fila exista más abajo en el documento.
-const CARD_WIDTH = 714;
-const CARD_HEIGHT = 753;
-
-type Geometry = {
-  foX: number;
-  foY: number;
-  lineWidth: number;
+// Cada beneficio se posiciona con coordenadas ABSOLUTAS e INDEPENDIENTES, en el mismo
+// sistema de coordenadas que el resto de la composición (0,0 = esquina superior izq. de
+// la tarjeta 714x753). Nada se calcula a partir de un grupo compartido: mover el
+// beneficio 1 no afecta al 2 ni al 3.
+type BenefitGeometry = {
+  iconX: number;
+  iconY: number;
   circleSize: number;
-  circleToTextGap: number;
-  textTop: number;
-  textOffsetX: number;
-  rowHeight: number;
+  lineLength: number;
+  lineThickness: number;
+  textX: number;
+  textY: number;
+  titleDescGap: number;
 };
 
-// Geometría restaurada (commit f7f88b7, antes de agrandar el contenedor por error), con
-// un ajuste fino de foY (204 -> 189, -15px) para que el grupo suba ligeramente: el primer
-// beneficio queda a la altura media del cuerpo de la botella, el segundo justo arriba del
-// borde superior del pedestal, y el tercero montado sobre el pedestal.
-const DEFAULT_GEOMETRY: Geometry = {
-  foX: 390,
-  foY: 189, // 489 (posición absoluta real) - ROW_TOP_OFFSET(300) = 189
-  lineWidth: 65,
-  circleSize: 36.5,
-  circleToTextGap: 20,
-  textTop: -14,
-  textOffsetX: 0,
-  rowHeight: 94.5,
-};
-
-// Rangos muy amplios (±1000px) a propósito: ningún control debe volver a topar con su
-// límite. El paso del slider es más grueso (movimientos rápidos); para precisión fina
-// se usa el campo numérico o los botones -10/-1/+1/+10 de cada fila.
-const SLIDERS: { key: keyof Geometry; label: string; min: number; max: number; step: number }[] = [
-  { key: "foX", label: "Posición X del grupo", min: -1000, max: 1000, step: 1 },
-  { key: "foY", label: "Posición Y del grupo", min: -1000, max: 1000, step: 1 },
-  { key: "lineWidth", label: "Longitud de la línea", min: -1000, max: 1000, step: 1 },
-  { key: "circleSize", label: "Tamaño del círculo", min: -1000, max: 1000, step: 1 },
-  { key: "circleToTextGap", label: "Espacio círculo → texto", min: -1000, max: 1000, step: 1 },
-  { key: "textTop", label: "Texto arriba/abajo (vs. centro del icono)", min: -1000, max: 1000, step: 1 },
-  { key: "textOffsetX", label: "Texto izquierda/derecha (extra)", min: -1000, max: 1000, step: 1 },
-  { key: "rowHeight", label: "Separación vertical entre beneficios", min: -1000, max: 1000, step: 1 },
+// Valores por defecto = la posición actualmente publicada (equivalentes al grupo
+// compartido anterior: foX=390/foY=189/lineWidth=65/circleSize=36.5/gap=20/textTop=-14/
+// rowHeight=94.5), ya traducidos a coordenadas absolutas independientes por beneficio.
+const DEFAULT_BENEFITS: BenefitGeometry[] = [
+  { iconX: 455, iconY: 489, circleSize: 36.5, lineLength: 65, lineThickness: 2, textX: 511.5, textY: 475, titleDescGap: 4 },
+  { iconX: 455, iconY: 583.5, circleSize: 36.5, lineLength: 65, lineThickness: 2, textX: 511.5, textY: 569.5, titleDescGap: 4 },
+  { iconX: 455, iconY: 678, circleSize: 36.5, lineLength: 65, lineThickness: 2, textX: 511.5, textY: 664, titleDescGap: 4 },
 ];
 
-const STORAGE_KEY = "destacaFeaturesEditor";
+// Relleno interno del foreignObject: da 1000px de libertad en cualquier dirección para
+// sacar un elemento del área visible sin que el propio foreignObject lo recorte. Las
+// coordenadas mostradas/editadas en el panel siguen siendo las del sistema 0-714/0-753
+// de la tarjeta; PAD solo se suma al montar el DOM, nunca se ve ni se edita.
+const PAD = 1000;
+const FO_X = -PAD;
+const FO_Y = -PAD;
+const FO_WIDTH = 714 + PAD * 2;
+const FO_HEIGHT = 753 + PAD * 2;
 
-/** Filas cuyo círculo queda total o parcialmente fuera del alto/ancho real de la tarjeta. */
-function getOverflowingRows(values: Geometry): number[] {
-  const out: number[] = [];
-  FEATURE_ICONS.forEach((_, i) => {
-    const top = values.foY + ROW_TOP_OFFSET + i * values.rowHeight;
-    const bottom = top + values.circleSize;
-    const left = values.foX + values.lineWidth;
-    const right = left + values.circleSize;
-    if (top < 0 || bottom > CARD_HEIGHT || left < 0 || right > CARD_WIDTH) {
-      out.push(i);
-    }
-  });
-  return out;
+// Sin límites: rango de slider deliberadamente enorme y sin min/max en el campo numérico,
+// para que ningún control vuelva a topar ni bloquee sacar un elemento del área visible.
+const FIELD_MIN = -5000;
+const FIELD_MAX = 5000;
+
+const POSITION_FIELDS: { key: keyof BenefitGeometry; label: string }[] = [
+  { key: "iconX", label: "X del icono" },
+  { key: "iconY", label: "Y del icono" },
+  { key: "textX", label: "X del texto" },
+  { key: "textY", label: "Y del texto" },
+  { key: "lineLength", label: "Longitud de la línea" },
+];
+const SIZE_FIELDS: { key: keyof BenefitGeometry; label: string }[] = [
+  { key: "circleSize", label: "Tamaño del círculo" },
+  { key: "lineThickness", label: "Grosor de la línea" },
+];
+const TEXT_FIELDS: { key: keyof BenefitGeometry; label: string }[] = [
+  { key: "titleDescGap", label: "Separación título → descripción" },
+];
+
+const STORAGE_KEY = "destacaFeaturesEditorV2";
+
+function NumberControl({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const bumpButtonStyle: CSSProperties = {
+    background: "rgba(255,255,255,0.08)",
+    color: "white",
+    border: "1px solid rgba(255,255,255,0.25)",
+    borderRadius: 6,
+    padding: "4px 6px",
+    fontSize: 12,
+    cursor: "pointer",
+    minWidth: 30,
+  };
+  const bump = (delta: number) => onChange(Math.round((value + delta) * 10) / 10);
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 4, opacity: 0.9 }}>{label}</div>
+      <input
+        type="range"
+        min={FIELD_MIN}
+        max={FIELD_MAX}
+        step={0.5}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        style={{ width: "100%" }}
+      />
+      <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
+        <button onClick={() => bump(-10)} style={bumpButtonStyle}>
+          -10
+        </button>
+        <button onClick={() => bump(-1)} style={bumpButtonStyle}>
+          -1
+        </button>
+        {/* sin min/max: se puede escribir cualquier número, incluyendo negativos */}
+        <input
+          type="number"
+          value={value}
+          onChange={(e) => onChange(e.target.value === "" || e.target.value === "-" ? 0 : parseFloat(e.target.value))}
+          style={{
+            width: 72,
+            background: "rgba(255,255,255,0.08)",
+            color: "white",
+            border: "1px solid rgba(255,255,255,0.25)",
+            borderRadius: 6,
+            padding: "4px 6px",
+            fontSize: 13,
+            textAlign: "center",
+          }}
+        />
+        <button onClick={() => bump(1)} style={bumpButtonStyle}>
+          +1
+        </button>
+        <button onClick={() => bump(10)} style={bumpButtonStyle}>
+          +10
+        </button>
+      </div>
+    </div>
+  );
 }
 
-function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: Geometry) => void }) {
+function BenefitSection({
+  index,
+  geometry,
+  update,
+}: {
+  index: number;
+  geometry: BenefitGeometry;
+  update: (patch: Partial<BenefitGeometry>) => void;
+}) {
+  // "Separación icono → texto" es una forma alterna de mover textX (no es un valor
+  // guardado aparte): al escribirla, recalcula textX = iconX + circleSize + separación.
+  const iconTextGap = geometry.textX - geometry.iconX - geometry.circleSize;
+
+  return (
+    <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.15)" }}>
+      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: "#02BBBC" }}>
+        Beneficio {index + 1}: {FEATURE_CONTENT[index].title}
+      </div>
+      <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
+        Posición
+      </div>
+      {POSITION_FIELDS.map((f) => (
+        <NumberControl
+          key={f.key}
+          label={f.label}
+          value={geometry[f.key]}
+          onChange={(v) => update({ [f.key]: v } as Partial<BenefitGeometry>)}
+        />
+      ))}
+      <div style={{ fontSize: 11, opacity: 0.6, margin: "8px 0", textTransform: "uppercase", letterSpacing: 0.5 }}>
+        Tamaño
+      </div>
+      {SIZE_FIELDS.map((f) => (
+        <NumberControl
+          key={f.key}
+          label={f.label}
+          value={geometry[f.key]}
+          onChange={(v) => update({ [f.key]: v } as Partial<BenefitGeometry>)}
+        />
+      ))}
+      <div style={{ fontSize: 11, opacity: 0.6, margin: "8px 0", textTransform: "uppercase", letterSpacing: 0.5 }}>
+        Texto
+      </div>
+      {TEXT_FIELDS.map((f) => (
+        <NumberControl
+          key={f.key}
+          label={f.label}
+          value={geometry[f.key]}
+          onChange={(v) => update({ [f.key]: v } as Partial<BenefitGeometry>)}
+        />
+      ))}
+      <NumberControl
+        label="Separación icono → texto"
+        value={Math.round(iconTextGap * 10) / 10}
+        onChange={(v) => update({ textX: geometry.iconX + geometry.circleSize + v })}
+      />
+    </div>
+  );
+}
+
+function EditorPanel({
+  values,
+  setValues,
+}: {
+  values: BenefitGeometry[];
+  setValues: (v: BenefitGeometry[]) => void;
+}) {
   const [copied, setCopied] = useState(false);
   const [cardRect, setCardRect] = useState<{ top: number; left: number; width: number; height: number } | null>(
     null
@@ -153,7 +270,6 @@ function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: G
     update();
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
-    // recalcula también en cada frame corto por si el layout se mueve al cambiar valores
     const interval = window.setInterval(update, 250);
     return () => {
       window.removeEventListener("resize", update);
@@ -162,28 +278,33 @@ function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: G
     };
   }, []);
 
-  const overflowingRows = getOverflowingRows(values);
+  const updateBenefit = (i: number, patch: Partial<BenefitGeometry>) => {
+    setValues(values.map((v, idx) => (idx === i ? { ...v, ...patch } : v)));
+  };
 
   const copyValues = () => {
-    const code = [
-      "// Valores copiados desde el editor visual (?editDestaca=1)",
-      `foX = ${values.foX}`,
-      `foY = ${values.foY}`,
-      `lineWidth = ${values.lineWidth}`,
-      `circleSize = ${values.circleSize}`,
-      `circleToTextGap = ${values.circleToTextGap}`,
-      `textTop = ${values.textTop}`,
-      `textOffsetX = ${values.textOffsetX}`,
-      `rowHeight = ${values.rowHeight}`,
-    ].join("\n");
-    navigator.clipboard.writeText(code).then(() => {
+    const code = values
+      .map(
+        (v, i) =>
+          `// Beneficio ${i + 1}: ${FEATURE_CONTENT[i].title}\n` +
+          `iconX = ${v.iconX}\n` +
+          `iconY = ${v.iconY}\n` +
+          `circleSize = ${v.circleSize}\n` +
+          `lineLength = ${v.lineLength}\n` +
+          `lineThickness = ${v.lineThickness}\n` +
+          `textX = ${v.textX}\n` +
+          `textY = ${v.textY}\n` +
+          `titleDescGap = ${v.titleDescGap}`
+      )
+      .join("\n\n");
+    navigator.clipboard.writeText(`// Valores copiados desde el editor visual (?editDestaca=1)\n\n${code}`).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
   };
 
   const reset = () => {
-    setValues(DEFAULT_GEOMETRY);
+    setValues(DEFAULT_BENEFITS);
     window.localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -198,7 +319,7 @@ function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: G
               left: cardRect.left,
               width: cardRect.width,
               height: cardRect.height,
-              border: `3px dashed ${overflowingRows.length > 0 ? "#ff4d4f" : "#02BBBC"}`,
+              border: "3px dashed #02BBBC",
               borderRadius: 24,
               pointerEvents: "none",
               zIndex: 999998,
@@ -208,142 +329,68 @@ function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: G
           document.body
         )}
       {createPortal(
-    <div
-      style={{
-        position: "fixed",
-        top: 16,
-        right: 16,
-        zIndex: 999999,
-        width: 320,
-        maxHeight: "calc(100vh - 32px)",
-        overflowY: "auto",
-        background: "rgba(20, 24, 28, 0.94)",
-        color: "white",
-        borderRadius: 12,
-        padding: 16,
-        fontFamily: "system-ui, sans-serif",
-        fontSize: 13,
-        boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
-      }}
-    >
-      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Editor: bloque de beneficios</div>
-      <div style={{ opacity: 0.7, marginBottom: 12, lineHeight: 1.4 }}>
-        Ajusta con el slider, el campo numérico o los botones. El borde punteado sobre la
-        tarjeta marca su límite real: lo que quede fuera se recorta y no se ve. Se guarda
-        automáticamente en este navegador.
-      </div>
-      {overflowingRows.length > 0 && (
         <div
           style={{
-            background: "rgba(255,77,79,0.18)",
-            border: "1px solid #ff4d4f",
-            borderRadius: 8,
-            padding: "8px 10px",
-            marginBottom: 12,
-            lineHeight: 1.4,
+            position: "fixed",
+            top: 16,
+            right: 16,
+            zIndex: 999999,
+            width: 340,
+            maxHeight: "calc(100vh - 32px)",
+            overflowY: "auto",
+            background: "rgba(20, 24, 28, 0.94)",
+            color: "white",
+            borderRadius: 12,
+            padding: 16,
+            fontFamily: "system-ui, sans-serif",
+            fontSize: 13,
+            boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
           }}
         >
-          ⚠️ {overflowingRows.map((i) => `"${FEATURE_ICONS[i].title}"`).join(" y ")}{" "}
-          {overflowingRows.length > 1 ? "quedan" : "queda"} fuera del borde de la tarjeta y no{" "}
-          {overflowingRows.length > 1 ? "se verán" : "se verá"} en la página. Ajusta &quot;Posición
-          Y del grupo&quot; o &quot;Separación vertical entre beneficios&quot; hasta que el borde
-          punteado quede verde.
-        </div>
-      )}
-      {SLIDERS.map((s) => {
-        const bumpButtonStyle: CSSProperties = {
-          background: "rgba(255,255,255,0.08)",
-          color: "white",
-          border: "1px solid rgba(255,255,255,0.25)",
-          borderRadius: 6,
-          padding: "4px 6px",
-          fontSize: 12,
-          cursor: "pointer",
-          minWidth: 30,
-        };
-        const bump = (delta: number) =>
-          setValues({ ...values, [s.key]: Math.round((values[s.key] + delta) * 10) / 10 });
-        return (
-          <div key={s.key} style={{ marginBottom: 14 }}>
-            <div style={{ marginBottom: 4 }}>{s.label}</div>
-            <input
-              type="range"
-              min={s.min}
-              max={s.max}
-              step={s.step}
-              value={values[s.key]}
-              onChange={(e) => setValues({ ...values, [s.key]: parseFloat(e.target.value) })}
-              style={{ width: "100%" }}
-            />
-            <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
-              <button onClick={() => bump(-10)} style={bumpButtonStyle}>
-                -10
-              </button>
-              <button onClick={() => bump(-1)} style={bumpButtonStyle}>
-                -1
-              </button>
-              <input
-                type="number"
-                value={values[s.key]}
-                onChange={(e) =>
-                  setValues({ ...values, [s.key]: e.target.value === "" ? 0 : parseFloat(e.target.value) })
-                }
-                style={{
-                  width: 68,
-                  background: "rgba(255,255,255,0.08)",
-                  color: "white",
-                  border: "1px solid rgba(255,255,255,0.25)",
-                  borderRadius: 6,
-                  padding: "4px 6px",
-                  fontSize: 13,
-                  textAlign: "center",
-                }}
-              />
-              <button onClick={() => bump(1)} style={bumpButtonStyle}>
-                +1
-              </button>
-              <button onClick={() => bump(10)} style={bumpButtonStyle}>
-                +10
-              </button>
-            </div>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Editor manual: beneficios</div>
+          <div style={{ opacity: 0.7, marginBottom: 16, lineHeight: 1.4 }}>
+            Cada beneficio es totalmente independiente — no hay grupo ni límites. El borde
+            punteado es solo referencia visual de la tarjeta (714×753). Se guarda
+            automáticamente en este navegador.
           </div>
-        );
-      })}
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <button
-          onClick={copyValues}
-          style={{
-            flex: 1,
-            background: "#02BBBC",
-            color: "white",
-            border: "none",
-            borderRadius: 8,
-            padding: "8px 10px",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          {copied ? "¡Copiado!" : "Copiar valores"}
-        </button>
-        <button
-          onClick={reset}
-          style={{
-            background: "transparent",
-            color: "white",
-            border: "1px solid rgba(255,255,255,0.3)",
-            borderRadius: 8,
-            padding: "8px 10px",
-            cursor: "pointer",
-          }}
-        >
-          Restablecer
-        </button>
-      </div>
-      <div style={{ opacity: 0.55, marginTop: 10, lineHeight: 1.4 }}>
-        Cuando termines, pega &quot;Copiar valores&quot; en el chat para dejarlo fijo y publicar.
-      </div>
-    </div>,
-    document.body
+          {values.map((geometry, i) => (
+            <BenefitSection key={i} index={i} geometry={geometry} update={(patch) => updateBenefit(i, patch)} />
+          ))}
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button
+              onClick={copyValues}
+              style={{
+                flex: 1,
+                background: "#02BBBC",
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                padding: "8px 10px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {copied ? "¡Copiado!" : "Copiar valores"}
+            </button>
+            <button
+              onClick={reset}
+              style={{
+                background: "transparent",
+                color: "white",
+                border: "1px solid rgba(255,255,255,0.3)",
+                borderRadius: 8,
+                padding: "8px 10px",
+                cursor: "pointer",
+              }}
+            >
+              Restablecer
+            </button>
+          </div>
+          <div style={{ opacity: 0.55, marginTop: 10, lineHeight: 1.4 }}>
+            Cuando termines, pega &quot;Copiar valores&quot; en el chat para dejarlo fijo y publicar.
+          </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -352,7 +399,7 @@ function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: G
 export default function DestacaFeatures() {
   const [editMode, setEditMode] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [values, setValues] = useState<Geometry>(DEFAULT_GEOMETRY);
+  const [values, setValues] = useState<BenefitGeometry[]>(DEFAULT_BENEFITS);
 
   useEffect(() => {
     setMounted(true);
@@ -362,7 +409,10 @@ export default function DestacaFeatures() {
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved) {
         try {
-          setValues({ ...DEFAULT_GEOMETRY, ...JSON.parse(saved) });
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length === 3) {
+            setValues(parsed);
+          }
         } catch {
           // ignora JSON inválido y usa los valores por defecto
         }
@@ -376,59 +426,62 @@ export default function DestacaFeatures() {
     }
   }, [values, editMode, mounted]);
 
-  const { foX, foY, lineWidth, circleSize, circleToTextGap, textTop, textOffsetX, rowHeight } = values;
-  const lineTop = (circleSize - 2) / 2;
-  const circleLeft = lineWidth; // la línea siempre termina exactamente en el borde izquierdo del círculo
-  const textLeft = circleLeft + circleSize + circleToTextGap + textOffsetX;
-
-  const rows = useMemo(
-    () =>
-      FEATURE_ICONS.map((f) => ({
-        ...f,
-        iconOffset: {
-          left: (circleSize - f.size.width) / 2,
-          top: (circleSize - f.size.height) / 2,
-        },
-      })),
-    [circleSize]
-  );
-
   return (
     <>
-      <foreignObject x={foX} y={foY} width={FO_WIDTH} height={FO_HEIGHT}>
+      <foreignObject x={FO_X} y={FO_Y} width={FO_WIDTH} height={FO_HEIGHT}>
         <div style={{ position: "relative", width: "100%", height: "100%" }}>
-          {rows.map((feature, i) => (
-            <div
-              key={feature.title}
-              className="absolute left-0"
-              style={{ top: `${ROW_TOP_OFFSET + i * rowHeight}px`, width: "100%", height: `${circleSize}px` }}
-            >
-              <span
-                className="absolute rounded-full bg-[#BBEEEC]"
-                style={{ left: 0, top: `${lineTop}px`, width: `${lineWidth}px`, height: "2px" }}
-                aria-hidden="true"
-              />
-              <span
-                className="absolute rounded-full border-[0.5px] border-[#7FDED9] bg-[#BBEEEC]"
-                style={{ left: `${circleLeft}px`, top: 0, width: `${circleSize}px`, height: `${circleSize}px` }}
-              >
+          {values.map((g, i) => {
+            const content = FEATURE_CONTENT[i];
+            const lineTop = g.iconY + (g.circleSize - g.lineThickness) / 2;
+            const iconOffset = {
+              left: (g.circleSize - content.size.width) / 2,
+              top: (g.circleSize - content.size.height) / 2,
+            };
+            return (
+              <div key={i}>
                 <span
-                  className="absolute rounded-full bg-[#7FDED9]/20 blur-[2px]"
-                  style={{ left: -4, top: -4, right: -4, bottom: -4 }}
+                  className="absolute rounded-full bg-[#BBEEEC]"
+                  style={{
+                    left: `${PAD + g.iconX - g.lineLength}px`,
+                    top: `${PAD + lineTop}px`,
+                    width: `${g.lineLength}px`,
+                    height: `${g.lineThickness}px`,
+                  }}
                   aria-hidden="true"
                 />
-                <span className="absolute" style={{ left: `${feature.iconOffset.left}px`, top: `${feature.iconOffset.top}px` }}>
-                  {feature.render}
+                <span
+                  className="absolute rounded-full border-[0.5px] border-[#7FDED9] bg-[#BBEEEC]"
+                  style={{
+                    left: `${PAD + g.iconX}px`,
+                    top: `${PAD + g.iconY}px`,
+                    width: `${g.circleSize}px`,
+                    height: `${g.circleSize}px`,
+                  }}
+                >
+                  <span
+                    className="absolute rounded-full bg-[#7FDED9]/20 blur-[2px]"
+                    style={{ left: -4, top: -4, right: -4, bottom: -4 }}
+                    aria-hidden="true"
+                  />
+                  <span className="absolute" style={{ left: `${iconOffset.left}px`, top: `${iconOffset.top}px` }}>
+                    {content.render}
+                  </span>
                 </span>
-              </span>
-              <div className="absolute whitespace-nowrap" style={{ left: `${textLeft}px`, top: `${textTop}px` }}>
-                <div className="font-sans text-base font-bold leading-none text-[#02BBBC]">{feature.title}</div>
-                <div className="font-sans text-[13px] leading-tight text-[#3C3C3C]" style={{ marginTop: "4px" }}>
-                  {feature.description}
+                <div
+                  className="absolute whitespace-nowrap"
+                  style={{ left: `${PAD + g.textX}px`, top: `${PAD + g.textY}px` }}
+                >
+                  <div className="font-sans text-base font-bold leading-none text-[#02BBBC]">{content.title}</div>
+                  <div
+                    className="font-sans text-[13px] leading-tight text-[#3C3C3C]"
+                    style={{ marginTop: `${g.titleDescGap}px` }}
+                  >
+                    {content.description}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </foreignObject>
       {mounted && editMode && <EditorPanel values={values} setValues={setValues} />}
