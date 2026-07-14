@@ -46,6 +46,14 @@ const CIRCLE_LEFT = LINE_WIDTH; // la línea termina exactamente en el borde izq
 const CIRCLE_TO_TEXT_GAP = 20; // mismo espacio círculo→texto en los tres beneficios
 const TEXT_LEFT = CIRCLE_LEFT + CIRCLE_SIZE + CIRCLE_TO_TEXT_GAP; // misma coordenada X en los tres títulos y descripciones
 const ROW_HEIGHT = 94.5; // misma separación vertical entre los tres beneficios
+// El foreignObject que contiene este componente se agrandó 20px hacia arriba (ver
+// page.tsx) únicamente para dar espacio interno; ROW_TOP_OFFSET compensa ese cambio
+// para que el círculo/línea/icono queden en la MISMA posición visual absoluta que antes.
+const ROW_TOP_OFFSET = 20;
+// El bloque de texto está desacoplado del icono: no se centra respecto al círculo.
+// Se desplaza 14px hacia arriba respecto al centro del icono para que el título
+// quede casi alineado con el borde superior del círculo, igual que en Figma.
+const TEXT_TOP = -14;
 
 const FEATURES: Feature[] = [
   {
@@ -83,7 +91,7 @@ export default function DestacaFeatures() {
         <div
           key={feature.title}
           className="absolute left-0"
-          style={{ top: `${i * ROW_HEIGHT}px`, width: "100%", height: `${CIRCLE_SIZE}px` }}
+          style={{ top: `${ROW_TOP_OFFSET + i * ROW_HEIGHT}px`, width: "100%", height: `${CIRCLE_SIZE}px` }}
         >
           <span
             className="absolute rounded-full bg-[#BBEEEC]"
@@ -103,7 +111,7 @@ export default function DestacaFeatures() {
               {feature.icon}
             </span>
           </span>
-          <div className="absolute whitespace-nowrap" style={{ left: `${TEXT_LEFT}px`, top: 0 }}>
+          <div className="absolute whitespace-nowrap" style={{ left: `${TEXT_LEFT}px`, top: `${TEXT_TOP}px` }}>
             <div className="font-sans text-base font-bold leading-none text-[#02BBBC]">{feature.title}</div>
             <div className="font-sans text-[13px] leading-tight text-[#3C3C3C]" style={{ marginTop: "4px" }}>
               {feature.description}
