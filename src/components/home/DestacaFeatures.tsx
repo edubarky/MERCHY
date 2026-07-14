@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 function BadgeIcon() {
@@ -66,12 +66,12 @@ const FEATURE_ICONS: FeatureIcon[] = [
 ];
 
 // Espacio interno reservado arriba de cada fila (dentro del foreignObject) para que
-// TEXT_TOP pueda ir bien negativo sin recortarse contra el borde del foreignObject.
-const ROW_TOP_OFFSET = 70;
-// Contenedor del foreignObject: generoso a propósito para que cualquier valor dentro
-// de los rangos de los sliders quepa sin recortarse; no es editable, es solo el lienzo.
-const FO_WIDTH = 550;
-const FO_HEIGHT = 430;
+// TEXT_TOP pueda ir muy negativo sin recortarse contra el borde del foreignObject.
+const ROW_TOP_OFFSET = 300;
+// Contenedor del foreignObject: muy generoso a propósito para que los rangos ampliados
+// de los controles (ver SLIDERS) quepan sin recortarse; no es editable, es solo el lienzo.
+const FO_WIDTH = 1200;
+const FO_HEIGHT = 1000;
 
 type Geometry = {
   foX: number;
@@ -86,7 +86,7 @@ type Geometry = {
 
 const DEFAULT_GEOMETRY: Geometry = {
   foX: 390,
-  foY: 434, // 484 antes de reservar ROW_TOP_OFFSET=70 (era 20): 504 - 70 = 434
+  foY: 204, // 504 (posición absoluta real) - ROW_TOP_OFFSET(300) = 204
   lineWidth: 65,
   circleSize: 36.5,
   circleToTextGap: 20,
@@ -95,15 +95,18 @@ const DEFAULT_GEOMETRY: Geometry = {
   rowHeight: 94.5,
 };
 
+// Rangos muy amplios (±1000px) a propósito: ningún control debe volver a topar con su
+// límite. El paso del slider es más grueso (movimientos rápidos); para precisión fina
+// se usa el campo numérico o los botones -10/-1/+1/+10 de cada fila.
 const SLIDERS: { key: keyof Geometry; label: string; min: number; max: number; step: number }[] = [
-  { key: "foX", label: "Posición X del grupo", min: 300, max: 460, step: 1 },
-  { key: "foY", label: "Posición Y del grupo", min: 380, max: 500, step: 1 },
-  { key: "lineWidth", label: "Longitud de la línea", min: 0, max: 150, step: 0.5 },
-  { key: "circleSize", label: "Tamaño del círculo", min: 20, max: 60, step: 0.5 },
-  { key: "circleToTextGap", label: "Espacio círculo → texto", min: 0, max: 60, step: 0.5 },
-  { key: "textTop", label: "Texto arriba/abajo (vs. centro del icono)", min: -70, max: 40, step: 0.5 },
-  { key: "textOffsetX", label: "Texto izquierda/derecha (extra)", min: -40, max: 40, step: 0.5 },
-  { key: "rowHeight", label: "Separación vertical entre beneficios", min: 60, max: 140, step: 0.5 },
+  { key: "foX", label: "Posición X del grupo", min: -1000, max: 1000, step: 1 },
+  { key: "foY", label: "Posición Y del grupo", min: -1000, max: 1000, step: 1 },
+  { key: "lineWidth", label: "Longitud de la línea", min: -1000, max: 1000, step: 1 },
+  { key: "circleSize", label: "Tamaño del círculo", min: -1000, max: 1000, step: 1 },
+  { key: "circleToTextGap", label: "Espacio círculo → texto", min: -1000, max: 1000, step: 1 },
+  { key: "textTop", label: "Texto arriba/abajo (vs. centro del icono)", min: -1000, max: 1000, step: 1 },
+  { key: "textOffsetX", label: "Texto izquierda/derecha (extra)", min: -1000, max: 1000, step: 1 },
+  { key: "rowHeight", label: "Separación vertical entre beneficios", min: -1000, max: 1000, step: 1 },
 ];
 
 const STORAGE_KEY = "destacaFeaturesEditor";
@@ -155,25 +158,68 @@ function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: G
     >
       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Editor: bloque de beneficios</div>
       <div style={{ opacity: 0.7, marginBottom: 12, lineHeight: 1.4 }}>
-        Mueve los sliders para ajustar. Se guarda automáticamente en este navegador.
+        Ajusta con el slider, el campo numérico o los botones. Se guarda automáticamente en
+        este navegador.
       </div>
-      {SLIDERS.map((s) => (
-        <div key={s.key} style={{ marginBottom: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span>{s.label}</span>
-            <span style={{ opacity: 0.7 }}>{values[s.key]}</span>
+      {SLIDERS.map((s) => {
+        const bumpButtonStyle: CSSProperties = {
+          background: "rgba(255,255,255,0.08)",
+          color: "white",
+          border: "1px solid rgba(255,255,255,0.25)",
+          borderRadius: 6,
+          padding: "4px 6px",
+          fontSize: 12,
+          cursor: "pointer",
+          minWidth: 30,
+        };
+        const bump = (delta: number) =>
+          setValues({ ...values, [s.key]: Math.round((values[s.key] + delta) * 10) / 10 });
+        return (
+          <div key={s.key} style={{ marginBottom: 14 }}>
+            <div style={{ marginBottom: 4 }}>{s.label}</div>
+            <input
+              type="range"
+              min={s.min}
+              max={s.max}
+              step={s.step}
+              value={values[s.key]}
+              onChange={(e) => setValues({ ...values, [s.key]: parseFloat(e.target.value) })}
+              style={{ width: "100%" }}
+            />
+            <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
+              <button onClick={() => bump(-10)} style={bumpButtonStyle}>
+                -10
+              </button>
+              <button onClick={() => bump(-1)} style={bumpButtonStyle}>
+                -1
+              </button>
+              <input
+                type="number"
+                value={values[s.key]}
+                onChange={(e) =>
+                  setValues({ ...values, [s.key]: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                }
+                style={{
+                  width: 68,
+                  background: "rgba(255,255,255,0.08)",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                  borderRadius: 6,
+                  padding: "4px 6px",
+                  fontSize: 13,
+                  textAlign: "center",
+                }}
+              />
+              <button onClick={() => bump(1)} style={bumpButtonStyle}>
+                +1
+              </button>
+              <button onClick={() => bump(10)} style={bumpButtonStyle}>
+                +10
+              </button>
+            </div>
           </div>
-          <input
-            type="range"
-            min={s.min}
-            max={s.max}
-            step={s.step}
-            value={values[s.key]}
-            onChange={(e) => setValues({ ...values, [s.key]: parseFloat(e.target.value) })}
-            style={{ width: "100%" }}
-          />
-        </div>
-      ))}
+        );
+      })}
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
         <button
           onClick={copyValues}
