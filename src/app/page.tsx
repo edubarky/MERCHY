@@ -169,21 +169,21 @@ export default async function HomePage() {
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           <FavoritosSection products={safeProducts} priceTiers={safeTiers} categories={safeCategories} />
 
-          {/* Destaca tu diseño: composición de las 5 capas exportadas de Figma, montadas dentro de un único SVG maestro con el viewBox nativo de Rectangle 33 (714x753). Cada capa usa sus coordenadas y tamaño exactos de Figma (escala 1:1, sin estirar), y un clipPath con el path real de Rectangle 33 (esquina superior izq. de 150px, esquinas inferiores de 6px, superior derecha recta) recorta todo el contenido exactamente a la forma de la tarjeta, para que nada sobresalga sin depender de un overflow:hidden rectangular */}
+          {/* Destaca tu diseño: composición de las 5 capas exportadas de Figma, montadas dentro de un único SVG maestro con el viewBox de Rectangle 33 (714x930). La tarjeta se alargó 177px por debajo del alto original de Figma (753) ÚNICAMENTE para dar espacio real al tercer beneficio; texto/producto/pedestal quedan en las mismas coordenadas absolutas de siempre (nada se movió), el lado derecho e izquierdo del marco (0-714 de ancho, radios de esquina) tampoco cambiaron, solo se extendieron las aristas rectas inferiores. Cada capa usa sus coordenadas y tamaño exactos de Figma (escala 1:1, sin estirar), y un clipPath con el path real de Rectangle 33 recorta todo el contenido exactamente a la forma de la tarjeta, para que nada sobresalga sin depender de un overflow:hidden rectangular */}
           <svg
             id="destaca-card-svg"
-            viewBox="0 0 714 753"
+            viewBox="0 0 714 930"
             className="w-full h-auto block"
             aria-label="Destaca tu diseño con nuestros productos. Obtén calidad que resalte tu identidad."
           >
             <defs>
               <clipPath id="destacaCardClip">
-                <path d="M0 150C0 67.1573 67.1573 0 150 0H714V747C714 750.314 711.314 753 708 753H6C2.68629 753 0 750.314 0 747V150Z" />
+                <path d="M0 150C0 67.1573 67.1573 0 150 0H714V924C714 927.314 711.314 930 708 930H6C2.68629 930 0 927.314 0 924V150Z" />
               </clipPath>
             </defs>
             <g clipPath="url(#destacaCardClip)">
               <path
-                d="M0 150C0 67.1573 67.1573 0 150 0H714V747C714 750.314 711.314 753 708 753H6C2.68629 753 0 750.314 0 747V150Z"
+                d="M0 150C0 67.1573 67.1573 0 150 0H714V924C714 927.314 711.314 930 708 930H6C2.68629 930 0 927.314 0 924V150Z"
                 fill="white"
               />
               {/* grupo pedestal+productos+glow+iconos desplazado 126px hacia abajo (111px base + 15px de ajuste final) como una sola unidad, sin reescalar, para que el pedestal quede apoyado justo sobre el margen inferior de la tarjeta; el título/subtítulo NO se mueve */}
