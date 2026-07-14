@@ -208,7 +208,7 @@ export default async function HomePage() {
                 width="418"
                 height="68"
               />
-              {/* bloque de beneficios: componentes con coordenadas absolutas; DestacaFeatures monta su propio <foreignObject> (para poder controlar su x/y en modo edición) y hereda el mismo escalado proporcional (viewBox) que el resto de la composición */}
+              {/* bloque de beneficios: 3 componentes con coordenadas absolutas e independientes, calibrados a mano en Figma; DestacaFeatures monta su propio <foreignObject> y hereda el mismo escalado proporcional (viewBox) que el resto de la composición */}
               <DestacaFeatures />
             </g>
           </svg>

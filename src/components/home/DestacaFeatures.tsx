@@ -1,7 +1,4 @@
-"use client";
-
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import type { ReactNode } from "react";
 
 function BadgeIcon() {
   return (
@@ -28,48 +25,15 @@ function PaletteIcon() {
   );
 }
 
-type FeatureContent = {
+type Benefit = {
   render: ReactNode;
-  /** tamaño natural del icono (para centrarlo dentro del círculo automáticamente) */
-  size: { width: number; height: number };
+  iconSize: { width: number; height: number };
   title: string;
   description: ReactNode;
-};
-
-const FEATURE_CONTENT: FeatureContent[] = [
-  {
-    render: <BadgeIcon />,
-    size: { width: 17, height: 19 },
-    title: "Diseño premium",
-    description: (
-      <>
-        Acabados de <span className="font-bold">alta calidad</span>.
-      </>
-    ),
-  },
-  {
-    render: <CheckIcon />,
-    size: { width: 18, height: 18.43 },
-    title: "Todo en uno",
-    description: "Diseña, cotiza y compra.",
-  },
-  {
-    render: <PaletteIcon />,
-    size: { width: 21, height: 21 },
-    title: "100% personalizable",
-    description: (
-      <>
-        <span className="font-bold">Hazlo</span> a tu manera.
-      </>
-    ),
-  },
-];
-
-// Cada beneficio se posiciona con coordenadas ABSOLUTAS e INDEPENDIENTES, en el mismo
-// sistema de coordenadas que el resto de la composición (0,0 = esquina superior izq. de
-// la tarjeta 714x753). Nada se calcula a partir de un grupo compartido: mover el
-// beneficio 1 no afecta al 2 ni al 3.
-type BenefitGeometry = {
+  // Geometría final, calibrada a mano por Diana con el editor visual (?editDestaca=1),
+  // en coordenadas absolutas del mismo sistema que el resto de la composición
+  // (0,0 = esquina superior izquierda de la tarjeta 714x753). Cada beneficio es
+  // independiente: no hay grupo ni fórmula compartida entre ellos.
   iconX: number;
   iconY: number;
   circleSize: number;
@@ -80,411 +44,107 @@ type BenefitGeometry = {
   titleDescGap: number;
 };
 
-// Valores por defecto = la posición actualmente publicada (equivalentes al grupo
-// compartido anterior: foX=390/foY=189/lineWidth=65/circleSize=36.5/gap=20/textTop=-14/
-// rowHeight=94.5), ya traducidos a coordenadas absolutas independientes por beneficio.
-const DEFAULT_BENEFITS: BenefitGeometry[] = [
-  { iconX: 455, iconY: 489, circleSize: 36.5, lineLength: 65, lineThickness: 2, textX: 511.5, textY: 475, titleDescGap: 4 },
-  { iconX: 455, iconY: 583.5, circleSize: 36.5, lineLength: 65, lineThickness: 2, textX: 511.5, textY: 569.5, titleDescGap: 4 },
-  { iconX: 455, iconY: 678, circleSize: 36.5, lineLength: 65, lineThickness: 2, textX: 511.5, textY: 664, titleDescGap: 4 },
+const BENEFITS: Benefit[] = [
+  {
+    render: <BadgeIcon />,
+    iconSize: { width: 17, height: 19 },
+    title: "Diseño premium",
+    description: (
+      <>
+        Acabados de <span className="font-bold">alta calidad</span>.
+      </>
+    ),
+    iconX: 491,
+    iconY: 395,
+    circleSize: 36.5,
+    lineLength: 48.5,
+    lineThickness: 4,
+    textX: 544.5,
+    textY: 394,
+    titleDescGap: 7,
+  },
+  {
+    render: <CheckIcon />,
+    iconSize: { width: 18, height: 18.43 },
+    title: "Todo en uno",
+    description: "Diseña, cotiza y compra.",
+    iconX: 509.5,
+    iconY: 494.5,
+    circleSize: 36.5,
+    lineLength: 65,
+    lineThickness: 4.5,
+    textX: 560.5,
+    textY: 494.5,
+    titleDescGap: 4,
+  },
+  {
+    render: <PaletteIcon />,
+    iconSize: { width: 21, height: 21 },
+    title: "100% personalizable",
+    description: (
+      <>
+        <span className="font-bold">Hazlo</span> a tu manera.
+      </>
+    ),
+    iconX: 475.5,
+    iconY: 583.5,
+    circleSize: 36.5,
+    lineLength: 31.5,
+    lineThickness: 4.5,
+    textX: 532,
+    textY: 585,
+    titleDescGap: 4,
+  },
 ];
-
-// Relleno interno del foreignObject: da 1000px de libertad en cualquier dirección para
-// sacar un elemento del área visible sin que el propio foreignObject lo recorte. Las
-// coordenadas mostradas/editadas en el panel siguen siendo las del sistema 0-714/0-753
-// de la tarjeta; PAD solo se suma al montar el DOM, nunca se ve ni se edita.
-const PAD = 1000;
-const FO_X = -PAD;
-const FO_Y = -PAD;
-const FO_WIDTH = 714 + PAD * 2;
-const FO_HEIGHT = 753 + PAD * 2;
-
-// Sin límites: rango de slider deliberadamente enorme y sin min/max en el campo numérico,
-// para que ningún control vuelva a topar ni bloquee sacar un elemento del área visible.
-const FIELD_MIN = -5000;
-const FIELD_MAX = 5000;
-
-const POSITION_FIELDS: { key: keyof BenefitGeometry; label: string }[] = [
-  { key: "iconX", label: "X del icono" },
-  { key: "iconY", label: "Y del icono" },
-  { key: "textX", label: "X del texto" },
-  { key: "textY", label: "Y del texto" },
-  { key: "lineLength", label: "Longitud de la línea" },
-];
-const SIZE_FIELDS: { key: keyof BenefitGeometry; label: string }[] = [
-  { key: "circleSize", label: "Tamaño del círculo" },
-  { key: "lineThickness", label: "Grosor de la línea" },
-];
-const TEXT_FIELDS: { key: keyof BenefitGeometry; label: string }[] = [
-  { key: "titleDescGap", label: "Separación título → descripción" },
-];
-
-const STORAGE_KEY = "destacaFeaturesEditorV2";
-
-function NumberControl({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  const bumpButtonStyle: CSSProperties = {
-    background: "rgba(255,255,255,0.08)",
-    color: "white",
-    border: "1px solid rgba(255,255,255,0.25)",
-    borderRadius: 6,
-    padding: "4px 6px",
-    fontSize: 12,
-    cursor: "pointer",
-    minWidth: 30,
-  };
-  const bump = (delta: number) => onChange(Math.round((value + delta) * 10) / 10);
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ marginBottom: 4, opacity: 0.9 }}>{label}</div>
-      <input
-        type="range"
-        min={FIELD_MIN}
-        max={FIELD_MAX}
-        step={0.5}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        style={{ width: "100%" }}
-      />
-      <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
-        <button onClick={() => bump(-10)} style={bumpButtonStyle}>
-          -10
-        </button>
-        <button onClick={() => bump(-1)} style={bumpButtonStyle}>
-          -1
-        </button>
-        {/* sin min/max: se puede escribir cualquier número, incluyendo negativos */}
-        <input
-          type="number"
-          value={value}
-          onChange={(e) => onChange(e.target.value === "" || e.target.value === "-" ? 0 : parseFloat(e.target.value))}
-          style={{
-            width: 72,
-            background: "rgba(255,255,255,0.08)",
-            color: "white",
-            border: "1px solid rgba(255,255,255,0.25)",
-            borderRadius: 6,
-            padding: "4px 6px",
-            fontSize: 13,
-            textAlign: "center",
-          }}
-        />
-        <button onClick={() => bump(1)} style={bumpButtonStyle}>
-          +1
-        </button>
-        <button onClick={() => bump(10)} style={bumpButtonStyle}>
-          +10
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function BenefitSection({
-  index,
-  geometry,
-  update,
-}: {
-  index: number;
-  geometry: BenefitGeometry;
-  update: (patch: Partial<BenefitGeometry>) => void;
-}) {
-  // "Separación icono → texto" es una forma alterna de mover textX (no es un valor
-  // guardado aparte): al escribirla, recalcula textX = iconX + circleSize + separación.
-  const iconTextGap = geometry.textX - geometry.iconX - geometry.circleSize;
-
-  return (
-    <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.15)" }}>
-      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: "#02BBBC" }}>
-        Beneficio {index + 1}: {FEATURE_CONTENT[index].title}
-      </div>
-      <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-        Posición
-      </div>
-      {POSITION_FIELDS.map((f) => (
-        <NumberControl
-          key={f.key}
-          label={f.label}
-          value={geometry[f.key]}
-          onChange={(v) => update({ [f.key]: v } as Partial<BenefitGeometry>)}
-        />
-      ))}
-      <div style={{ fontSize: 11, opacity: 0.6, margin: "8px 0", textTransform: "uppercase", letterSpacing: 0.5 }}>
-        Tamaño
-      </div>
-      {SIZE_FIELDS.map((f) => (
-        <NumberControl
-          key={f.key}
-          label={f.label}
-          value={geometry[f.key]}
-          onChange={(v) => update({ [f.key]: v } as Partial<BenefitGeometry>)}
-        />
-      ))}
-      <div style={{ fontSize: 11, opacity: 0.6, margin: "8px 0", textTransform: "uppercase", letterSpacing: 0.5 }}>
-        Texto
-      </div>
-      {TEXT_FIELDS.map((f) => (
-        <NumberControl
-          key={f.key}
-          label={f.label}
-          value={geometry[f.key]}
-          onChange={(v) => update({ [f.key]: v } as Partial<BenefitGeometry>)}
-        />
-      ))}
-      <NumberControl
-        label="Separación icono → texto"
-        value={Math.round(iconTextGap * 10) / 10}
-        onChange={(v) => update({ textX: geometry.iconX + geometry.circleSize + v })}
-      />
-    </div>
-  );
-}
-
-function EditorPanel({
-  values,
-  setValues,
-}: {
-  values: BenefitGeometry[];
-  setValues: (v: BenefitGeometry[]) => void;
-}) {
-  const [copied, setCopied] = useState(false);
-  const [cardRect, setCardRect] = useState<{ top: number; left: number; width: number; height: number } | null>(
-    null
-  );
-
-  useEffect(() => {
-    function update() {
-      const svg = document.getElementById("destaca-card-svg");
-      if (svg) {
-        const r = svg.getBoundingClientRect();
-        setCardRect({ top: r.top, left: r.left, width: r.width, height: r.height });
-      }
-    }
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
-    const interval = window.setInterval(update, 250);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
-      window.clearInterval(interval);
-    };
-  }, []);
-
-  const updateBenefit = (i: number, patch: Partial<BenefitGeometry>) => {
-    setValues(values.map((v, idx) => (idx === i ? { ...v, ...patch } : v)));
-  };
-
-  const copyValues = () => {
-    const code = values
-      .map(
-        (v, i) =>
-          `// Beneficio ${i + 1}: ${FEATURE_CONTENT[i].title}\n` +
-          `iconX = ${v.iconX}\n` +
-          `iconY = ${v.iconY}\n` +
-          `circleSize = ${v.circleSize}\n` +
-          `lineLength = ${v.lineLength}\n` +
-          `lineThickness = ${v.lineThickness}\n` +
-          `textX = ${v.textX}\n` +
-          `textY = ${v.textY}\n` +
-          `titleDescGap = ${v.titleDescGap}`
-      )
-      .join("\n\n");
-    navigator.clipboard.writeText(`// Valores copiados desde el editor visual (?editDestaca=1)\n\n${code}`).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  const reset = () => {
-    setValues(DEFAULT_BENEFITS);
-    window.localStorage.removeItem(STORAGE_KEY);
-  };
-
-  return (
-    <>
-      {cardRect &&
-        createPortal(
-          <div
-            style={{
-              position: "fixed",
-              top: cardRect.top,
-              left: cardRect.left,
-              width: cardRect.width,
-              height: cardRect.height,
-              border: "3px dashed #02BBBC",
-              borderRadius: 24,
-              pointerEvents: "none",
-              zIndex: 999998,
-              boxSizing: "border-box",
-            }}
-          />,
-          document.body
-        )}
-      {createPortal(
-        <div
-          style={{
-            position: "fixed",
-            top: 16,
-            right: 16,
-            zIndex: 999999,
-            width: 340,
-            maxHeight: "calc(100vh - 32px)",
-            overflowY: "auto",
-            background: "rgba(20, 24, 28, 0.94)",
-            color: "white",
-            borderRadius: 12,
-            padding: 16,
-            fontFamily: "system-ui, sans-serif",
-            fontSize: 13,
-            boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
-          }}
-        >
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Editor manual: beneficios</div>
-          <div style={{ opacity: 0.7, marginBottom: 16, lineHeight: 1.4 }}>
-            Cada beneficio es totalmente independiente — no hay grupo ni límites. El borde
-            punteado es solo referencia visual de la tarjeta (714×753). Se guarda
-            automáticamente en este navegador.
-          </div>
-          {values.map((geometry, i) => (
-            <BenefitSection key={i} index={i} geometry={geometry} update={(patch) => updateBenefit(i, patch)} />
-          ))}
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button
-              onClick={copyValues}
-              style={{
-                flex: 1,
-                background: "#02BBBC",
-                color: "white",
-                border: "none",
-                borderRadius: 8,
-                padding: "8px 10px",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              {copied ? "¡Copiado!" : "Copiar valores"}
-            </button>
-            <button
-              onClick={reset}
-              style={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.3)",
-                borderRadius: 8,
-                padding: "8px 10px",
-                cursor: "pointer",
-              }}
-            >
-              Restablecer
-            </button>
-          </div>
-          <div style={{ opacity: 0.55, marginTop: 10, lineHeight: 1.4 }}>
-            Cuando termines, pega &quot;Copiar valores&quot; en el chat para dejarlo fijo y publicar.
-          </div>
-        </div>,
-        document.body
-      )}
-    </>
-  );
-}
 
 export default function DestacaFeatures() {
-  const [editMode, setEditMode] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [values, setValues] = useState<BenefitGeometry[]>(DEFAULT_BENEFITS);
-
-  useEffect(() => {
-    setMounted(true);
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("editDestaca") === "1") {
-      setEditMode(true);
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length === 3) {
-            setValues(parsed);
-          }
-        } catch {
-          // ignora JSON inválido y usa los valores por defecto
-        }
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (editMode && mounted) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
-    }
-  }, [values, editMode, mounted]);
-
   return (
-    <>
-      <foreignObject x={FO_X} y={FO_Y} width={FO_WIDTH} height={FO_HEIGHT}>
-        <div style={{ position: "relative", width: "100%", height: "100%" }}>
-          {values.map((g, i) => {
-            const content = FEATURE_CONTENT[i];
-            const lineTop = g.iconY + (g.circleSize - g.lineThickness) / 2;
-            const iconOffset = {
-              left: (g.circleSize - content.size.width) / 2,
-              top: (g.circleSize - content.size.height) / 2,
-            };
-            return (
-              <div key={i}>
+    <foreignObject x={0} y={0} width={760} height={760}>
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        {BENEFITS.map((b) => {
+          const lineTop = b.iconY + (b.circleSize - b.lineThickness) / 2;
+          const iconOffset = {
+            left: (b.circleSize - b.iconSize.width) / 2,
+            top: (b.circleSize - b.iconSize.height) / 2,
+          };
+          return (
+            <div key={b.title}>
+              <span
+                className="absolute rounded-full bg-[#BBEEEC]"
+                style={{
+                  left: `${b.iconX - b.lineLength}px`,
+                  top: `${lineTop}px`,
+                  width: `${b.lineLength}px`,
+                  height: `${b.lineThickness}px`,
+                }}
+                aria-hidden="true"
+              />
+              <span
+                className="absolute rounded-full border-[0.5px] border-[#7FDED9] bg-[#BBEEEC]"
+                style={{ left: `${b.iconX}px`, top: `${b.iconY}px`, width: `${b.circleSize}px`, height: `${b.circleSize}px` }}
+              >
                 <span
-                  className="absolute rounded-full bg-[#BBEEEC]"
-                  style={{
-                    left: `${PAD + g.iconX - g.lineLength}px`,
-                    top: `${PAD + lineTop}px`,
-                    width: `${g.lineLength}px`,
-                    height: `${g.lineThickness}px`,
-                  }}
+                  className="absolute rounded-full bg-[#7FDED9]/20 blur-[2px]"
+                  style={{ left: -4, top: -4, right: -4, bottom: -4 }}
                   aria-hidden="true"
                 />
-                <span
-                  className="absolute rounded-full border-[0.5px] border-[#7FDED9] bg-[#BBEEEC]"
-                  style={{
-                    left: `${PAD + g.iconX}px`,
-                    top: `${PAD + g.iconY}px`,
-                    width: `${g.circleSize}px`,
-                    height: `${g.circleSize}px`,
-                  }}
-                >
-                  <span
-                    className="absolute rounded-full bg-[#7FDED9]/20 blur-[2px]"
-                    style={{ left: -4, top: -4, right: -4, bottom: -4 }}
-                    aria-hidden="true"
-                  />
-                  <span className="absolute" style={{ left: `${iconOffset.left}px`, top: `${iconOffset.top}px` }}>
-                    {content.render}
-                  </span>
+                <span className="absolute" style={{ left: `${iconOffset.left}px`, top: `${iconOffset.top}px` }}>
+                  {b.render}
                 </span>
+              </span>
+              <div className="absolute whitespace-nowrap" style={{ left: `${b.textX}px`, top: `${b.textY}px` }}>
+                <div className="font-sans text-base font-bold leading-none text-[#02BBBC]">{b.title}</div>
                 <div
-                  className="absolute whitespace-nowrap"
-                  style={{ left: `${PAD + g.textX}px`, top: `${PAD + g.textY}px` }}
+                  className="font-sans text-[13px] leading-tight text-[#3C3C3C]"
+                  style={{ marginTop: `${b.titleDescGap}px` }}
                 >
-                  <div className="font-sans text-base font-bold leading-none text-[#02BBBC]">{content.title}</div>
-                  <div
-                    className="font-sans text-[13px] leading-tight text-[#3C3C3C]"
-                    style={{ marginTop: `${g.titleDescGap}px` }}
-                  >
-                    {content.description}
-                  </div>
+                  {b.description}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </foreignObject>
-      {mounted && editMode && <EditorPanel values={values} setValues={setValues} />}
-    </>
+            </div>
+          );
+        })}
+      </div>
+    </foreignObject>
   );
 }
