@@ -169,49 +169,57 @@ export default async function HomePage() {
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           <FavoritosSection products={safeProducts} priceTiers={safeTiers} categories={safeCategories} />
 
-          {/* Destaca tu diseño: composición de las 5 capas exportadas de Figma, montadas dentro de un único SVG maestro con el viewBox nativo de Rectangle 33 (714x753). Cada capa usa sus coordenadas y tamaño exactos de Figma (escala 1:1, sin estirar), y un clipPath con el path real de Rectangle 33 (esquina superior izq. de 150px, esquinas inferiores de 6px, superior derecha recta) recorta todo el contenido exactamente a la forma de la tarjeta, para que nada sobresalga sin depender de un overflow:hidden rectangular */}
-          <svg
-            id="destaca-card-svg"
-            viewBox="0 0 714 753"
-            className="w-full h-auto block"
-            aria-label="Destaca tu diseño con nuestros productos. Obtén calidad que resalte tu identidad."
-          >
-            <defs>
-              <clipPath id="destacaCardClip">
-                <path d="M0 150C0 67.1573 67.1573 0 150 0H714V747C714 750.314 711.314 753 708 753H6C2.68629 753 0 750.314 0 747V150Z" />
-              </clipPath>
-            </defs>
-            <g clipPath="url(#destacaCardClip)">
-              <path
-                d="M0 150C0 67.1573 67.1573 0 150 0H714V747C714 750.314 711.314 753 708 753H6C2.68629 753 0 750.314 0 747V150Z"
-                fill="white"
-              />
-              {/* grupo pedestal+productos+glow+iconos desplazado 126px hacia abajo (111px base + 15px de ajuste final) como una sola unidad, sin reescalar, para que el pedestal quede apoyado justo sobre el margen inferior de la tarjeta; el título/subtítulo NO se mueve */}
-              <image
-                href="/Home/DESTACA%20TU%20DISE%C3%91O/IMAGEN%20DE%20PRODUCTOS.svg"
-                x="-80"
-                y="282"
-                width="799"
-                height="597"
-              />
-              <image
-                href="/Home/DESTACA%20TU%20DISE%C3%91O/Destaca%20tu%20dise%C3%B1o%20con%20nuestros%20productos.svg"
-                x="107"
-                y="80"
-                width="500"
-                height="99"
-              />
-              <image
-                href="/Home/DESTACA%20TU%20DISE%C3%91O/Obt%C3%A9n%20calidad%20que%20resalte%20tu%20identidad..svg"
-                x="107"
-                y="206"
-                width="418"
-                height="68"
-              />
-              {/* bloque de beneficios: 3 componentes con coordenadas absolutas e independientes, calibrados a mano en Figma; DestacaFeatures monta su propio <foreignObject> y hereda el mismo escalado proporcional (viewBox) que el resto de la composición */}
-              <DestacaFeatures />
-            </g>
-          </svg>
+          {/* Destaca tu diseño: composición de las 5 capas exportadas de Figma, montadas dentro de un único SVG maestro con el viewBox nativo de Rectangle 33 (714x753). Cada capa usa sus coordenadas y tamaño exactos de Figma (escala 1:1, sin estirar), y un clipPath con el path real de Rectangle 33 (esquina superior izq. de 150px, esquinas inferiores de 6px, superior derecha recta) recorta todo el contenido exactamente a la forma de la tarjeta, para que nada sobresalga sin depender de un overflow:hidden rectangular. El SVG en sí NO cambió: mismo viewBox, mismo width, mismas coordenadas internas. */}
+          <div className="relative">
+            {/* Relleno: continúa el fondo blanco de la tarjeta desde su borde derecho hasta ~32px del borde del viewport, ÚNICAMENTE en pantallas más anchas que max-w-7xl (1280px), donde ese excedente hoy se ve como margen gris de página. max(0px, 50vw-640px) da 0 en cualquier viewport normal (sin efecto) y crece solo más allá de 1280px. No es parte del SVG: no toca ninguna coordenada, tamaño ni elemento interno de la tarjeta. */}
+            <div
+              className="absolute inset-y-0 left-full hidden rounded-br-[6px] bg-white lg:block"
+              style={{ width: "max(0px, calc(50vw - 640px))" }}
+              aria-hidden="true"
+            />
+            <svg
+              id="destaca-card-svg"
+              viewBox="0 0 714 753"
+              className="relative z-10 block h-auto w-full"
+              aria-label="Destaca tu diseño con nuestros productos. Obtén calidad que resalte tu identidad."
+            >
+              <defs>
+                <clipPath id="destacaCardClip">
+                  <path d="M0 150C0 67.1573 67.1573 0 150 0H714V747C714 750.314 711.314 753 708 753H6C2.68629 753 0 750.314 0 747V150Z" />
+                </clipPath>
+              </defs>
+              <g clipPath="url(#destacaCardClip)">
+                <path
+                  d="M0 150C0 67.1573 67.1573 0 150 0H714V747C714 750.314 711.314 753 708 753H6C2.68629 753 0 750.314 0 747V150Z"
+                  fill="white"
+                />
+                {/* grupo pedestal+productos+glow+iconos desplazado 126px hacia abajo (111px base + 15px de ajuste final) como una sola unidad, sin reescalar, para que el pedestal quede apoyado justo sobre el margen inferior de la tarjeta; el título/subtítulo NO se mueve */}
+                <image
+                  href="/Home/DESTACA%20TU%20DISE%C3%91O/IMAGEN%20DE%20PRODUCTOS.svg"
+                  x="-80"
+                  y="282"
+                  width="799"
+                  height="597"
+                />
+                <image
+                  href="/Home/DESTACA%20TU%20DISE%C3%91O/Destaca%20tu%20dise%C3%B1o%20con%20nuestros%20productos.svg"
+                  x="107"
+                  y="80"
+                  width="500"
+                  height="99"
+                />
+                <image
+                  href="/Home/DESTACA%20TU%20DISE%C3%91O/Obt%C3%A9n%20calidad%20que%20resalte%20tu%20identidad..svg"
+                  x="107"
+                  y="206"
+                  width="418"
+                  height="68"
+                />
+                {/* bloque de beneficios: 3 componentes con coordenadas absolutas e independientes, calibrados a mano en Figma; DestacaFeatures monta su propio <foreignObject> y hereda el mismo escalado proporcional (viewBox) que el resto de la composición */}
+                <DestacaFeatures />
+              </g>
+            </svg>
+          </div>
         </div>
       </section>
 
