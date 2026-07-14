@@ -171,6 +171,7 @@ export default async function HomePage() {
 
           {/* Destaca tu diseño: composición de las 5 capas exportadas de Figma, montadas dentro de un único SVG maestro con el viewBox nativo de Rectangle 33 (714x753). Cada capa usa sus coordenadas y tamaño exactos de Figma (escala 1:1, sin estirar), y un clipPath con el path real de Rectangle 33 (esquina superior izq. de 150px, esquinas inferiores de 6px, superior derecha recta) recorta todo el contenido exactamente a la forma de la tarjeta, para que nada sobresalga sin depender de un overflow:hidden rectangular */}
           <svg
+            id="destaca-card-svg"
             viewBox="0 0 714 753"
             className="w-full h-auto block"
             aria-label="Destaca tu diseño con nuestros productos. Obtén calidad que resalte tu identidad."
