@@ -73,6 +73,12 @@ const ROW_TOP_OFFSET = 300;
 const FO_WIDTH = 1200;
 const FO_HEIGHT = 1000;
 
+// Tamaño real de la tarjeta (el viewBox del <svg> maestro en page.tsx, "Rectangle 33").
+// Cualquier círculo cuyo top/bottom quede fuera de este rango en Y se recorta y
+// desaparece, aunque en el editor la fila exista más abajo en el documento.
+const CARD_WIDTH = 714;
+const CARD_HEIGHT = 753;
+
 type Geometry = {
   foX: number;
   foY: number;
@@ -84,16 +90,17 @@ type Geometry = {
   rowHeight: number;
 };
 
-// Valores finales calibrados a mano por Diana con el editor visual (?editDestaca=1).
-// La tarjeta (viewBox del <svg> maestro en page.tsx) se alargó a 714x930 para que estos
-// valores quepan completos, sin recortar el tercer beneficio.
+// Geometría restaurada (commit f7f88b7, antes de agrandar el contenedor por error), con
+// un ajuste fino de foY (204 -> 189, -15px) para que el grupo suba ligeramente: el primer
+// beneficio queda a la altura media del cuerpo de la botella, el segundo justo arriba del
+// borde superior del pedestal, y el tercero montado sobre el pedestal.
 const DEFAULT_GEOMETRY: Geometry = {
-  foX: 443,
-  foY: 380,
-  lineWidth: 25.5,
-  circleSize: 37,
-  circleToTextGap: 18,
-  textTop: 1.5,
+  foX: 390,
+  foY: 189, // 489 (posición absoluta real) - ROW_TOP_OFFSET(300) = 189
+  lineWidth: 65,
+  circleSize: 36.5,
+  circleToTextGap: 20,
+  textTop: -14,
   textOffsetX: 0,
   rowHeight: 94.5,
 };
@@ -113,6 +120,21 @@ const SLIDERS: { key: keyof Geometry; label: string; min: number; max: number; s
 ];
 
 const STORAGE_KEY = "destacaFeaturesEditor";
+
+/** Filas cuyo círculo queda total o parcialmente fuera del alto/ancho real de la tarjeta. */
+function getOverflowingRows(values: Geometry): number[] {
+  const out: number[] = [];
+  FEATURE_ICONS.forEach((_, i) => {
+    const top = values.foY + ROW_TOP_OFFSET + i * values.rowHeight;
+    const bottom = top + values.circleSize;
+    const left = values.foX + values.lineWidth;
+    const right = left + values.circleSize;
+    if (top < 0 || bottom > CARD_HEIGHT || left < 0 || right > CARD_WIDTH) {
+      out.push(i);
+    }
+  });
+  return out;
+}
 
 function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: Geometry) => void }) {
   const [copied, setCopied] = useState(false);
@@ -139,6 +161,8 @@ function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: G
       window.clearInterval(interval);
     };
   }, []);
+
+  const overflowingRows = getOverflowingRows(values);
 
   const copyValues = () => {
     const code = [
@@ -174,7 +198,7 @@ function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: G
               left: cardRect.left,
               width: cardRect.width,
               height: cardRect.height,
-              border: "3px dashed #02BBBC",
+              border: `3px dashed ${overflowingRows.length > 0 ? "#ff4d4f" : "#02BBBC"}`,
               borderRadius: 24,
               pointerEvents: "none",
               zIndex: 999998,
@@ -205,9 +229,27 @@ function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: G
       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Editor: bloque de beneficios</div>
       <div style={{ opacity: 0.7, marginBottom: 12, lineHeight: 1.4 }}>
         Ajusta con el slider, el campo numérico o los botones. El borde punteado sobre la
-        tarjeta es solo una referencia visual de su tamaño real. Se guarda automáticamente en
-        este navegador.
+        tarjeta marca su límite real: lo que quede fuera se recorta y no se ve. Se guarda
+        automáticamente en este navegador.
       </div>
+      {overflowingRows.length > 0 && (
+        <div
+          style={{
+            background: "rgba(255,77,79,0.18)",
+            border: "1px solid #ff4d4f",
+            borderRadius: 8,
+            padding: "8px 10px",
+            marginBottom: 12,
+            lineHeight: 1.4,
+          }}
+        >
+          ⚠️ {overflowingRows.map((i) => `"${FEATURE_ICONS[i].title}"`).join(" y ")}{" "}
+          {overflowingRows.length > 1 ? "quedan" : "queda"} fuera del borde de la tarjeta y no{" "}
+          {overflowingRows.length > 1 ? "se verán" : "se verá"} en la página. Ajusta &quot;Posición
+          Y del grupo&quot; o &quot;Separación vertical entre beneficios&quot; hasta que el borde
+          punteado quede verde.
+        </div>
+      )}
       {SLIDERS.map((s) => {
         const bumpButtonStyle: CSSProperties = {
           background: "rgba(255,255,255,0.08)",
