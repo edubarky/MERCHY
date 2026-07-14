@@ -1,4 +1,7 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 function BadgeIcon() {
   return (
@@ -25,40 +28,18 @@ function PaletteIcon() {
   );
 }
 
-type Feature = {
-  icon: ReactNode;
-  /** desplazamiento del icono dentro del círculo (left,top en px), fijo por icono, copiado del bbox real del SVG de Figma */
-  iconOffset: { left: number; top: number };
+type FeatureIcon = {
+  render: ReactNode;
+  /** tamaño natural del icono (para centrarlo dentro del círculo automáticamente) */
+  size: { width: number; height: number };
   title: string;
   description: ReactNode;
 };
 
-// ── Geometría de referencia (tomada del PRIMER beneficio, "Diseño premium", del SVG
-// original de Figma) ── Los otros dos beneficios son copias EXACTAS de estos mismos
-// valores; lo único que cambia entre beneficios es la traslación vertical (ROW_HEIGHT).
-// No hay flexbox, no hay justify-content/space-between, no hay cálculo de distribución:
-// cada elemento tiene su left/top fijo, repetido tal cual en los tres bloques.
-const LINE_WIDTH = 65; // longitud de línea, igual en los tres beneficios
-const LINE_HEIGHT = 2;
-const CIRCLE_SIZE = 36.5; // diámetro, igual en los tres beneficios
-const LINE_TOP = (CIRCLE_SIZE - LINE_HEIGHT) / 2; // centra la línea sobre el eje del círculo
-const CIRCLE_LEFT = LINE_WIDTH; // la línea termina exactamente en el borde izquierdo del círculo
-const CIRCLE_TO_TEXT_GAP = 20; // mismo espacio círculo→texto en los tres beneficios
-const TEXT_LEFT = CIRCLE_LEFT + CIRCLE_SIZE + CIRCLE_TO_TEXT_GAP; // misma coordenada X en los tres títulos y descripciones
-const ROW_HEIGHT = 94.5; // misma separación vertical entre los tres beneficios
-// El foreignObject que contiene este componente se agrandó 20px hacia arriba (ver
-// page.tsx) únicamente para dar espacio interno; ROW_TOP_OFFSET compensa ese cambio
-// para que el círculo/línea/icono queden en la MISMA posición visual absoluta que antes.
-const ROW_TOP_OFFSET = 20;
-// El bloque de texto está desacoplado del icono: no se centra respecto al círculo.
-// Se desplaza 14px hacia arriba respecto al centro del icono para que el título
-// quede casi alineado con el borde superior del círculo, igual que en Figma.
-const TEXT_TOP = -14;
-
-const FEATURES: Feature[] = [
+const FEATURE_ICONS: FeatureIcon[] = [
   {
-    icon: <BadgeIcon />,
-    iconOffset: { left: 9.75, top: 8.75 },
+    render: <BadgeIcon />,
+    size: { width: 17, height: 19 },
     title: "Diseño premium",
     description: (
       <>
@@ -67,14 +48,14 @@ const FEATURES: Feature[] = [
     ),
   },
   {
-    icon: <CheckIcon />,
-    iconOffset: { left: 9.25, top: 9.04 },
+    render: <CheckIcon />,
+    size: { width: 18, height: 18.43 },
     title: "Todo en uno",
     description: "Diseña, cotiza y compra.",
   },
   {
-    icon: <PaletteIcon />,
-    iconOffset: { left: 7.75, top: 7.75 },
+    render: <PaletteIcon />,
+    size: { width: 21, height: 21 },
     title: "100% personalizable",
     description: (
       <>
@@ -84,41 +65,236 @@ const FEATURES: Feature[] = [
   },
 ];
 
-export default function DestacaFeatures() {
-  return (
-    <div className="relative h-full w-full">
-      {FEATURES.map((feature, i) => (
-        <div
-          key={feature.title}
-          className="absolute left-0"
-          style={{ top: `${ROW_TOP_OFFSET + i * ROW_HEIGHT}px`, width: "100%", height: `${CIRCLE_SIZE}px` }}
-        >
-          <span
-            className="absolute rounded-full bg-[#BBEEEC]"
-            style={{ left: 0, top: `${LINE_TOP}px`, width: `${LINE_WIDTH}px`, height: `${LINE_HEIGHT}px` }}
-            aria-hidden="true"
-          />
-          <span
-            className="absolute rounded-full border-[0.5px] border-[#7FDED9] bg-[#BBEEEC]"
-            style={{ left: `${CIRCLE_LEFT}px`, top: 0, width: `${CIRCLE_SIZE}px`, height: `${CIRCLE_SIZE}px` }}
-          >
-            <span
-              className="absolute rounded-full bg-[#7FDED9]/20 blur-[2px]"
-              style={{ left: -4, top: -4, right: -4, bottom: -4 }}
-              aria-hidden="true"
-            />
-            <span className="absolute" style={{ left: `${feature.iconOffset.left}px`, top: `${feature.iconOffset.top}px` }}>
-              {feature.icon}
-            </span>
-          </span>
-          <div className="absolute whitespace-nowrap" style={{ left: `${TEXT_LEFT}px`, top: `${TEXT_TOP}px` }}>
-            <div className="font-sans text-base font-bold leading-none text-[#02BBBC]">{feature.title}</div>
-            <div className="font-sans text-[13px] leading-tight text-[#3C3C3C]" style={{ marginTop: "4px" }}>
-              {feature.description}
-            </div>
+// Espacio interno reservado arriba de cada fila (dentro del foreignObject) para que
+// TEXT_TOP pueda ir bien negativo sin recortarse contra el borde del foreignObject.
+const ROW_TOP_OFFSET = 70;
+// Contenedor del foreignObject: generoso a propósito para que cualquier valor dentro
+// de los rangos de los sliders quepa sin recortarse; no es editable, es solo el lienzo.
+const FO_WIDTH = 550;
+const FO_HEIGHT = 430;
+
+type Geometry = {
+  foX: number;
+  foY: number;
+  lineWidth: number;
+  circleSize: number;
+  circleToTextGap: number;
+  textTop: number;
+  textOffsetX: number;
+  rowHeight: number;
+};
+
+const DEFAULT_GEOMETRY: Geometry = {
+  foX: 390,
+  foY: 434, // 484 antes de reservar ROW_TOP_OFFSET=70 (era 20): 504 - 70 = 434
+  lineWidth: 65,
+  circleSize: 36.5,
+  circleToTextGap: 20,
+  textTop: -14,
+  textOffsetX: 0,
+  rowHeight: 94.5,
+};
+
+const SLIDERS: { key: keyof Geometry; label: string; min: number; max: number; step: number }[] = [
+  { key: "foX", label: "Posición X del grupo", min: 300, max: 460, step: 1 },
+  { key: "foY", label: "Posición Y del grupo", min: 380, max: 500, step: 1 },
+  { key: "lineWidth", label: "Longitud de la línea", min: 0, max: 150, step: 0.5 },
+  { key: "circleSize", label: "Tamaño del círculo", min: 20, max: 60, step: 0.5 },
+  { key: "circleToTextGap", label: "Espacio círculo → texto", min: 0, max: 60, step: 0.5 },
+  { key: "textTop", label: "Texto arriba/abajo (vs. centro del icono)", min: -70, max: 40, step: 0.5 },
+  { key: "textOffsetX", label: "Texto izquierda/derecha (extra)", min: -40, max: 40, step: 0.5 },
+  { key: "rowHeight", label: "Separación vertical entre beneficios", min: 60, max: 140, step: 0.5 },
+];
+
+const STORAGE_KEY = "destacaFeaturesEditor";
+
+function EditorPanel({ values, setValues }: { values: Geometry; setValues: (v: Geometry) => void }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyValues = () => {
+    const code = [
+      "// Valores copiados desde el editor visual (?editDestaca=1)",
+      `foX = ${values.foX}`,
+      `foY = ${values.foY}`,
+      `lineWidth = ${values.lineWidth}`,
+      `circleSize = ${values.circleSize}`,
+      `circleToTextGap = ${values.circleToTextGap}`,
+      `textTop = ${values.textTop}`,
+      `textOffsetX = ${values.textOffsetX}`,
+      `rowHeight = ${values.rowHeight}`,
+    ].join("\n");
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const reset = () => {
+    setValues(DEFAULT_GEOMETRY);
+    window.localStorage.removeItem(STORAGE_KEY);
+  };
+
+  return createPortal(
+    <div
+      style={{
+        position: "fixed",
+        top: 16,
+        right: 16,
+        zIndex: 999999,
+        width: 320,
+        maxHeight: "calc(100vh - 32px)",
+        overflowY: "auto",
+        background: "rgba(20, 24, 28, 0.94)",
+        color: "white",
+        borderRadius: 12,
+        padding: 16,
+        fontFamily: "system-ui, sans-serif",
+        fontSize: 13,
+        boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+      }}
+    >
+      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Editor: bloque de beneficios</div>
+      <div style={{ opacity: 0.7, marginBottom: 12, lineHeight: 1.4 }}>
+        Mueve los sliders para ajustar. Se guarda automáticamente en este navegador.
+      </div>
+      {SLIDERS.map((s) => (
+        <div key={s.key} style={{ marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+            <span>{s.label}</span>
+            <span style={{ opacity: 0.7 }}>{values[s.key]}</span>
           </div>
+          <input
+            type="range"
+            min={s.min}
+            max={s.max}
+            step={s.step}
+            value={values[s.key]}
+            onChange={(e) => setValues({ ...values, [s.key]: parseFloat(e.target.value) })}
+            style={{ width: "100%" }}
+          />
         </div>
       ))}
-    </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <button
+          onClick={copyValues}
+          style={{
+            flex: 1,
+            background: "#02BBBC",
+            color: "white",
+            border: "none",
+            borderRadius: 8,
+            padding: "8px 10px",
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          {copied ? "¡Copiado!" : "Copiar valores"}
+        </button>
+        <button
+          onClick={reset}
+          style={{
+            background: "transparent",
+            color: "white",
+            border: "1px solid rgba(255,255,255,0.3)",
+            borderRadius: 8,
+            padding: "8px 10px",
+            cursor: "pointer",
+          }}
+        >
+          Restablecer
+        </button>
+      </div>
+      <div style={{ opacity: 0.55, marginTop: 10, lineHeight: 1.4 }}>
+        Cuando termines, pega &quot;Copiar valores&quot; en el chat para dejarlo fijo y publicar.
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+export default function DestacaFeatures() {
+  const [editMode, setEditMode] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [values, setValues] = useState<Geometry>(DEFAULT_GEOMETRY);
+
+  useEffect(() => {
+    setMounted(true);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("editDestaca") === "1") {
+      setEditMode(true);
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          setValues({ ...DEFAULT_GEOMETRY, ...JSON.parse(saved) });
+        } catch {
+          // ignora JSON inválido y usa los valores por defecto
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (editMode && mounted) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
+    }
+  }, [values, editMode, mounted]);
+
+  const { foX, foY, lineWidth, circleSize, circleToTextGap, textTop, textOffsetX, rowHeight } = values;
+  const lineTop = (circleSize - 2) / 2;
+  const circleLeft = lineWidth; // la línea siempre termina exactamente en el borde izquierdo del círculo
+  const textLeft = circleLeft + circleSize + circleToTextGap + textOffsetX;
+
+  const rows = useMemo(
+    () =>
+      FEATURE_ICONS.map((f) => ({
+        ...f,
+        iconOffset: {
+          left: (circleSize - f.size.width) / 2,
+          top: (circleSize - f.size.height) / 2,
+        },
+      })),
+    [circleSize]
+  );
+
+  return (
+    <>
+      <foreignObject x={foX} y={foY} width={FO_WIDTH} height={FO_HEIGHT}>
+        <div style={{ position: "relative", width: "100%", height: "100%" }}>
+          {rows.map((feature, i) => (
+            <div
+              key={feature.title}
+              className="absolute left-0"
+              style={{ top: `${ROW_TOP_OFFSET + i * rowHeight}px`, width: "100%", height: `${circleSize}px` }}
+            >
+              <span
+                className="absolute rounded-full bg-[#BBEEEC]"
+                style={{ left: 0, top: `${lineTop}px`, width: `${lineWidth}px`, height: "2px" }}
+                aria-hidden="true"
+              />
+              <span
+                className="absolute rounded-full border-[0.5px] border-[#7FDED9] bg-[#BBEEEC]"
+                style={{ left: `${circleLeft}px`, top: 0, width: `${circleSize}px`, height: `${circleSize}px` }}
+              >
+                <span
+                  className="absolute rounded-full bg-[#7FDED9]/20 blur-[2px]"
+                  style={{ left: -4, top: -4, right: -4, bottom: -4 }}
+                  aria-hidden="true"
+                />
+                <span className="absolute" style={{ left: `${feature.iconOffset.left}px`, top: `${feature.iconOffset.top}px` }}>
+                  {feature.render}
+                </span>
+              </span>
+              <div className="absolute whitespace-nowrap" style={{ left: `${textLeft}px`, top: `${textTop}px` }}>
+                <div className="font-sans text-base font-bold leading-none text-[#02BBBC]">{feature.title}</div>
+                <div className="font-sans text-[13px] leading-tight text-[#3C3C3C]" style={{ marginTop: "4px" }}>
+                  {feature.description}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </foreignObject>
+      {mounted && editMode && <EditorPanel values={values} setValues={setValues} />}
+    </>
   );
 }

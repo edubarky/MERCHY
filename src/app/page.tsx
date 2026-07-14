@@ -207,12 +207,8 @@ export default async function HomePage() {
                 width="418"
                 height="68"
               />
-              {/* bloque de beneficios: componentes posicionados con coordenadas absolutas, montados en un foreignObject para heredar el mismo escalado proporcional (viewBox) que el resto de la composición. y/height ampliados 20px hacia arriba (484/259 en vez de 504/239) únicamente para dar espacio interno: DestacaFeatures compensa ese mismo offset en cada fila, así que los círculos/líneas/iconos quedan exactamente en la misma posición visual que antes; el margen extra solo permite que el bloque de texto pueda desplazarse hacia arriba sin recortarse contra el borde del foreignObject */}
-              <foreignObject x="390" y="484" width="300" height="259">
-                <div style={{ width: "100%", height: "100%" }}>
-                  <DestacaFeatures />
-                </div>
-              </foreignObject>
+              {/* bloque de beneficios: componentes con coordenadas absolutas; DestacaFeatures monta su propio <foreignObject> (para poder controlar su x/y en modo edición) y hereda el mismo escalado proporcional (viewBox) que el resto de la composición */}
+              <DestacaFeatures />
             </g>
           </svg>
         </div>
