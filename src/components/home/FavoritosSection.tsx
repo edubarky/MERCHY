@@ -15,7 +15,7 @@ interface Props {
 // en /public/Home/FAVORITOS DEL MOMENTO/ (mismo trazo y color #00A5A3).
 function HeartBadge() {
   return (
-    <svg viewBox="0 0 63 62" className="h-11 w-11 shrink-0" fill="none">
+    <svg viewBox="0 0 63 62" className="h-[58px] w-[58px] shrink-0" fill="none">
       <g>
         <ellipse cx="30.5" cy="26" rx="21.5" ry="21" fill="white" className="drop-shadow-md" />
       </g>
@@ -44,7 +44,7 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
   return (
     <div>
       {/* Título */}
-      <h2 className="mb-5 flex items-center gap-3 font-display text-[34px] font-bold text-foreground">
+      <h2 className="mb-5 flex items-center gap-3 font-display text-[42px] font-bold text-foreground">
         <HeartBadge />
         Favoritos <span className="text-primary">del momento</span>
       </h2>
