@@ -2,12 +2,29 @@
 
 import { useState } from "react";
 import type { Product, PriceTier, Category } from "@/types";
-import ProductCard from "@/app/catalogo/components/ProductCard";
+import FavoritoProductCard from "@/components/home/FavoritoProductCard";
+import CarouselDots from "@/components/home/CarouselDots";
 
 interface Props {
   products: (Product & { variants: NonNullable<Product["variants"]> })[];
   priceTiers: PriceTier[];
   categories: Category[];
+}
+
+// Icono de corazón en círculo blanco junto al título, calcado de "Group 985.svg"
+// en /public/Home/FAVORITOS DEL MOMENTO/ (mismo trazo y color #00A5A3).
+function HeartBadge() {
+  return (
+    <svg viewBox="0 0 63 62" className="h-9 w-9 shrink-0" fill="none">
+      <g>
+        <ellipse cx="30.5" cy="26" rx="21.5" ry="21" fill="white" className="drop-shadow-md" />
+      </g>
+      <path
+        d="M37.9357 17.515C35.3293 16.4478 32.5603 17.0843 30.4941 19.2141C28.2543 16.9057 25.1915 16.3555 22.4552 17.7848C18.5317 19.9548 18.2792 24.3835 20.0576 27.6349C20.8054 29.0453 21.9296 30.3244 23.4944 31.5442L30.4941 37L38.0498 31.0793C39.1484 30.2191 40.0674 29.1234 40.9415 27.6314L40.9451 27.6243C41.6286 26.3204 41.9636 25.1088 41.9976 23.8108C42.0704 21.0646 40.4777 18.5929 37.9357 17.515Z"
+        fill="#00A5A3"
+      />
+    </svg>
+  );
 }
 
 export default function FavoritosSection({ products, priceTiers, categories }: Props) {
@@ -26,24 +43,22 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
 
   return (
     <div>
-      {/* Title */}
-      <h2 className="font-display font-bold text-3xl text-foreground flex items-center gap-3 mb-5">
-        <svg className="w-7 h-7 text-accent-coral" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z" />
-        </svg>
+      {/* Título */}
+      <h2 className="mb-5 flex items-center gap-3 font-display text-3xl font-bold text-foreground">
+        <HeartBadge />
         Favoritos <span className="text-primary">del momento</span>
       </h2>
 
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      {/* Categorías */}
+      <div className="mb-6 flex flex-wrap gap-2.5">
         {tabs.map((tab) => (
           <button
             key={tab.slug ?? "all"}
             onClick={() => setActiveSlug(tab.slug)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            className={`rounded-pill px-5 py-2 text-sm font-semibold transition-colors ${
               activeSlug === tab.slug
-                ? "bg-foreground text-white border-foreground"
-                : "bg-white text-foreground border-ui-border hover:border-primary"
+                ? "bg-foreground text-white"
+                : "bg-white text-foreground shadow-[0_4px_10px_rgba(0,0,0,0.08)] hover:text-primary"
             }`}
           >
             {tab.label}
@@ -51,17 +66,22 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
         ))}
       </div>
 
-      {/* Product grid */}
+      {/* Grid de productos */}
       {visible.length === 0 ? (
-        <div className="text-center py-10 text-ui-gray text-sm">
+        <div className="py-10 text-center text-sm text-ui-gray">
           No hay productos en esta categoría aún.
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
-          {visible.map((product) => (
-            <ProductCard key={product.id} product={product} priceTiers={priceTiers} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {visible.map((product) => (
+              <FavoritoProductCard key={product.id} product={product} priceTiers={priceTiers} />
+            ))}
+          </div>
+          <div className="mt-6 flex justify-center">
+            <CarouselDots count={4} activeIndex={0} />
+          </div>
+        </>
       )}
     </div>
   );
