@@ -96,7 +96,7 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-contain p-2"
+            className="scale-[0.91] object-contain p-2"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-teal-light to-gray-100">
@@ -122,7 +122,7 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
       </Link>
 
       {/* Divisor sutil */}
-      <div className="h-px bg-gradient-to-r from-white via-[#A0E6E8] to-white" />
+      <div className="h-px bg-gradient-to-r from-white via-[#DDF8FA] to-white" />
 
       {/* Info */}
       <div className="flex flex-col gap-2.5 px-3 pb-3 pt-2.5">
