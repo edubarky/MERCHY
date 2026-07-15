@@ -171,10 +171,10 @@ export default async function HomePage() {
 
           {/* Destaca tu diseño: composición de las 5 capas exportadas de Figma, montadas dentro de un único SVG maestro con el viewBox nativo de Rectangle 33 (714x753). Cada capa usa sus coordenadas y tamaño exactos de Figma (escala 1:1, sin estirar), y un clipPath con el path real de Rectangle 33 (esquina superior izq. de 150px, esquinas inferiores de 6px, superior derecha recta) recorta todo el contenido exactamente a la forma de la tarjeta, para que nada sobresalga sin depender de un overflow:hidden rectangular. El SVG en sí NO cambió: mismo viewBox, mismo width, mismas coordenadas internas. */}
           <div className="relative">
-            {/* Relleno: continúa el fondo blanco de la tarjeta desde su borde derecho hasta ~32px del borde del viewport, ÚNICAMENTE en pantallas más anchas que max-w-7xl (1280px), donde ese excedente hoy se ve como margen gris de página. max(0px, 50vw-640px) da 0 en cualquier viewport normal (sin efecto) y crece solo más allá de 1280px. No es parte del SVG: no toca ninguna coordenada, tamaño ni elemento interno de la tarjeta. */}
+            {/* Relleno: continúa el fondo blanco de la tarjeta desde su borde derecho hasta prácticamente el borde del viewport (4px), ÚNICAMENTE en pantallas más anchas que max-w-7xl (1280px). max(0px, 50vw-612px) da 0 en cualquier viewport normal (sin efecto) y crece solo más allá de 1280px. No es parte del SVG: no toca ninguna coordenada, tamaño ni elemento interno de la tarjeta. */}
             <div
               className="absolute inset-y-0 left-full hidden rounded-br-[6px] bg-white lg:block"
-              style={{ width: "max(0px, calc(50vw - 640px))" }}
+              style={{ width: "max(0px, calc(50vw - 612px))" }}
               aria-hidden="true"
             />
             <svg
