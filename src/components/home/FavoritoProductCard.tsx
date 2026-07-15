@@ -15,7 +15,7 @@ interface Props {
 // dentro de /public/Home/FAVORITOS DEL MOMENTO/ — mismo trazo y color (#767788).
 function HeartOutlineIcon({ filled }: { filled: boolean }) {
   return (
-    <svg viewBox="0 0 25 22" className="h-[18px] w-[20px]" fill="none">
+    <svg viewBox="0 0 25 22" className="h-[16px] w-[18px]" fill="none">
       <path
         d="M19.5357 1.515C16.9293 0.447798 14.1603 1.0843 12.0941 3.2141C9.8543 0.905698 6.7915 0.355498 4.0552 1.7848C0.1317 3.9548 -0.1208 8.3835 1.6576 11.6349C2.4054 13.0453 3.5296 14.3244 5.0944 15.5442L12.0941 21L19.6498 15.0793C20.7484 14.2191 21.6674 13.1234 22.5415 11.6314L22.5451 11.6243C23.2286 10.3204 23.5636 9.1088 23.5976 7.8108C23.6704 5.0646 22.0777 2.5929 19.5357 1.515Z"
         fill={filled ? "#30BE52" : "none"}
@@ -60,8 +60,8 @@ function BadgeIcon() {
 // Cursor de mano dentro del botón "Ver detalles", en círculo blanco translúcido.
 function HandCursorIcon() {
   return (
-    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/60">
-      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/60">
+      <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none">
         <path
           d="M6.5 8.5V3.2a1 1 0 0 1 2 0V7m0 0V2.4a1 1 0 0 1 2 0V7m0 .3V3.6a1 1 0 0 1 2 0V9m-6-.6L5.7 7.6a1 1 0 0 0-1.6 1.2l2.4 3.5a2.5 2.5 0 0 0 2.1 1.1h1.2a3 3 0 0 0 3-3V7.6"
           stroke="#076868"
@@ -84,7 +84,7 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
   const extraVariants = activeVariants.length - visibleVariants.length;
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-[16px] bg-white shadow-[0_4px_25px_rgba(0,0,0,0.12)]">
+    <div className="flex flex-col overflow-hidden rounded-[10px] bg-white shadow-[0_4px_25px_rgba(0,0,0,0.12)]">
       {/* Imagen */}
       <Link
         href={`/producto/${product.id}`}
@@ -96,7 +96,7 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-contain p-4"
+            className="object-contain p-2"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-teal-light to-gray-100">
@@ -115,7 +115,7 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
           }}
           aria-label={liked ? "Quitar de favoritos" : "Agregar a favoritos"}
           aria-pressed={liked}
-          className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#F4F5F6] shadow-[0_4px_4px_rgba(0,0,0,0.05)] transition-transform hover:scale-105"
+          className="absolute right-2.5 top-2.5 flex h-9 w-9 items-center justify-center rounded-full bg-[#F4F5F6] shadow-[0_4px_4px_rgba(0,0,0,0.05)] transition-transform hover:scale-105"
         >
           <HeartOutlineIcon filled={liked} />
         </button>
@@ -125,33 +125,33 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
       <div className="h-px bg-gradient-to-r from-white via-[#A0E6E8] to-white" />
 
       {/* Info */}
-      <div className="flex flex-col gap-3 px-4 pb-4 pt-3">
-        <h3 className="text-center font-display text-xl font-bold text-foreground line-clamp-1">
+      <div className="flex flex-col gap-2.5 px-3 pb-3 pt-2.5">
+        <h3 className="text-center font-display text-lg font-bold text-foreground line-clamp-1">
           {product.name}
         </h3>
 
         <div className="flex items-stretch">
           {/* Colores */}
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <span className="whitespace-nowrap text-[11px] font-medium text-foreground/80">
               Colores disponibles
             </span>
             {visibleVariants.length > 0 ? (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-3">
                 {visibleVariants.map((v) => (
                   <button
                     key={v.id}
                     type="button"
                     title={v.color_name}
                     onClick={() => setSelectedVariantId(v.id)}
-                    className={`h-6 w-6 shrink-0 rounded-full border border-ui-border ring-2 ring-offset-2 transition-shadow ${
+                    className={`h-4 w-4 shrink-0 rounded-full border border-ui-border ring-1 ring-offset-1 transition-shadow ${
                       selectedVariantId === v.id ? "ring-[#37D949]" : "ring-transparent"
                     }`}
                     style={{ backgroundColor: v.color_hex }}
                   />
                 ))}
                 {extraVariants > 0 && (
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-ui-border text-xs text-ui-gray">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-ui-border text-[9px] text-ui-gray">
                     +
                   </span>
                 )}
@@ -166,32 +166,36 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
 
           {/* Precio + etiqueta */}
           <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
-            <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-[#EDF7F0] px-2 py-1 text-[9.5px] font-semibold leading-tight text-[#30BE52]">
-              <BadgeIcon />
+            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-[#EDF7F0] px-1.5 py-0.5 text-[8px] font-semibold leading-tight text-[#30BE52]">
+              <span className="shrink-0 [&_svg]:h-[8px] [&_svg]:w-[8px]">
+                <BadgeIcon />
+              </span>
               <span>Mejor precio por mayoreo</span>
             </span>
             <p className="leading-none">
-              <span className="font-display text-2xl font-bold text-foreground">
+              <span className="font-display text-xl font-bold text-foreground">
                 {formatMXN(precioDesde)}
               </span>{" "}
-              <span className="align-super text-xs font-semibold text-ui-gray">MXN</span>
+              <span className="align-super text-[10px] font-semibold text-ui-gray">MXN</span>
             </p>
           </div>
         </div>
 
         {/* Banner inferior */}
-        <div className="flex flex-col gap-2 rounded-[12px] bg-[#D1F4F2]/50 p-2.5">
+        <div className="flex items-center justify-between gap-2 rounded-[7px] bg-[#D1F4F2]/50 px-3 py-2">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FC7C68]">
-              <ShoppingBagIcon />
+            <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#FC7C68]">
+              <span className="[&_svg]:h-[10px] [&_svg]:w-[9px]">
+                <ShoppingBagIcon />
+              </span>
             </span>
-            <p className="min-w-0 text-[11px] leading-tight text-foreground">
+            <p className="min-w-0 text-[10px] leading-tight text-foreground">
               Descubre más detalles, tallas y recomendaciones.
             </p>
           </div>
           <Link
             href={`/producto/${product.id}`}
-            className="flex w-full items-center justify-center gap-1.5 rounded-[6px] bg-[#7FDED9] px-3 py-2 text-[13px] font-semibold text-[#076868] transition-colors hover:bg-[#6BD4CE]"
+            className="flex shrink-0 items-center justify-center gap-1 rounded-[7px] bg-[#7FDED9] px-3 py-1.5 text-[11px] font-semibold text-[#076868] transition-colors hover:bg-[#6BD4CE]"
           >
             Ver detalles
             <HandCursorIcon />
