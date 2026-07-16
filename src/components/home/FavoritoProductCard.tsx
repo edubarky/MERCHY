@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Product, PriceTier } from "@/types";
@@ -9,6 +9,7 @@ import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 interface Props {
   product: Product & { variants: NonNullable<Product["variants"]> };
   priceTiers: PriceTier[];
+  index?: number;
 }
 
 function toTitleCase(str: string): string {
@@ -21,9 +22,9 @@ function toTitleCase(str: string): string {
 
 // Icono de corazón (botón de favorito de la tarjeta), extraído de "Group 1014.svg"
 // dentro de /public/Home/FAVORITOS DEL MOMENTO/ — mismo trazo y color (#767788).
-function HeartOutlineIcon({ filled }: { filled: boolean }) {
+function HeartOutlineIcon({ filled, className = "" }: { filled: boolean; className?: string }) {
   return (
-    <svg viewBox="0 0 25 22" className="h-[16px] w-[18px]" fill="none">
+    <svg viewBox="0 0 25 22" className={`h-[16px] w-[18px] ${className}`} fill="none">
       <path
         d="M19.5357 1.515C16.9293 0.447798 14.1603 1.0843 12.0941 3.2141C9.8543 0.905698 6.7915 0.355498 4.0552 1.7848C0.1317 3.9548 -0.1208 8.3835 1.6576 11.6349C2.4054 13.0453 3.5296 14.3244 5.0944 15.5442L12.0941 21L19.6498 15.0793C20.7484 14.2191 21.6674 13.1234 22.5415 11.6314L22.5451 11.6243C23.2286 10.3204 23.5636 9.1088 23.5976 7.8108C23.6704 5.0646 22.0777 2.5929 19.5357 1.515Z"
         fill={filled ? "#30BE52" : "none"}
@@ -66,9 +67,9 @@ function BadgeIcon() {
 }
 
 // Cursor de mano dentro del botón "Ver detalles", en círculo blanco translúcido.
-function HandCursorIcon() {
+function HandCursorIcon({ className = "" }: { className?: string }) {
   return (
-    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/60">
+    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/60 transition-transform duration-300 ease-out ${className}`}>
       <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none">
         <path
           d="M6.5 8.5V3.2a1 1 0 0 1 2 0V7m0 0V2.4a1 1 0 0 1 2 0V7m0 .3V3.6a1 1 0 0 1 2 0V9m-6-.6L5.7 7.6a1 1 0 0 0-1.6 1.2l2.4 3.5a2.5 2.5 0 0 0 2.1 1.1h1.2a3 3 0 0 0 3-3V7.6"
@@ -82,8 +83,10 @@ function HandCursorIcon() {
   );
 }
 
-export default function FavoritoProductCard({ product, priceTiers }: Props) {
+export default function FavoritoProductCard({ product, priceTiers, index = 0 }: Props) {
   const [liked, setLiked] = useState(false);
+  const [popKey, setPopKey] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const activeVariants = product.variants.filter((v) => v.active);
   const [selectedVariantId, setSelectedVariantId] = useState(activeVariants[0]?.id ?? null);
   const firstImage = activeVariants.flatMap((v) => v.images)[0] ?? null;
@@ -94,6 +97,11 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
   const visibleVariants = activeVariants.slice(0, 3);
   const extraVariants = activeVariants.length - visibleVariants.length;
 
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), index * 80);
+    return () => clearTimeout(t);
+  }, [index]);
+
   function handleSelectVariant(v: NonNullable<Product["variants"]>[number]) {
     if (v.id === selectedVariantId) return;
     setSelectedVariantId(v.id);
@@ -103,15 +111,19 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
     setTimeout(() => {
       setDisplayedImage(nextImage);
       setImageVisible(true);
-    }, 150);
+    }, 100);
   }
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-[10px] bg-white shadow-[0_4px_25px_rgba(0,0,0,0.12)]">
+    <div
+      className={`flex flex-col overflow-hidden rounded-[10px] bg-white shadow-[0_4px_25px_rgba(0,0,0,0.12)] [transition-property:opacity,transform,box-shadow] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-[10px] hover:scale-[1.02] hover:shadow-[0_20px_45px_rgba(0,0,0,0.18)] ${
+        mounted ? "opacity-100 translate-y-0 duration-300" : "opacity-0 translate-y-5 duration-500"
+      }`}
+    >
       {/* Imagen */}
       <Link
         href={`/producto/${product.id}`}
-        className="relative block aspect-[303/277] bg-white"
+        className="group/card relative block aspect-[303/277] bg-white"
       >
         {displayedImage ? (
           <Image
@@ -119,7 +131,7 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`scale-[0.91] object-contain p-2 transition-opacity duration-150 ease-out ${
+            className={`scale-[0.91] object-contain p-2 transition-[opacity_100ms_ease-out,transform_300ms_cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-[0.955] ${
               imageVisible ? "opacity-100" : "opacity-0"
             }`}
           />
@@ -133,16 +145,20 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
 
         {/* Botón de favorito */}
         <button
+          key={popKey}
           type="button"
           onClick={(e) => {
             e.preventDefault();
             setLiked((v) => !v);
+            setPopKey((k) => k + 1);
           }}
           aria-label={liked ? "Quitar de favoritos" : "Agregar a favoritos"}
           aria-pressed={liked}
-          className="absolute right-2.5 top-2.5 flex h-9 w-9 items-center justify-center rounded-full bg-[#F4F5F6] shadow-[0_4px_4px_rgba(0,0,0,0.05)] transition-transform hover:scale-105"
+          className={`absolute right-2.5 top-2.5 flex h-9 w-9 items-center justify-center rounded-full bg-[#F4F5F6] shadow-[0_4px_4px_rgba(0,0,0,0.05)] transition-transform duration-300 hover:scale-105 ${
+            popKey > 0 ? "animate-circle-pop" : ""
+          }`}
         >
-          <HeartOutlineIcon filled={liked} />
+          <HeartOutlineIcon filled={liked} className={popKey > 0 ? "animate-heart-pop" : ""} />
         </button>
       </Link>
 
@@ -169,7 +185,7 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
                     type="button"
                     title={v.color_name}
                     onClick={() => handleSelectVariant(v)}
-                    className={`h-4 w-4 shrink-0 rounded-full border border-ui-border ring-1 ring-offset-1 transition-shadow ${
+                    className={`h-4 w-4 shrink-0 rounded-full border border-ui-border ring-1 ring-offset-1 transition-[box-shadow] duration-[250ms] ease-out ${
                       selectedVariantId === v.id ? "ring-[#37D949]" : "ring-transparent"
                     }`}
                     style={{ backgroundColor: v.color_hex }}
@@ -191,7 +207,10 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
 
           {/* Precio + etiqueta */}
           <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
-            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-[#EDF7F0] px-1.5 py-0.5 text-[8px] font-semibold leading-tight text-[#30BE52]">
+            <span
+              className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-[#EDF7F0] px-1.5 py-0.5 text-[8px] font-semibold leading-tight text-[#30BE52] animate-badge-in"
+              style={{ animationDelay: `${index * 80 + 250}ms` }}
+            >
               <span className="shrink-0 [&_svg]:h-[8px] [&_svg]:w-[8px]">
                 <BadgeIcon />
               </span>
@@ -220,10 +239,10 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
           </div>
           <Link
             href={`/producto/${product.id}`}
-            className="flex shrink-0 items-center justify-center gap-1 rounded-[7px] bg-[#7FDED9] px-3 py-1.5 text-[11px] font-semibold text-[#076868] transition-colors hover:bg-[#6BD4CE]"
+            className="group/btn flex shrink-0 items-center justify-center gap-1 rounded-[7px] bg-[#7FDED9] px-3 py-1.5 text-[11px] font-semibold text-[#076868] transition-[background-color,transform] duration-300 ease-out hover:scale-[1.03] hover:bg-[#6BD4CE]"
           >
             Ver detalles
-            <HandCursorIcon />
+            <HandCursorIcon className="group-hover/btn:translate-x-0.5" />
           </Link>
         </div>
       </div>

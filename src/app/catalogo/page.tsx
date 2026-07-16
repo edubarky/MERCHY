@@ -144,11 +144,12 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
                   {categoria ? ` en ${safeCategories.find((c) => c.slug === categoria)?.name}` : ""}
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {safeProducts.map((product) => (
+                  {safeProducts.map((product, index) => (
                     <ProductCard
                       key={product.id}
                       product={product}
                       priceTiers={safeTiers}
+                      index={index}
                     />
                   ))}
                 </div>

@@ -35,6 +35,27 @@ const config: Config = {
         pill: "9999px",
         card: "1.5rem",
       },
+      keyframes: {
+        badgeIn: {
+          "0%": { opacity: "0", transform: "translateY(4px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        heartPop: {
+          "0%": { transform: "scale(0.8)" },
+          "50%": { transform: "scale(1.2)" },
+          "100%": { transform: "scale(1)" },
+        },
+        circlePop: {
+          "0%": { transform: "scale(1)" },
+          "50%": { transform: "scale(1.12)" },
+          "100%": { transform: "scale(1)" },
+        },
+      },
+      animation: {
+        "badge-in": "badgeIn 450ms cubic-bezier(0.22,1,0.36,1) both",
+        "heart-pop": "heartPop 380ms cubic-bezier(0.22,1,0.36,1)",
+        "circle-pop": "circlePop 380ms cubic-bezier(0.22,1,0.36,1)",
+      },
     },
   },
   plugins: [],

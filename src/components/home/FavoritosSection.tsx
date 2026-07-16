@@ -70,8 +70,8 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {visible.map((product) => (
-              <FavoritoProductCard key={product.id} product={product} priceTiers={priceTiers} />
+            {visible.map((product, index) => (
+              <FavoritoProductCard key={product.id} product={product} priceTiers={priceTiers} index={index} />
             ))}
           </div>
           <div className="mt-6 flex justify-center">

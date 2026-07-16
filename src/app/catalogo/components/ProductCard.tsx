@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Product, PriceTier } from "@/types";
@@ -9,16 +9,23 @@ import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 interface Props {
   product: Product & { variants: NonNullable<Product["variants"]> };
   priceTiers: PriceTier[];
+  index?: number;
 }
 
-export default function ProductCard({ product, priceTiers }: Props) {
+export default function ProductCard({ product, priceTiers, index = 0 }: Props) {
   const activeVariants = product.variants.filter((v) => v.active);
   const firstImage = activeVariants.flatMap((v) => v.images)[0] ?? null;
   const [selectedVariantId, setSelectedVariantId] = useState(activeVariants[0]?.id ?? null);
   const [displayedImage, setDisplayedImage] = useState(activeVariants[0]?.images?.[0] ?? firstImage);
   const [imageVisible, setImageVisible] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const precioDesde = getProductUnitPrice(product.costo, 1, priceTiers);
   const hasSizes = product.sizes_available.length > 0;
+
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), index * 80);
+    return () => clearTimeout(t);
+  }, [index]);
 
   function handleSelectVariant(e: React.MouseEvent, v: NonNullable<Product["variants"]>[number]) {
     e.preventDefault();
@@ -31,13 +38,15 @@ export default function ProductCard({ product, priceTiers }: Props) {
     setTimeout(() => {
       setDisplayedImage(nextImage);
       setImageVisible(true);
-    }, 150);
+    }, 100);
   }
 
   return (
     <Link
       href={`/producto/${product.id}`}
-      className="group bg-ui-surface rounded-card overflow-hidden border border-ui-border hover:border-primary hover:shadow-lg transition-all duration-200 flex flex-col"
+      className={`group bg-ui-surface rounded-card overflow-hidden border border-ui-border hover:border-primary [transition-property:opacity,transform,box-shadow,border-color] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-[10px] hover:scale-[1.02] hover:shadow-[0_20px_45px_rgba(0,0,0,0.18)] flex flex-col ${
+        mounted ? "opacity-100 translate-y-0 duration-300" : "opacity-0 translate-y-5 duration-500"
+      }`}
     >
       {/* Image */}
       <div className="relative aspect-square bg-gray-100 overflow-hidden">
@@ -47,7 +56,7 @@ export default function ProductCard({ product, priceTiers }: Props) {
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`object-cover group-hover:scale-105 transition-transform transition-opacity duration-300 ease-out ${
+            className={`object-cover group-hover:scale-105 transition-[opacity_100ms_ease-out,transform_300ms_cubic-bezier(0.22,1,0.36,1)] ${
               imageVisible ? "opacity-100" : "opacity-0"
             }`}
           />
@@ -83,7 +92,7 @@ export default function ProductCard({ product, priceTiers }: Props) {
                 type="button"
                 title={v.color_name}
                 onClick={(e) => handleSelectVariant(e, v)}
-                className={`w-4 h-4 rounded-full border border-white ring-1 flex-shrink-0 transition-shadow ${
+                className={`w-4 h-4 rounded-full border border-white ring-1 flex-shrink-0 transition-[box-shadow] duration-[250ms] ease-out ${
                   selectedVariantId === v.id ? "ring-[#37D949]" : "ring-ui-border"
                 }`}
                 style={{ backgroundColor: v.color_hex }}
