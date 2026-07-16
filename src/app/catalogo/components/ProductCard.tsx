@@ -24,8 +24,9 @@ export default function ProductCard({ product, priceTiers }: Props) {
     e.preventDefault();
     e.stopPropagation();
     if (v.id === selectedVariantId) return;
+    const nextImage = v.images?.[0];
+    if (!nextImage) return; // sin foto propia: se conserva la imagen y selección actuales
     setSelectedVariantId(v.id);
-    const nextImage = v.images?.[0] ?? null;
     setImageVisible(false);
     setTimeout(() => {
       setDisplayedImage(nextImage);
