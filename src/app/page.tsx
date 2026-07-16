@@ -115,12 +115,22 @@ export default async function HomePage() {
     category: { id: "static-sudaderas", name: "Sudaderas", slug: "sudaderas", icon: "🧥", sort_order: 2, active: true },
     variants: [
       {
+        id: "static-sudadera-sand-beige",
+        product_id: "static-sudadera-sand",
+        sku: "STATIC-SUDADERA-SAND-BEIGE",
+        color_name: "Beige",
+        color_hex: "#CDBCB1",
+        images: ["/Home/FAVORITOS%20DEL%20MOMENTO/sudadera-sand.jpg"],
+        stock: 0,
+        active: true,
+      },
+      {
         id: "static-sudadera-sand-azul-marino",
         product_id: "static-sudadera-sand",
         sku: "STATIC-SUDADERA-SAND-AZUL-MARINO",
         color_name: "Azul marino",
         color_hex: "#1B263B",
-        images: ["/Home/FAVORITOS%20DEL%20MOMENTO/sudadera-sand.jpg"],
+        images: [],
         stock: 0,
         active: true,
       },
