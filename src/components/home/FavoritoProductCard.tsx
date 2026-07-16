@@ -11,6 +11,14 @@ interface Props {
   priceTiers: PriceTier[];
 }
 
+function toTitleCase(str: string): string {
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+    .join(" ");
+}
+
 // Icono de corazón (botón de favorito de la tarjeta), extraído de "Group 1014.svg"
 // dentro de /public/Home/FAVORITOS DEL MOMENTO/ — mismo trazo y color (#767788).
 function HeartOutlineIcon({ filled }: { filled: boolean }) {
@@ -127,7 +135,7 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
       {/* Info */}
       <div className="flex flex-col gap-2.5 px-3 pb-3 pt-2.5">
         <h3 className="text-center font-display text-lg font-bold text-foreground line-clamp-1">
-          {product.name}
+          {toTitleCase(product.name)}
         </h3>
 
         <div className="flex items-stretch">
