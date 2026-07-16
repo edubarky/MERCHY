@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Product, PriceTier } from "@/types";
@@ -13,8 +14,24 @@ interface Props {
 export default function ProductCard({ product, priceTiers }: Props) {
   const activeVariants = product.variants.filter((v) => v.active);
   const firstImage = activeVariants.flatMap((v) => v.images)[0] ?? null;
+  const [selectedVariantId, setSelectedVariantId] = useState(activeVariants[0]?.id ?? null);
+  const [displayedImage, setDisplayedImage] = useState(activeVariants[0]?.images?.[0] ?? firstImage);
+  const [imageVisible, setImageVisible] = useState(true);
   const precioDesde = getProductUnitPrice(product.costo, 1, priceTiers);
   const hasSizes = product.sizes_available.length > 0;
+
+  function handleSelectVariant(e: React.MouseEvent, v: NonNullable<Product["variants"]>[number]) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (v.id === selectedVariantId) return;
+    setSelectedVariantId(v.id);
+    const nextImage = v.images?.[0] ?? null;
+    setImageVisible(false);
+    setTimeout(() => {
+      setDisplayedImage(nextImage);
+      setImageVisible(true);
+    }, 150);
+  }
 
   return (
     <Link
@@ -23,13 +40,15 @@ export default function ProductCard({ product, priceTiers }: Props) {
     >
       {/* Image */}
       <div className="relative aspect-square bg-gray-100 overflow-hidden">
-        {firstImage ? (
+        {displayedImage ? (
           <Image
-            src={firstImage}
+            src={displayedImage}
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className={`object-cover group-hover:scale-105 transition-transform transition-opacity duration-300 ease-out ${
+              imageVisible ? "opacity-100" : "opacity-0"
+            }`}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-teal-light to-gray-100">
@@ -58,10 +77,14 @@ export default function ProductCard({ product, priceTiers }: Props) {
         {activeVariants.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap">
             {activeVariants.slice(0, 8).map((v) => (
-              <span
+              <button
                 key={v.id}
+                type="button"
                 title={v.color_name}
-                className="w-4 h-4 rounded-full border border-white ring-1 ring-ui-border flex-shrink-0"
+                onClick={(e) => handleSelectVariant(e, v)}
+                className={`w-4 h-4 rounded-full border border-white ring-1 flex-shrink-0 transition-shadow ${
+                  selectedVariantId === v.id ? "ring-[#37D949]" : "ring-ui-border"
+                }`}
                 style={{ backgroundColor: v.color_hex }}
               />
             ))}

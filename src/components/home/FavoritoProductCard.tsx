@@ -87,9 +87,23 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
   const activeVariants = product.variants.filter((v) => v.active);
   const [selectedVariantId, setSelectedVariantId] = useState(activeVariants[0]?.id ?? null);
   const firstImage = activeVariants.flatMap((v) => v.images)[0] ?? null;
+  const selectedVariant = activeVariants.find((v) => v.id === selectedVariantId) ?? activeVariants[0];
+  const [displayedImage, setDisplayedImage] = useState(selectedVariant?.images?.[0] ?? firstImage);
+  const [imageVisible, setImageVisible] = useState(true);
   const precioDesde = getProductUnitPrice(product.costo, 1, priceTiers);
   const visibleVariants = activeVariants.slice(0, 3);
   const extraVariants = activeVariants.length - visibleVariants.length;
+
+  function handleSelectVariant(v: NonNullable<Product["variants"]>[number]) {
+    if (v.id === selectedVariantId) return;
+    setSelectedVariantId(v.id);
+    const nextImage = v.images?.[0] ?? null;
+    setImageVisible(false);
+    setTimeout(() => {
+      setDisplayedImage(nextImage);
+      setImageVisible(true);
+    }, 150);
+  }
 
   return (
     <div className="flex flex-col overflow-hidden rounded-[10px] bg-white shadow-[0_4px_25px_rgba(0,0,0,0.12)]">
@@ -98,13 +112,15 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
         href={`/producto/${product.id}`}
         className="relative block aspect-[303/277] bg-white"
       >
-        {firstImage ? (
+        {displayedImage ? (
           <Image
-            src={firstImage}
+            src={displayedImage}
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="scale-[0.91] object-contain p-2"
+            className={`scale-[0.91] object-contain p-2 transition-opacity duration-150 ease-out ${
+              imageVisible ? "opacity-100" : "opacity-0"
+            }`}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-teal-light to-gray-100">
@@ -151,7 +167,7 @@ export default function FavoritoProductCard({ product, priceTiers }: Props) {
                     key={v.id}
                     type="button"
                     title={v.color_name}
-                    onClick={() => setSelectedVariantId(v.id)}
+                    onClick={() => handleSelectVariant(v)}
                     className={`h-4 w-4 shrink-0 rounded-full border border-ui-border ring-1 ring-offset-1 transition-shadow ${
                       selectedVariantId === v.id ? "ring-[#37D949]" : "ring-transparent"
                     }`}
