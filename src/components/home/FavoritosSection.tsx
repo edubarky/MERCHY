@@ -55,7 +55,7 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
           <button
             key={tab.slug ?? "all"}
             onClick={() => setActiveSlug(tab.slug)}
-            className="rounded-pill bg-white px-5 py-2 text-sm font-semibold text-black shadow-[0_4px_10px_rgba(0,0,0,0.08)] transition-colors"
+            className="cursor-pointer rounded-pill bg-white px-5 py-2 text-sm font-semibold text-black shadow-[0_4px_10px_rgba(0,0,0,0.08)] [transition:all_220ms_ease] hover:scale-[1.03] hover:bg-gradient-to-r hover:from-[#A8E9EA] hover:to-[#7FDCDD] hover:text-[#007F87] hover:shadow-[0_6px_18px_rgba(0,0,0,0.15)] hover:outline hover:outline-2 hover:outline-white"
           >
             {tab.label}
           </button>
