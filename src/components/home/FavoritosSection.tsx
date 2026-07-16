@@ -55,7 +55,7 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
           <button
             key={tab.slug ?? "all"}
             onClick={() => setActiveSlug(tab.slug)}
-            className="cursor-pointer rounded-pill bg-white px-5 py-2 text-sm font-semibold text-black shadow-[0_4px_10px_rgba(0,0,0,0.08)] [transition:all_220ms_ease] hover:scale-[1.03] hover:bg-gradient-to-r hover:from-[#A8E9EA] hover:to-[#7FDCDD] hover:text-[#007F87] hover:shadow-[0_6px_18px_rgba(0,0,0,0.15)] hover:outline hover:outline-2 hover:outline-white"
+            className="relative cursor-pointer overflow-hidden rounded-pill bg-white px-5 py-2 text-sm font-semibold text-black shadow-[0_4px_10px_rgba(0,0,0,0.08)] outline outline-0 outline-transparent before:absolute before:inset-0 before:-z-10 before:rounded-pill before:bg-gradient-to-r before:from-[#A8E9EA] before:to-[#7FDCDD] before:opacity-0 before:content-[''] before:[transition:opacity_420ms_cubic-bezier(0.22,1,0.36,1)] [transition:color_420ms_cubic-bezier(0.22,1,0.36,1),outline-color_420ms_cubic-bezier(0.22,1,0.36,1),outline-width_420ms_cubic-bezier(0.22,1,0.36,1),box-shadow_420ms_cubic-bezier(0.22,1,0.36,1),transform_420ms_cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:scale-[1.02] hover:text-[#007F87] hover:shadow-[0_6px_18px_rgba(0,0,0,0.15)] hover:outline-2 hover:outline-white hover:before:opacity-100"
           >
             {tab.label}
           </button>
