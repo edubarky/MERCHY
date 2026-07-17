@@ -242,11 +242,11 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0 }: 
               </span>
               <span>Mejor precio por mayoreo</span>
             </span>
-            <p className="leading-none">
-              <span className="font-display text-xl font-bold text-foreground">
+            <p className="flex items-baseline gap-1">
+              <span className="font-display text-xl font-bold leading-none text-foreground">
                 {formatMXN(precioDesde)}
-              </span>{" "}
-              <span className="align-super text-[10px] font-semibold text-ui-gray">MXN</span>
+              </span>
+              <span className="text-[10px] font-semibold leading-none text-ui-gray">MXN</span>
             </p>
           </div>
         </div>
