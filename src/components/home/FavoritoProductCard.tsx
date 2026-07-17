@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Product, PriceTier } from "@/types";
@@ -67,9 +67,15 @@ function BadgeIcon() {
 }
 
 // Cursor de mano dentro del botón "Ver detalles", en círculo blanco translúcido.
-function HandCursorIcon({ className = "" }: { className?: string }) {
+const HandCursorIcon = forwardRef<HTMLSpanElement, { className?: string }>(function HandCursorIcon(
+  { className = "" },
+  ref
+) {
   return (
-    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/60 transition-transform duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${className}`}>
+    <span
+      ref={ref}
+      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-[transform,background-color] duration-300 ease-out ${className}`}
+    >
       <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none">
         <path
           d="M6.5 8.5V3.2a1 1 0 0 1 2 0V7m0 0V2.4a1 1 0 0 1 2 0V7m0 .3V3.6a1 1 0 0 1 2 0V9m-6-.6L5.7 7.6a1 1 0 0 0-1.6 1.2l2.4 3.5a2.5 2.5 0 0 0 2.1 1.1h1.2a3 3 0 0 0 3-3V7.6"
@@ -81,7 +87,7 @@ function HandCursorIcon({ className = "" }: { className?: string }) {
       </svg>
     </span>
   );
-}
+});
 
 export default function FavoritoProductCard({ product, priceTiers, index = 0 }: Props) {
   const [liked, setLiked] = useState(false);
@@ -96,6 +102,26 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0 }: 
   const precioDesde = getProductUnitPrice(product.costo, 1, priceTiers);
   const visibleVariants = activeVariants.slice(0, 3);
   const extraVariants = activeVariants.length - visibleVariants.length;
+
+  const spotlightRef = useRef<HTMLSpanElement>(null);
+  const handIconRef = useRef<HTMLSpanElement>(null);
+  const [iconBoosted, setIconBoosted] = useState(false);
+
+  function handleDetailsMouseMove(e: React.MouseEvent<HTMLAnchorElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (spotlightRef.current) {
+      spotlightRef.current.style.transform = `translate3d(${x - 70}px, ${y - 70}px, 0)`;
+    }
+    if (handIconRef.current) {
+      const iconRect = handIconRef.current.getBoundingClientRect();
+      const cx = iconRect.left + iconRect.width / 2;
+      const cy = iconRect.top + iconRect.height / 2;
+      const near = Math.hypot(e.clientX - cx, e.clientY - cy) < 32;
+      setIconBoosted((prev) => (prev === near ? prev : near));
+    }
+  }
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), index * 80);
@@ -239,24 +265,22 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0 }: 
           </div>
           <Link
             href={`/producto/${product.id}`}
-            className="group/btn relative overflow-hidden flex shrink-0 items-center justify-center gap-1 rounded-[7px] bg-[#7FDED9] px-3 py-1.5 text-[11px] font-semibold text-[#076868] [transition:transform_320ms_cubic-bezier(0.22,1,0.36,1),box-shadow_320ms_cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-[2.5px] hover:shadow-[0_6px_14px_rgba(7,104,104,0.28)]"
+            onMouseMove={handleDetailsMouseMove}
+            onMouseLeave={() => setIconBoosted(false)}
+            className="group/btn relative overflow-hidden flex shrink-0 items-center justify-center gap-1 rounded-[7px] bg-[#7FDED9] px-3 py-1.5 text-[11px] font-semibold text-[#076868] [transition:transform_300ms_cubic-bezier(0.22,1,0.36,1),box-shadow_300ms_cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-[2px] hover:scale-[1.01] hover:shadow-[0_6px_14px_rgba(7,104,104,0.18)]"
           >
-            {/* Capa coral: se desliza de izquierda a derecha cubriendo el turquesa (y a la inversa al salir) */}
+            {/* Spotlight: sigue al cursor en tiempo real (transform vía ref, sin re-render) */}
             <span
+              ref={spotlightRef}
               aria-hidden="true"
-              className="absolute inset-0 origin-left scale-x-0 bg-accent-coral transition-transform duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/btn:scale-x-100"
+              className="pointer-events-none absolute left-0 top-0 h-[140px] w-[140px] rounded-full opacity-0 transition-opacity duration-300 ease-out will-change-transform group-hover/btn:opacity-100 [background:radial-gradient(circle,rgba(255,255,255,0.30),rgba(255,255,255,0)_70%)]"
             />
-            {/* Brillo: recorre el botón una sola vez al iniciar el hover */}
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 left-0 z-20 w-1/3 -translate-x-[220%] skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 group-hover/btn:animate-[buttonShine_700ms_ease-out]"
-            />
-            {/* Contenido: encima de ambas capas; escala levemente al presionar (independiente de la elevación) */}
-            <span className="relative z-10 flex items-center justify-center gap-1 transition-transform duration-150 ease-out group-active/btn:scale-[0.98]">
-              <span className="transition-transform duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/btn:translate-x-1">
-                Ver detalles
-              </span>
-              <HandCursorIcon className="group-hover/btn:translate-x-1 group-hover/btn:scale-[1.09]" />
+            <span className="relative z-10 flex items-center justify-center gap-1">
+              Ver detalles
+              <HandCursorIcon
+                ref={handIconRef}
+                className={iconBoosted ? "scale-[1.07] bg-white/90" : "bg-white/60"}
+              />
             </span>
           </Link>
         </div>
