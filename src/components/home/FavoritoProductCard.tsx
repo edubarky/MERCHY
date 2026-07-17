@@ -69,7 +69,7 @@ function BadgeIcon() {
 // Cursor de mano dentro del botón "Ver detalles", en círculo blanco translúcido.
 function HandCursorIcon({ className = "" }: { className?: string }) {
   return (
-    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/60 transition-transform duration-300 ease-out ${className}`}>
+    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/60 transition-transform duration-[280ms] ease-out ${className}`}>
       <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none">
         <path
           d="M6.5 8.5V3.2a1 1 0 0 1 2 0V7m0 0V2.4a1 1 0 0 1 2 0V7m0 .3V3.6a1 1 0 0 1 2 0V9m-6-.6L5.7 7.6a1 1 0 0 0-1.6 1.2l2.4 3.5a2.5 2.5 0 0 0 2.1 1.1h1.2a3 3 0 0 0 3-3V7.6"
@@ -239,10 +239,16 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0 }: 
           </div>
           <Link
             href={`/producto/${product.id}`}
-            className="group/btn flex shrink-0 items-center justify-center gap-1 rounded-[7px] bg-[#7FDED9] px-3 py-1.5 text-[11px] font-semibold text-[#076868] transition-[background-color,transform] duration-300 ease-out hover:scale-[1.03] hover:bg-[#6BD4CE]"
+            className="group/btn relative overflow-hidden flex shrink-0 items-center justify-center gap-1 rounded-[7px] bg-[#7FDED9] px-3 py-1.5 text-[11px] font-semibold text-[#076868] [transition:background-color_280ms_ease-out,box-shadow_280ms_ease-out,transform_150ms_ease-out] hover:-translate-y-[2.5px] active:scale-[0.98] hover:bg-[#6BD4CE] hover:shadow-[0_6px_14px_rgba(7,104,104,0.28)]"
           >
-            Ver detalles
-            <HandCursorIcon className="group-hover/btn:translate-x-0.5" />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -translate-x-[220%] skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 group-hover/btn:animate-[buttonShine_700ms_ease-out]"
+            />
+            <span className="transition-transform duration-[280ms] ease-out group-hover/btn:translate-x-1">
+              Ver detalles
+            </span>
+            <HandCursorIcon className="group-hover/btn:translate-x-1 group-hover/btn:scale-[1.09]" />
           </Link>
         </div>
       </div>

@@ -50,6 +50,12 @@ const config: Config = {
           "50%": { transform: "scale(1.12)" },
           "100%": { transform: "scale(1)" },
         },
+        buttonShine: {
+          "0%": { transform: "translateX(-220%) skewX(-20deg)", opacity: "0" },
+          "12%": { opacity: "1" },
+          "88%": { opacity: "1" },
+          "100%": { transform: "translateX(420%) skewX(-20deg)", opacity: "0" },
+        },
       },
       animation: {
         "badge-in": "badgeIn 450ms cubic-bezier(0.22,1,0.36,1) both",
