@@ -232,7 +232,7 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0 }: 
           <div className="mx-3 w-px self-stretch bg-ui-border" />
 
           {/* Precio + etiqueta */}
-          <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+          <div className="grid min-w-0 flex-1 justify-start gap-1">
             <span
               className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-[#EDF7F0] px-1.5 py-0.5 text-[8px] font-semibold leading-tight text-[#30BE52] animate-badge-in"
               style={{ animationDelay: `${index * 80 + 250}ms` }}
@@ -242,7 +242,7 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0 }: 
               </span>
               <span>Mejor precio por mayoreo</span>
             </span>
-            <p className="flex items-baseline gap-1">
+            <p className="flex items-baseline gap-1 justify-self-center">
               <span className="font-display text-xl font-bold leading-none text-foreground">
                 {formatMXN(precioDesde)}
               </span>
