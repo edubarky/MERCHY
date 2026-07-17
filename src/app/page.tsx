@@ -318,7 +318,7 @@ export default async function HomePage() {
           {/* Lo que ofrecemos */}
           <div className="bg-white rounded-card p-10 h-full flex flex-col border border-ui-border">
             <h2 className="font-display font-bold text-2xl text-foreground mb-8 text-center">Lo que ofrecemos</h2>
-            <div className="flex flex-1 flex-col justify-between gap-6 divide-y divide-[#F1F3F5]/70">
+            <div className="flex w-fit flex-1 flex-col justify-between gap-6 self-center divide-y divide-[#F1F3F5]/70">
               {WHAT_WE_OFFER.map((item) => (
                 <div key={item.title} className="flex items-start gap-4">
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#F2FCFC] shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
