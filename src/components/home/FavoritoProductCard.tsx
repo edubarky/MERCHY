@@ -69,7 +69,7 @@ function BadgeIcon() {
 // Cursor de mano dentro del botón "Ver detalles", en círculo blanco translúcido.
 function HandCursorIcon({ className = "" }: { className?: string }) {
   return (
-    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/60 transition-transform duration-[280ms] ease-out ${className}`}>
+    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/60 transition-transform duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${className}`}>
       <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none">
         <path
           d="M6.5 8.5V3.2a1 1 0 0 1 2 0V7m0 0V2.4a1 1 0 0 1 2 0V7m0 .3V3.6a1 1 0 0 1 2 0V9m-6-.6L5.7 7.6a1 1 0 0 0-1.6 1.2l2.4 3.5a2.5 2.5 0 0 0 2.1 1.1h1.2a3 3 0 0 0 3-3V7.6"
@@ -239,16 +239,25 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0 }: 
           </div>
           <Link
             href={`/producto/${product.id}`}
-            className="group/btn relative overflow-hidden flex shrink-0 items-center justify-center gap-1 rounded-[7px] bg-[#7FDED9] px-3 py-1.5 text-[11px] font-semibold text-[#076868] [transition:background-color_280ms_ease-out,box-shadow_280ms_ease-out,transform_150ms_ease-out] hover:-translate-y-[2.5px] active:scale-[0.98] hover:bg-[#6BD4CE] hover:shadow-[0_6px_14px_rgba(7,104,104,0.28)]"
+            className="group/btn relative overflow-hidden flex shrink-0 items-center justify-center gap-1 rounded-[7px] bg-[#7FDED9] px-3 py-1.5 text-[11px] font-semibold text-[#076868] [transition:transform_320ms_cubic-bezier(0.22,1,0.36,1),box-shadow_320ms_cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-[2.5px] hover:shadow-[0_6px_14px_rgba(7,104,104,0.28)]"
           >
+            {/* Capa coral: se desliza de izquierda a derecha cubriendo el turquesa (y a la inversa al salir) */}
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -translate-x-[220%] skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 group-hover/btn:animate-[buttonShine_700ms_ease-out]"
+              className="absolute inset-0 origin-left scale-x-0 bg-accent-coral transition-transform duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/btn:scale-x-100"
             />
-            <span className="transition-transform duration-[280ms] ease-out group-hover/btn:translate-x-1">
-              Ver detalles
+            {/* Brillo: recorre el botón una sola vez al iniciar el hover */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 left-0 z-20 w-1/3 -translate-x-[220%] skew-x-[-20deg] bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 group-hover/btn:animate-[buttonShine_700ms_ease-out]"
+            />
+            {/* Contenido: encima de ambas capas; escala levemente al presionar (independiente de la elevación) */}
+            <span className="relative z-10 flex items-center justify-center gap-1 transition-transform duration-150 ease-out group-active/btn:scale-[0.98]">
+              <span className="transition-transform duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/btn:translate-x-1">
+                Ver detalles
+              </span>
+              <HandCursorIcon className="group-hover/btn:translate-x-1 group-hover/btn:scale-[1.09]" />
             </span>
-            <HandCursorIcon className="group-hover/btn:translate-x-1 group-hover/btn:scale-[1.09]" />
           </Link>
         </div>
       </div>
