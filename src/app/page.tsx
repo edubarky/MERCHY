@@ -316,7 +316,7 @@ export default async function HomePage() {
           </div>
 
           {/* Lo que ofrecemos */}
-          <div className="bg-white rounded-card p-10 h-full flex flex-col border border-ui-border">
+          <div className="bg-white rounded-none p-10 h-full flex flex-col border border-ui-border">
             <h2 className="font-display font-bold text-2xl text-foreground mb-8 text-center">Lo que ofrecemos</h2>
             <div className="flex w-fit flex-1 flex-col justify-between gap-6 self-center divide-y divide-[#F1F3F5]/70">
               {WHAT_WE_OFFER.map((item) => (
