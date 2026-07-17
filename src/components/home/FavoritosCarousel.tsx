@@ -16,7 +16,7 @@ interface Props {
 // Cuánto se atenúan las tarjetas fuera del centro (1 = centrada, EDGE_OPACITY = borde).
 const EDGE_OPACITY = 0.93;
 const TWEEN_FACTOR_BASE = 0.2;
-const PARALLAX_PX = 14;
+const PARALLAX_PX = 10;
 
 function numberWithinRange(n: number, min: number, max: number) {
   return Math.min(Math.max(n, min), max);
@@ -24,7 +24,7 @@ function numberWithinRange(n: number, min: number, max: number) {
 
 function ChevronIcon({ direction }: { direction: "left" | "right" }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none">
       <path
         d={direction === "left" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"}
         stroke="#076868"
@@ -38,11 +38,11 @@ function ChevronIcon({ direction }: { direction: "left" | "right" }) {
 
 export default function FavoritosCarousel({ products, priceTiers }: Props) {
   const autoplay = useRef(
-    Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true })
+    Autoplay({ delay: 6000, stopOnInteraction: false, stopOnMouseEnter: true })
   );
   const wheelGestures = useRef(WheelGesturesPlugin({ forceWheelAxis: "x" }));
   const [emblaRef, emblaApi] = useEmblaCarousel(
-    { align: "start", containScroll: "trimSnaps", loop: false },
+    { align: "start", containScroll: "trimSnaps", loop: false, duration: 34 },
     [autoplay.current, wheelGestures.current]
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -109,11 +109,11 @@ export default function FavoritosCarousel({ products, priceTiers }: Props) {
   return (
     <div className="group/carousel relative">
       <div className="overflow-hidden" ref={emblaRef}>
-        <div className="-ml-4 flex touch-pan-y">
+        <div className="-ml-2 flex touch-pan-y">
           {products.map((product, index) => (
             <div
               key={product.id}
-              className="min-w-0 shrink-0 grow-0 basis-[86%] pl-4 sm:basis-[62%] lg:basis-[44%]"
+              className="min-w-0 shrink-0 grow-0 basis-[86%] pl-2 sm:basis-[62%] lg:basis-[44%]"
             >
               <FavoritoProductCard product={product} priceTiers={priceTiers} index={index} />
             </div>
@@ -126,7 +126,7 @@ export default function FavoritosCarousel({ products, priceTiers }: Props) {
         type="button"
         onClick={scrollPrev}
         aria-label="Producto anterior"
-        className="absolute left-2 top-[calc(50%-28px)] z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/70 opacity-0 shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md transition-opacity duration-300 ease-out group-hover/carousel:opacity-100 hover:bg-white/90"
+        className="absolute left-2 top-[calc(50%-28px)] z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/70 opacity-0 shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md transition-opacity duration-200 ease-out group-hover/carousel:opacity-100 hover:bg-white/90"
       >
         <ChevronIcon direction="left" />
       </button>
@@ -134,7 +134,7 @@ export default function FavoritosCarousel({ products, priceTiers }: Props) {
         type="button"
         onClick={scrollNext}
         aria-label="Producto siguiente"
-        className="absolute right-2 top-[calc(50%-28px)] z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/70 opacity-0 shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md transition-opacity duration-300 ease-out group-hover/carousel:opacity-100 hover:bg-white/90"
+        className="absolute right-2 top-[calc(50%-28px)] z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/70 opacity-0 shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md transition-opacity duration-200 ease-out group-hover/carousel:opacity-100 hover:bg-white/90"
       >
         <ChevronIcon direction="right" />
       </button>
