@@ -332,7 +332,7 @@ export default async function HomePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d={item.iconPath} />
                     </svg>
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-bold text-foreground">{item.title}</p>
                     <p className="text-sm leading-relaxed text-ui-gray mt-1">{item.desc}</p>
                   </div>
