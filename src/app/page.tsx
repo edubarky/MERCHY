@@ -316,11 +316,12 @@ export default async function HomePage() {
           </div>
 
           {/* Lo que ofrecemos */}
-          <div className="bg-white rounded-card p-10 flex flex-col justify-center border border-ui-border">
-            <h2 className="font-display font-bold text-2xl text-foreground mb-8">Lo que ofrecemos</h2>
+          <div className="bg-white rounded-card p-10 h-full flex flex-col justify-center border border-ui-border">
+            <h2 className="font-display font-bold text-2xl text-foreground mb-8 text-center">Lo que ofrecemos</h2>
             <div className="flex flex-col gap-14 divide-y divide-[#F1F3F5]/70">
               {WHAT_WE_OFFER.map((item) => (
-                <div key={item.title} className="flex items-start gap-4">
+                <div key={item.title} className="flex justify-center">
+                <div className="flex w-fit items-start gap-4">
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#F2FCFC] shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
                     <svg
                       className="h-11 w-11 text-primary"
@@ -336,6 +337,7 @@ export default async function HomePage() {
                     <p className="font-bold text-foreground">{item.title}</p>
                     <p className="text-sm leading-relaxed text-ui-gray mt-1">{item.desc}</p>
                   </div>
+                </div>
                 </div>
               ))}
             </div>
