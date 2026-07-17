@@ -3,17 +3,21 @@
 interface Props {
   count?: number;
   activeIndex?: number;
+  onSelect?: (index: number) => void;
 }
 
-export default function CarouselDots({ count = 4, activeIndex = 0 }: Props) {
+export default function CarouselDots({ count = 4, activeIndex = 0, onSelect }: Props) {
   return (
     <div className="flex items-center gap-2" role="tablist" aria-label="Paginación de favoritos">
       {Array.from({ length: count }).map((_, i) => (
-        <span
+        <button
           key={i}
+          type="button"
           role="tab"
           aria-selected={i === activeIndex}
-          className={`h-[17px] rounded-pill transition-all ${
+          aria-label={`Ir al producto ${i + 1}`}
+          onClick={() => onSelect?.(i)}
+          className={`h-[17px] rounded-pill transition-[width,background-color] duration-[250ms] ease-out ${
             i === activeIndex ? "w-10 bg-primary" : "w-6 bg-ui-border"
           }`}
         />

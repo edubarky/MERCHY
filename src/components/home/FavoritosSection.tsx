@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import type { Product, PriceTier, Category } from "@/types";
-import FavoritoProductCard from "@/components/home/FavoritoProductCard";
-import CarouselDots from "@/components/home/CarouselDots";
+import FavoritosCarousel from "@/components/home/FavoritosCarousel";
 
 interface Props {
   products: (Product & { variants: NonNullable<Product["variants"]> })[];
@@ -39,7 +38,7 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
     ? products.filter((p) => (p.category as Category | null)?.slug === activeSlug)
     : products;
 
-  const visible = filtered.slice(0, 4);
+  const visible = filtered.slice(0, 7);
 
   return (
     <div>
@@ -62,22 +61,13 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
         ))}
       </div>
 
-      {/* Grid de productos */}
+      {/* Carrusel de productos */}
       {visible.length === 0 ? (
         <div className="py-10 text-center text-sm text-ui-gray">
           No hay productos en esta categoría aún.
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {visible.map((product, index) => (
-              <FavoritoProductCard key={product.id} product={product} priceTiers={priceTiers} index={index} />
-            ))}
-          </div>
-          <div className="mt-6 flex justify-center">
-            <CarouselDots count={4} activeIndex={0} />
-          </div>
-        </>
+        <FavoritosCarousel products={visible} priceTiers={priceTiers} />
       )}
     </div>
   );
