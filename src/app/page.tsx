@@ -52,29 +52,22 @@ const STATIC_CATEGORIES = [
 
 const WHAT_WE_OFFER = [
   {
-    // Heroicons Solid "check-badge" — sello de calidad.
+    // Heroicons Outline "shield-check" — escudo delineado.
     iconPath:
-      "M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z",
-    fillRule: "evenodd" as const,
-    color: "#57E0D9",
+      "M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z",
     title: "Calidad",
     desc: "Excelencia en cada detalle.",
   },
   {
-    // Heroicons Solid "heart" — satisfacción.
-    iconPath:
-      "M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z",
-    fillRule: undefined,
-    color: "#30BE52",
+    // Heroicons Outline "check-circle" — círculo con check.
+    iconPath: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
     title: "Satisfacción",
     desc: "Materiales y acabados de alto nivel.",
   },
   {
-    // Heroicons Solid "shield-check" — entrega garantizada.
+    // Heroicons Outline "truck" — camión delineado.
     iconPath:
-      "M12.516 2.17a.75.75 0 00-1.032 0 11.209 11.209 0 01-7.877 3.08.75.75 0 00-.722.515A12.74 12.74 0 002.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 00.374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.39-.223-2.73-.635-3.985a.75.75 0 00-.722-.516l-.143.001c-2.996 0-5.717-1.17-7.734-3.08zm3.094 8.016a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z",
-    fillRule: "evenodd" as const,
-    color: "#114C8F",
+      "M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12",
     title: "Entrega garantizada",
     desc: "Confianza de principio a fin.",
   },
@@ -297,7 +290,7 @@ export default async function HomePage() {
 
       {/* ── EXPERIENCE + LO QUE OFRECEMOS ── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid items-stretch lg:grid-cols-2 gap-6">
           {/* Teal card */}
           <div className="bg-gradient-to-br from-primary to-primary-dark rounded-card p-10 flex flex-col justify-between min-h-[260px]">
             <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-6">
@@ -325,14 +318,18 @@ export default async function HomePage() {
           {/* Lo que ofrecemos */}
           <div className="bg-white rounded-card p-10 flex flex-col justify-center border border-ui-border">
             <h2 className="font-display font-bold text-2xl text-foreground mb-8">Lo que ofrecemos</h2>
-            <div className="flex flex-col gap-12 divide-y divide-[#F1F3F5]">
+            <div className="flex flex-col gap-14 divide-y divide-[#F1F3F5]/70">
               {WHAT_WE_OFFER.map((item) => (
                 <div key={item.title} className="flex items-start gap-4">
-                  <div
-                    className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[#E8F3F3] bg-[#F4FAFA] shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
-                  >
-                    <svg className="h-11 w-11" style={{ color: item.color }} fill="currentColor" viewBox="0 0 24 24">
-                      <path fillRule={item.fillRule} clipRule={item.fillRule ? "evenodd" : undefined} d={item.iconPath} />
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#F2FCFC] shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
+                    <svg
+                      className="h-11 w-11 text-primary"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d={item.iconPath} />
                     </svg>
                   </div>
                   <div>
