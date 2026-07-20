@@ -4,7 +4,9 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
+import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
+import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
 import ExperienciaHeadingArt from "@/components/home/ExperienciaHeadingArt";
 import ExperienciaParagraphArt from "@/components/home/ExperienciaParagraphArt";
@@ -325,6 +327,9 @@ export default async function HomePage() {
             {/* Desktop (lg+): calco exacto de la referencia, usando el arte fuente de /public/Home/EXPERIENCIA */}
             <div className="hidden lg:block absolute inset-0">
               <ExperienciaCardArt />
+              <div id="exp-glow" className="absolute" style={{ top: "3px", left: "-1px", width: "72px", height: "424px" }}>
+                <ExperienciaGlowArt />
+              </div>
               <div className="absolute" style={{ top: "17px", left: "56px", width: "68px", height: "113px" }}>
                 <ExperienciaIconArt />
               </div>
@@ -470,6 +475,8 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
+
+      <AdjustPanel />
     </main>
   );
 }
