@@ -13,8 +13,8 @@ interface Props {
 // Posicionamiento manual (píxeles) del contenedor exterior de cada tarjeta.
 // Valores iniciales = posición actual exacta, para no producir ningún cambio visual.
 const CARD_BOX_CLASSNAMES = [
-  "sm:absolute sm:top-[0px] sm:left-[0px] sm:w-[288px] sm:h-[426px]",
-  "sm:absolute sm:top-[0px] sm:left-[304px] sm:w-[288px] sm:h-[426px]",
+  "sm:absolute sm:top-[17px] sm:-left-[17px] sm:w-[288px] sm:h-[426px]",
+  "sm:absolute sm:top-[17px] sm:left-[293px] sm:w-[285px] sm:h-[426px]",
 ];
 
 // Icono de corazón en círculo blanco junto al título, calcado de "Group 985.svg"
@@ -74,7 +74,7 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
           No hay productos en esta categoría aún.
         </div>
       ) : (
-        <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2 sm:min-h-[426px]">
+        <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2 sm:min-h-[443px]">
           {visible.map((product, index) => (
             <FavoritoProductCard
               key={product.id}
