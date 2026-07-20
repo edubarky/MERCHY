@@ -335,8 +335,8 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/contacto"
-                className="group absolute inline-flex items-center justify-center gap-[19px] rounded-full bg-white text-[22px] font-semibold leading-tight text-[#5FA8A5] shadow-[0_8px_22px_rgba(0,0,0,0.12)] transition-[transform,box-shadow] duration-[220ms] ease-out hover:-translate-y-[3px] hover:shadow-[0_11px_26px_rgba(0,0,0,0.16)]"
-                style={{ top: "329px", left: "234px", width: "auto", height: "auto", paddingLeft: "40px", paddingRight: "40px", paddingTop: "8px", paddingBottom: "8px" }}
+                className="group absolute flex items-center justify-center gap-[16px] rounded-full bg-white text-[21px] font-semibold leading-tight tracking-[-0.02em] text-[#5FA8A5] shadow-[0_10px_26px_rgba(0,0,0,0.12)] transition-[transform,box-shadow] duration-[220ms] ease-out hover:-translate-y-[2px] hover:shadow-[0_13px_30px_rgba(0,0,0,0.16)]"
+                style={{ top: "321px", left: "234px", width: "340px", height: "60px" }}
               >
                 Contáctanos
                 <svg
