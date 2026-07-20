@@ -4,6 +4,7 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
+import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product, PriceTier } from "@/types";
 
@@ -290,29 +291,44 @@ export default async function HomePage() {
 
       {/* ── EXPERIENCE + LO QUE OFRECEMOS ── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="relative grid items-stretch lg:grid-cols-2 gap-6 lg:min-h-[370px]">
+        <div className="relative grid items-stretch lg:grid-cols-2 gap-6 lg:min-h-[453px]">
           {/* Teal card */}
-          <div className="bg-gradient-to-br from-primary to-primary-dark rounded-none p-10 flex flex-col justify-between min-h-[260px] lg:absolute lg:-top-[54px] lg:-left-[85px] lg:w-[728px] lg:h-[422px]">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-6">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
+          <div className="relative overflow-hidden bg-gradient-to-br from-primary to-primary-dark rounded-none p-10 flex flex-col justify-between min-h-[260px] lg:p-0 lg:absolute lg:-top-[54px] lg:-left-[85px] lg:w-[722px] lg:h-[507px]">
+            {/* Mobile / tablet: composición original en flujo normal */}
+            <div className="contents lg:hidden">
+              <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-6">
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="font-display font-bold text-3xl text-white leading-tight">
+                  Experiencia que<br />
+                  <span className="text-white/90 italic">supera expectativas</span>
+                </h2>
+                <p className="mt-3 text-white/80 text-sm">
+                  Productos que combinan buen diseño<br />con la calidad que esperas.
+                </p>
+              </div>
+              <Link
+                href="/contacto"
+                className="mt-8 inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-foreground font-semibold text-sm hover:shadow-md transition-shadow w-fit"
+              >
+                Contáctanos
+              </Link>
             </div>
-            <div>
-              <h2 className="font-display font-bold text-3xl text-white leading-tight">
-                Experiencia que<br />
-                <span className="text-white/90 italic">supera expectativas</span>
-              </h2>
-              <p className="mt-3 text-white/80 text-sm">
-                Productos que combinan buen diseño<br />con la calidad que esperas.
-              </p>
+
+            {/* Desktop (lg+): calco exacto de la referencia, usando el arte fuente de /public/Home/EXPERIENCIA */}
+            <div className="hidden lg:block absolute inset-0">
+              <ExperienciaCardArt />
+              <Link
+                href="/contacto"
+                className="absolute inline-flex items-center justify-center rounded-full bg-white text-[15px] font-bold text-[#68A7A4] shadow-[0_4px_6px_rgba(93,133,132,0.35)] transition-shadow hover:shadow-[0_6px_10px_rgba(93,133,132,0.45)]"
+                style={{ left: "146px", top: "395px", width: "208px", height: "41px" }}
+              >
+                Contáctanos
+              </Link>
             </div>
-            <Link
-              href="/contacto"
-              className="mt-8 inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-foreground font-semibold text-sm hover:shadow-md transition-shadow w-fit"
-            >
-              Contáctanos
-            </Link>
           </div>
 
           {/* Lo que ofrecemos */}
