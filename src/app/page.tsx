@@ -4,7 +4,6 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
-import AdjustPanel from "@/components/home/AdjustPanel";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product, PriceTier } from "@/types";
 
@@ -317,7 +316,7 @@ export default async function HomePage() {
           </div>
 
           {/* Lo que ofrecemos */}
-          <div id="ofrecemos-box" className="bg-white rounded-none p-10 flex flex-col border border-ui-border lg:absolute lg:top-[20px] lg:left-[570px] lg:w-[640px] lg:h-[410px]">
+          <div className="bg-white rounded-none p-10 flex flex-col border border-ui-border lg:absolute lg:-top-[62px] lg:left-[622px] lg:w-[680px] lg:h-[432px]">
             <h2 className="font-display font-bold text-3xl text-foreground mb-8 text-center">Lo que ofrecemos</h2>
             <div className="flex w-fit flex-1 flex-col justify-between gap-6 self-center divide-y divide-[#F1F3F5]/70">
               {WHAT_WE_OFFER.map((item) => (
@@ -441,8 +440,6 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
-
-      <AdjustPanel />
     </main>
   );
 }
