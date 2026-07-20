@@ -21,18 +21,18 @@ export default function AdjustPanel() {
     el.style.height = `${height}px`;
   }, [top, left, width, height]);
 
-  const fields: [string, number, (v: number) => void][] = [
-    ["top", top, setTop],
-    ["left", left, setLeft],
-    ["width", width, setWidth],
-    ["height", height, setHeight],
+  const fields: [string, number, (v: number) => void, number][] = [
+    ["top", top, setTop, -300],
+    ["left", left, setLeft, 0],
+    ["width", width, setWidth, 0],
+    ["height", height, setHeight, 0],
   ];
 
   return (
     <div className="fixed top-4 right-4 z-[9999] w-56 rounded-lg border border-ui-border bg-white p-4 shadow-2xl">
       <p className="mb-3 text-xs font-bold text-foreground">Ajuste rectángulo (temporal)</p>
       <div className="flex flex-col gap-3">
-        {fields.map(([label, value, setter]) => (
+        {fields.map(([label, value, setter, min]) => (
           <label key={label} className="flex flex-col gap-1 text-xs text-ui-gray">
             <span className="flex items-center justify-between">
               <span className="capitalize">{label}</span>
@@ -40,7 +40,7 @@ export default function AdjustPanel() {
             </span>
             <input
               type="range"
-              min={0}
+              min={min}
               max={900}
               value={value}
               onChange={(e) => setter(Number(e.target.value))}
