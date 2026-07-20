@@ -4,7 +4,6 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
-import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product, PriceTier } from "@/types";
@@ -292,9 +291,9 @@ export default async function HomePage() {
 
       {/* ── EXPERIENCE + LO QUE OFRECEMOS ── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="relative grid items-stretch lg:grid-cols-2 gap-6 lg:min-h-[453px]">
+        <div className="relative grid items-stretch lg:grid-cols-2 gap-6 lg:min-h-[370px]">
           {/* Teal card */}
-          <div id="experiencia-box" className="relative overflow-hidden bg-gradient-to-br from-primary to-primary-dark rounded-none p-10 flex flex-col justify-between min-h-[260px] lg:p-0 lg:absolute lg:-top-[54px] lg:-left-[85px] lg:w-[722px] lg:h-[507px]">
+          <div className="relative overflow-hidden bg-gradient-to-br from-primary to-primary-dark rounded-none p-10 flex flex-col justify-between min-h-[260px] lg:p-0 lg:absolute lg:-top-[57px] lg:-left-[100px] lg:w-[722px] lg:h-[426px]">
             {/* Mobile / tablet: composición original en flujo normal */}
             <div className="contents lg:hidden">
               <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-6">
@@ -457,8 +456,6 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
-
-      <AdjustPanel />
     </main>
   );
 }
