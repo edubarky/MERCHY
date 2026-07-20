@@ -8,6 +8,7 @@ import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
 import ExperienciaHeadingArt from "@/components/home/ExperienciaHeadingArt";
 import ExperienciaParagraphArt from "@/components/home/ExperienciaParagraphArt";
+import ExperienciaButtonOneArt from "@/components/home/ExperienciaButtonOneArt";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product, PriceTier } from "@/types";
 
@@ -335,21 +336,11 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/contacto"
-                className="group absolute flex items-center justify-center gap-[16px] rounded-full bg-white text-[21px] font-semibold leading-tight tracking-[-0.02em] text-[#5FA8A5] shadow-[0_10px_26px_rgba(0,0,0,0.12)] transition-[transform,box-shadow] duration-[220ms] ease-out hover:-translate-y-[2px] hover:shadow-[0_13px_30px_rgba(0,0,0,0.16)]"
-                style={{ top: "321px", left: "234px", width: "340px", height: "60px" }}
+                className="absolute transition-transform duration-[220ms] ease-out hover:-translate-y-[2px]"
+                style={{ top: "313px", left: "267px", width: "275px", height: "76px" }}
               >
-                Contáctanos
-                <svg
-                  className="h-5 w-5 shrink-0 transition-transform duration-[220ms] ease-out group-hover:translate-x-1"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
+                <ExperienciaButtonOneArt />
+                <span className="sr-only">Contáctanos</span>
               </Link>
             </div>
           </div>
