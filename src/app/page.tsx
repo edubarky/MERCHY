@@ -4,7 +4,6 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
-import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
@@ -84,9 +83,9 @@ const WHAT_WE_OFFER = [
 // (ícono+texto juntos) de la tarjeta "Lo que ofrecemos". Valores iniciales =
 // posición actual exacta.
 const OFRECEMOS_ROW_BOXES = [
-  { top: "109px", left: "185px", width: "310px", height: "64px" },
-  { top: "218px", left: "185px", width: "310px", height: "64px" },
-  { top: "327px", left: "185px", width: "310px", height: "64px" },
+  { top: "130px", left: "185px", width: "310px", height: "64px" },
+  { top: "218px", left: "185px", width: "321px", height: "101px" },
+  { top: "307px", left: "185px", width: "310px", height: "64px" },
 ];
 
 export default async function HomePage() {
@@ -390,17 +389,16 @@ export default async function HomePage() {
             {/* Desktop (lg+): título, íconos y textos como piezas independientes movibles */}
             <div className="hidden lg:block absolute inset-0">
               <h2
-                id="ofr-title"
                 className="absolute font-display font-bold text-4xl text-foreground text-center"
-                style={{ top: "41px", left: "41px", width: "598px", height: "36px" }}
+                style={{ top: "50px", left: "41px", width: "598px", height: "36px" }}
               >
                 Lo que ofrecemos
               </h2>
               {/* Líneas divisorias entre filas (decorativas, no forman parte del panel) */}
-              <div className="absolute border-t border-[#F1F3F5]/70" style={{ top: "218px", left: "185px", width: "310px" }} />
-              <div className="absolute border-t border-[#F1F3F5]/70" style={{ top: "327px", left: "185px", width: "310px" }} />
+              <div className="absolute border-t border-[#F1F3F5]/70" style={{ top: "218px", left: "185px", width: "321px" }} />
+              <div className="absolute border-t border-[#F1F3F5]/70" style={{ top: "307px", left: "185px", width: "310px" }} />
               {WHAT_WE_OFFER.map((item, i) => (
-                <div key={item.title} id={`ofr-row-${i}`} className="absolute flex items-start gap-4" style={OFRECEMOS_ROW_BOXES[i]}>
+                <div key={item.title} className="absolute flex items-start gap-4" style={OFRECEMOS_ROW_BOXES[i]}>
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#F2FCFC] shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
                     <svg
                       className="h-11 w-11 text-primary"
@@ -520,8 +518,6 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
-
-      <AdjustPanel />
     </main>
   );
 }
