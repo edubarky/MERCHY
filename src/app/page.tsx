@@ -335,10 +335,21 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/contacto"
-                className="absolute inline-flex items-center justify-center rounded-full bg-white text-[15px] font-bold text-[#68A7A4] shadow-[0_4px_6px_rgba(93,133,132,0.35)] transition-shadow hover:shadow-[0_6px_10px_rgba(93,133,132,0.45)]"
-                style={{ top: "327px", left: "234px", width: "152px", height: "47px" }}
+                className="group absolute inline-flex items-center justify-center gap-[19px] rounded-full bg-white text-[22px] font-semibold leading-tight text-[#5FA8A5] shadow-[0_8px_22px_rgba(0,0,0,0.12)] transition-[transform,box-shadow] duration-[220ms] ease-out hover:-translate-y-[3px] hover:shadow-[0_11px_26px_rgba(0,0,0,0.16)]"
+                style={{ top: "329px", left: "234px", width: "auto", height: "auto", paddingLeft: "40px", paddingRight: "40px", paddingTop: "8px", paddingBottom: "8px" }}
               >
                 Contáctanos
+                <svg
+                  className="h-5 w-5 shrink-0 transition-transform duration-[220ms] ease-out group-hover:translate-x-1"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
               </Link>
             </div>
           </div>
