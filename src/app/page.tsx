@@ -10,6 +10,7 @@ import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
 import ExperienciaHeadingArt from "@/components/home/ExperienciaHeadingArt";
 import ExperienciaParagraphArt from "@/components/home/ExperienciaParagraphArt";
 import ExperienciaButtonOneArt from "@/components/home/ExperienciaButtonOneArt";
+import ExperienciaButtonTwoArt from "@/components/home/ExperienciaButtonTwoArt";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product, PriceTier } from "@/types";
 
@@ -349,10 +350,13 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/contacto"
-                className="absolute transition-transform duration-[220ms] ease-out hover:-translate-y-[2px]"
+                className="group absolute"
                 style={{ top: "313px", left: "218px", width: "275px", height: "76px" }}
               >
                 <ExperienciaButtonOneArt />
+                <div className="absolute inset-0 opacity-0 blur-[6px] transition-[opacity,filter] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:blur-[0px]">
+                  <ExperienciaButtonTwoArt />
+                </div>
                 <span className="sr-only">Contáctanos</span>
               </Link>
             </div>
