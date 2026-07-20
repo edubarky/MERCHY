@@ -80,17 +80,13 @@ const WHAT_WE_OFFER = [
   },
 ];
 
-// Posicionamiento manual (píxeles, solo escritorio) del título, íconos y textos
-// de la tarjeta "Lo que ofrecemos". Valores iniciales = posición actual exacta.
-const OFRECEMOS_ICON_BOXES = [
-  { top: "109px", left: "185px", width: "64px", height: "64px" },
-  { top: "218px", left: "185px", width: "64px", height: "64px" },
-  { top: "327px", left: "185px", width: "64px", height: "64px" },
-];
-const OFRECEMOS_TEXT_BOXES = [
-  { top: "109px", left: "265px", width: "230px", height: "51px" },
-  { top: "218px", left: "265px", width: "230px", height: "51px" },
-  { top: "327px", left: "265px", width: "230px", height: "51px" },
+// Posicionamiento manual (píxeles, solo escritorio) del título y de cada fila
+// (ícono+texto juntos) de la tarjeta "Lo que ofrecemos". Valores iniciales =
+// posición actual exacta.
+const OFRECEMOS_ROW_BOXES = [
+  { top: "109px", left: "185px", width: "310px", height: "64px" },
+  { top: "218px", left: "185px", width: "310px", height: "64px" },
+  { top: "327px", left: "185px", width: "310px", height: "64px" },
 ];
 
 export default async function HomePage() {
@@ -404,12 +400,8 @@ export default async function HomePage() {
               <div className="absolute border-t border-[#F1F3F5]/70" style={{ top: "218px", left: "185px", width: "310px" }} />
               <div className="absolute border-t border-[#F1F3F5]/70" style={{ top: "327px", left: "185px", width: "310px" }} />
               {WHAT_WE_OFFER.map((item, i) => (
-                <div key={item.title}>
-                  <div
-                    id={`ofr-icon-${i}`}
-                    className="absolute flex items-center justify-center rounded-2xl bg-[#F2FCFC] shadow-[0_2px_6px_rgba(0,0,0,0.03)]"
-                    style={OFRECEMOS_ICON_BOXES[i]}
-                  >
+                <div key={item.title} id={`ofr-row-${i}`} className="absolute flex items-start gap-4" style={OFRECEMOS_ROW_BOXES[i]}>
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#F2FCFC] shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
                     <svg
                       className="h-11 w-11 text-primary"
                       fill="none"
@@ -420,7 +412,7 @@ export default async function HomePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d={item.iconPath} />
                     </svg>
                   </div>
-                  <div id={`ofr-text-${i}`} className="absolute" style={OFRECEMOS_TEXT_BOXES[i]}>
+                  <div className="flex-1">
                     <p className="font-bold text-foreground">{item.title}</p>
                     <p className="text-sm leading-relaxed text-ui-gray mt-1">{item.desc}</p>
                   </div>

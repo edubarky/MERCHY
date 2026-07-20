@@ -3,38 +3,19 @@
 import { useEffect, useState } from "react";
 
 // Panel temporal de ajuste visual para la tarjeta "Lo que ofrecemos"
-// (título + ícono y texto de cada una de las 3 filas). Eliminar este archivo
+// (título + cada fila completa, ícono y texto juntos). Eliminar este archivo
 // y su uso en page.tsx cuando el usuario termine de ajustar.
 type Box = { top: number; left: number; width: number; height: number };
 
-const TARGETS = [
-  "ofr-title",
-  "ofr-icon-0",
-  "ofr-text-0",
-  "ofr-icon-1",
-  "ofr-text-1",
-  "ofr-icon-2",
-  "ofr-text-2",
-] as const;
+const TARGETS = ["ofr-title", "ofr-row-0", "ofr-row-1", "ofr-row-2"] as const;
 
-const LABELS = [
-  "Título",
-  "Ícono 1 (Calidad)",
-  "Texto 1 (Calidad)",
-  "Ícono 2 (Satisfacción)",
-  "Texto 2 (Satisfacción)",
-  "Ícono 3 (Entrega)",
-  "Texto 3 (Entrega)",
-];
+const LABELS = ["Título", "Fila 1 (Calidad)", "Fila 2 (Satisfacción)", "Fila 3 (Entrega)"];
 
 const INITIAL: Record<(typeof TARGETS)[number], Box> = {
   "ofr-title": { top: 41, left: 41, width: 598, height: 36 },
-  "ofr-icon-0": { top: 109, left: 185, width: 64, height: 64 },
-  "ofr-text-0": { top: 109, left: 265, width: 230, height: 51 },
-  "ofr-icon-1": { top: 218, left: 185, width: 64, height: 64 },
-  "ofr-text-1": { top: 218, left: 265, width: 230, height: 51 },
-  "ofr-icon-2": { top: 327, left: 185, width: 64, height: 64 },
-  "ofr-text-2": { top: 327, left: 265, width: 230, height: 51 },
+  "ofr-row-0": { top: 109, left: 185, width: 310, height: 64 },
+  "ofr-row-1": { top: 218, left: 185, width: 310, height: 64 },
+  "ofr-row-2": { top: 327, left: 185, width: 310, height: 64 },
 };
 
 export default function AdjustPanel() {
