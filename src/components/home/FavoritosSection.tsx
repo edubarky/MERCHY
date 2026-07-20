@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { Product, PriceTier, Category } from "@/types";
 import FavoritoProductCard from "@/components/home/FavoritoProductCard";
-import CarouselDots from "@/components/home/CarouselDots";
 
 interface Props {
   products: (Product & { variants: NonNullable<Product["variants"]> })[];
@@ -68,16 +67,11 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
           No hay productos en esta categoría aún.
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {visible.map((product, index) => (
-              <FavoritoProductCard key={product.id} product={product} priceTiers={priceTiers} index={index} />
-            ))}
-          </div>
-          <div className="mt-6 flex justify-center">
-            <CarouselDots count={4} activeIndex={0} />
-          </div>
-        </>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {visible.map((product, index) => (
+            <FavoritoProductCard key={product.id} product={product} priceTiers={priceTiers} index={index} />
+          ))}
+        </div>
       )}
     </div>
   );
