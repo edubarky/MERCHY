@@ -4,7 +4,6 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
-import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
 import ExperienciaHeadingArt from "@/components/home/ExperienciaHeadingArt";
@@ -325,20 +324,19 @@ export default async function HomePage() {
             {/* Desktop (lg+): calco exacto de la referencia, usando el arte fuente de /public/Home/EXPERIENCIA */}
             <div className="hidden lg:block absolute inset-0">
               <ExperienciaCardArt />
-              <div id="exp-icon" className="absolute" style={{ top: "17px", left: "58px", width: "59px", height: "59px" }}>
+              <div className="absolute" style={{ top: "17px", left: "56px", width: "68px", height: "113px" }}>
                 <ExperienciaIconArt />
               </div>
-              <div id="exp-heading" className="absolute" style={{ top: "88px", left: "142px", width: "438px", height: "102px" }}>
+              <div className="absolute" style={{ top: "88px", left: "150px", width: "433px", height: "128px" }}>
                 <ExperienciaHeadingArt />
               </div>
-              <div id="exp-paragraph" className="absolute" style={{ top: "226px", left: "146px", width: "430px", height: "57px" }}>
+              <div className="absolute" style={{ top: "226px", left: "146px", width: "439px", height: "61px" }}>
                 <ExperienciaParagraphArt />
               </div>
               <Link
-                id="exp-button"
                 href="/contacto"
                 className="absolute inline-flex items-center justify-center rounded-full bg-white text-[15px] font-bold text-[#68A7A4] shadow-[0_4px_6px_rgba(93,133,132,0.35)] transition-shadow hover:shadow-[0_6px_10px_rgba(93,133,132,0.45)]"
-                style={{ top: "332px", left: "146px", width: "208px", height: "34px" }}
+                style={{ top: "327px", left: "234px", width: "152px", height: "47px" }}
               >
                 Contáctanos
               </Link>
@@ -470,8 +468,6 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
-
-      <AdjustPanel />
     </main>
   );
 }
