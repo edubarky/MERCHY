@@ -4,6 +4,7 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
+import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product, PriceTier } from "@/types";
@@ -293,7 +294,7 @@ export default async function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="relative grid items-stretch lg:grid-cols-2 gap-6 lg:min-h-[453px]">
           {/* Teal card */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-primary to-primary-dark rounded-none p-10 flex flex-col justify-between min-h-[260px] lg:p-0 lg:absolute lg:-top-[54px] lg:-left-[85px] lg:w-[722px] lg:h-[507px]">
+          <div id="experiencia-box" className="relative overflow-hidden bg-gradient-to-br from-primary to-primary-dark rounded-none p-10 flex flex-col justify-between min-h-[260px] lg:p-0 lg:absolute lg:-top-[54px] lg:-left-[85px] lg:w-[722px] lg:h-[507px]">
             {/* Mobile / tablet: composición original en flujo normal */}
             <div className="contents lg:hidden">
               <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-6">
@@ -324,7 +325,7 @@ export default async function HomePage() {
               <Link
                 href="/contacto"
                 className="absolute inline-flex items-center justify-center rounded-full bg-white text-[15px] font-bold text-[#68A7A4] shadow-[0_4px_6px_rgba(93,133,132,0.35)] transition-shadow hover:shadow-[0_6px_10px_rgba(93,133,132,0.45)]"
-                style={{ left: "146px", top: "395px", width: "208px", height: "41px" }}
+                style={{ left: "20.222%", top: "77.909%", width: "28.809%", height: "8.087%" }}
               >
                 Contáctanos
               </Link>
@@ -456,6 +457,8 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
+
+      <AdjustPanel />
     </main>
   );
 }
