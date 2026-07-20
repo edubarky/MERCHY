@@ -24,7 +24,7 @@ export default function AdjustPanel() {
 
   const fields: [string, number, (v: number) => void, number][] = [
     ["top", top, setTop, -300],
-    ["left", left, setLeft, 0],
+    ["left", left, setLeft, -300],
     ["width", width, setWidth, 0],
     ["height", height, setHeight, 0],
   ];
