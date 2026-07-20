@@ -4,7 +4,6 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
-import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
@@ -327,23 +326,22 @@ export default async function HomePage() {
             {/* Desktop (lg+): calco exacto de la referencia, usando el arte fuente de /public/Home/EXPERIENCIA */}
             <div className="hidden lg:block absolute inset-0">
               <ExperienciaCardArt />
-              <div id="exp-glow" className="absolute" style={{ top: "-7px", left: "15px", width: "162px", height: "506px" }}>
+              <div className="absolute" style={{ top: "70px", left: "2px", width: "203px", height: "552px" }}>
                 <ExperienciaGlowArt />
               </div>
-              <div id="exp-icon" className="absolute" style={{ top: "17px", left: "56px", width: "68px", height: "113px" }}>
+              <div className="absolute" style={{ top: "27px", left: "60px", width: "68px", height: "113px" }}>
                 <ExperienciaIconArt />
               </div>
-              <div id="exp-heading" className="absolute" style={{ top: "88px", left: "150px", width: "433px", height: "128px" }}>
+              <div className="absolute" style={{ top: "77px", left: "149px", width: "434px", height: "128px" }}>
                 <ExperienciaHeadingArt />
               </div>
-              <div id="exp-paragraph" className="absolute" style={{ top: "226px", left: "146px", width: "439px", height: "61px" }}>
+              <div className="absolute" style={{ top: "216px", left: "151px", width: "439px", height: "61px" }}>
                 <ExperienciaParagraphArt />
               </div>
               <Link
-                id="exp-button"
                 href="/contacto"
                 className="absolute transition-transform duration-[220ms] ease-out hover:-translate-y-[2px]"
-                style={{ top: "313px", left: "267px", width: "275px", height: "76px" }}
+                style={{ top: "313px", left: "218px", width: "275px", height: "76px" }}
               >
                 <ExperienciaButtonOneArt />
                 <span className="sr-only">Contáctanos</span>
@@ -476,8 +474,6 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
-
-      <AdjustPanel />
     </main>
   );
 }
