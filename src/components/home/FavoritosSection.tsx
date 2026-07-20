@@ -10,6 +10,13 @@ interface Props {
   categories: Category[];
 }
 
+// Posicionamiento manual (píxeles) del contenedor exterior de cada tarjeta.
+// Valores iniciales = posición actual exacta, para no producir ningún cambio visual.
+const CARD_BOX_CLASSNAMES = [
+  "sm:absolute sm:top-[0px] sm:left-[0px] sm:w-[288px] sm:h-[426px]",
+  "sm:absolute sm:top-[0px] sm:left-[304px] sm:w-[288px] sm:h-[426px]",
+];
+
 // Icono de corazón en círculo blanco junto al título, calcado de "Group 985.svg"
 // en /public/Home/FAVORITOS DEL MOMENTO/ (mismo trazo y color #00A5A3).
 function HeartBadge() {
@@ -67,9 +74,15 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
           No hay productos en esta categoría aún.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2 sm:min-h-[426px]">
           {visible.map((product, index) => (
-            <FavoritoProductCard key={product.id} product={product} priceTiers={priceTiers} index={index} />
+            <FavoritoProductCard
+              key={product.id}
+              product={product}
+              priceTiers={priceTiers}
+              index={index}
+              boxClassName={CARD_BOX_CLASSNAMES[index] ?? ""}
+            />
           ))}
         </div>
       )}

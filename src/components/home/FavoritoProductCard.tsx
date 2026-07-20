@@ -10,6 +10,7 @@ interface Props {
   product: Product & { variants: NonNullable<Product["variants"]> };
   priceTiers: PriceTier[];
   index?: number;
+  boxClassName?: string;
 }
 
 function toTitleCase(str: string): string {
@@ -89,7 +90,7 @@ const HandCursorIcon = forwardRef<HTMLSpanElement, { className?: string }>(funct
   );
 });
 
-export default function FavoritoProductCard({ product, priceTiers, index = 0 }: Props) {
+export default function FavoritoProductCard({ product, priceTiers, index = 0, boxClassName = "" }: Props) {
   const [liked, setLiked] = useState(false);
   const [popKey, setPopKey] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -144,7 +145,7 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0 }: 
     <div
       className={`flex flex-col overflow-hidden rounded-[10px] bg-white shadow-[0_4px_25px_rgba(0,0,0,0.12)] [transition-property:opacity,transform,box-shadow] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-[10px] hover:scale-[1.02] hover:shadow-[0_20px_45px_rgba(0,0,0,0.18)] ${
         mounted ? "opacity-100 translate-y-0 duration-300" : "opacity-0 translate-y-5 duration-500"
-      }`}
+      } ${boxClassName}`}
     >
       {/* Imagen */}
       <Link
