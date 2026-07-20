@@ -4,6 +4,7 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
+import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
@@ -77,6 +78,19 @@ const WHAT_WE_OFFER = [
     title: "Entrega garantizada",
     desc: "Confianza de principio a fin.",
   },
+];
+
+// Posicionamiento manual (píxeles, solo escritorio) del título, íconos y textos
+// de la tarjeta "Lo que ofrecemos". Valores iniciales = posición actual exacta.
+const OFRECEMOS_ICON_BOXES = [
+  { top: "109px", left: "185px", width: "64px", height: "64px" },
+  { top: "218px", left: "185px", width: "64px", height: "64px" },
+  { top: "327px", left: "185px", width: "64px", height: "64px" },
+];
+const OFRECEMOS_TEXT_BOXES = [
+  { top: "109px", left: "265px", width: "230px", height: "51px" },
+  { top: "218px", left: "265px", width: "230px", height: "51px" },
+  { top: "327px", left: "265px", width: "230px", height: "51px" },
 ];
 
 export default async function HomePage() {
@@ -350,12 +364,52 @@ export default async function HomePage() {
           </div>
 
           {/* Lo que ofrecemos */}
-          <div className="bg-white rounded-none p-10 flex flex-col border border-ui-border lg:absolute lg:-top-[62px] lg:left-[622px] lg:w-[680px] lg:h-[432px]">
-            <h2 className="font-display font-bold text-3xl text-foreground mb-8 text-center">Lo que ofrecemos</h2>
-            <div className="flex w-fit flex-1 flex-col justify-between gap-6 self-center divide-y divide-[#F1F3F5]/70">
-              {WHAT_WE_OFFER.map((item) => (
-                <div key={item.title} className="flex items-start gap-4">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#F2FCFC] shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
+          <div className="relative bg-white rounded-none p-10 flex flex-col border border-ui-border lg:absolute lg:-top-[62px] lg:left-[622px] lg:w-[680px] lg:h-[432px]">
+            {/* Mobile / tablet: composición original en flujo normal */}
+            <div className="contents lg:hidden">
+              <h2 className="font-display font-bold text-3xl text-foreground mb-8 text-center">Lo que ofrecemos</h2>
+              <div className="flex w-fit flex-1 flex-col justify-between gap-6 self-center divide-y divide-[#F1F3F5]/70">
+                {WHAT_WE_OFFER.map((item) => (
+                  <div key={item.title} className="flex items-start gap-4">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#F2FCFC] shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
+                      <svg
+                        className="h-11 w-11 text-primary"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d={item.iconPath} />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-foreground">{item.title}</p>
+                      <p className="text-sm leading-relaxed text-ui-gray mt-1">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop (lg+): título, íconos y textos como piezas independientes movibles */}
+            <div className="hidden lg:block absolute inset-0">
+              <h2
+                id="ofr-title"
+                className="absolute font-display font-bold text-3xl text-foreground text-center"
+                style={{ top: "41px", left: "41px", width: "598px", height: "36px" }}
+              >
+                Lo que ofrecemos
+              </h2>
+              {/* Líneas divisorias entre filas (decorativas, no forman parte del panel) */}
+              <div className="absolute border-t border-[#F1F3F5]/70" style={{ top: "218px", left: "185px", width: "310px" }} />
+              <div className="absolute border-t border-[#F1F3F5]/70" style={{ top: "327px", left: "185px", width: "310px" }} />
+              {WHAT_WE_OFFER.map((item, i) => (
+                <div key={item.title}>
+                  <div
+                    id={`ofr-icon-${i}`}
+                    className="absolute flex items-center justify-center rounded-2xl bg-[#F2FCFC] shadow-[0_2px_6px_rgba(0,0,0,0.03)]"
+                    style={OFRECEMOS_ICON_BOXES[i]}
+                  >
                     <svg
                       className="h-11 w-11 text-primary"
                       fill="none"
@@ -366,7 +420,7 @@ export default async function HomePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d={item.iconPath} />
                     </svg>
                   </div>
-                  <div className="flex-1">
+                  <div id={`ofr-text-${i}`} className="absolute" style={OFRECEMOS_TEXT_BOXES[i]}>
                     <p className="font-bold text-foreground">{item.title}</p>
                     <p className="text-sm leading-relaxed text-ui-gray mt-1">{item.desc}</p>
                   </div>
@@ -474,6 +528,8 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
+
+      <AdjustPanel />
     </main>
   );
 }
