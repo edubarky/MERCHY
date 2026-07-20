@@ -363,7 +363,7 @@ export default async function HomePage() {
           <div className="relative bg-white rounded-none p-10 flex flex-col border border-ui-border lg:absolute lg:-top-[62px] lg:left-[622px] lg:w-[680px] lg:h-[432px]">
             {/* Mobile / tablet: composición original en flujo normal */}
             <div className="contents lg:hidden">
-              <h2 className="font-display font-bold text-3xl text-foreground mb-8 text-center">Lo que ofrecemos</h2>
+              <h2 className="font-display font-bold text-4xl text-foreground mb-8 text-center">Lo que ofrecemos</h2>
               <div className="flex w-fit flex-1 flex-col justify-between gap-6 self-center divide-y divide-[#F1F3F5]/70">
                 {WHAT_WE_OFFER.map((item) => (
                   <div key={item.title} className="flex items-start gap-4">
@@ -391,7 +391,7 @@ export default async function HomePage() {
             <div className="hidden lg:block absolute inset-0">
               <h2
                 id="ofr-title"
-                className="absolute font-display font-bold text-3xl text-foreground text-center"
+                className="absolute font-display font-bold text-4xl text-foreground text-center"
                 style={{ top: "41px", left: "41px", width: "598px", height: "36px" }}
               >
                 Lo que ofrecemos
