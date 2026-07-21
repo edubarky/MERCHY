@@ -9,8 +9,10 @@ import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
 import ExperienciaHeadingArt from "@/components/home/ExperienciaHeadingArt";
 import ExperienciaParagraphArt from "@/components/home/ExperienciaParagraphArt";
-import ExperienciaButtonOneArt from "@/components/home/ExperienciaButtonOneArt";
-import ExperienciaButtonTwoArt from "@/components/home/ExperienciaButtonTwoArt";
+import ExperienciaButtonOnePill from "@/components/home/ExperienciaButtonOnePill";
+import ExperienciaButtonOneText from "@/components/home/ExperienciaButtonOneText";
+import ExperienciaButtonTwoPill from "@/components/home/ExperienciaButtonTwoPill";
+import ExperienciaButtonTwoText from "@/components/home/ExperienciaButtonTwoText";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product, PriceTier } from "@/types";
 
@@ -350,12 +352,32 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/contacto"
-                className="group absolute"
+                className="group absolute transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-[3px] group-hover:scale-[1.015]"
                 style={{ top: "313px", left: "218px", width: "275px", height: "76px" }}
               >
-                <ExperienciaButtonOneArt />
-                <div className="absolute inset-0 opacity-0 blur-[6px] transition-[opacity,filter] duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:blur-[0px]">
-                  <ExperienciaButtonTwoArt />
+                {/* Halo de luz coral, muy difuso */}
+                <div className="pointer-events-none absolute -inset-4 rounded-[40px] bg-[#FF8674] opacity-0 blur-2xl transition-opacity duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-25" />
+
+                {/* Sombra dinámica (nunca negra, tono coral) */}
+                <div className="relative h-full w-full rounded-[34px] shadow-[0_8px_18px_rgba(255,112,90,0.10)] transition-shadow duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:shadow-[0_16px_34px_rgba(255,112,90,0.25)]">
+                  {/* Base: Botón 1 (fondo + texto por separado) */}
+                  <ExperienciaButtonOnePill />
+                  <div className="absolute inset-0 transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-px">
+                    <ExperienciaButtonOneText />
+                  </div>
+
+                  {/* Overlay: Botón 2, efecto Blur to Color */}
+                  <div className="absolute inset-0 opacity-0 blur-[6px] transition-[opacity,filter] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:blur-[0px]">
+                    <ExperienciaButtonTwoPill />
+                    <div className="absolute inset-0 transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-px">
+                      <ExperienciaButtonTwoText />
+                    </div>
+                  </div>
+
+                  {/* Micro brillo satinado, recorre el botón una sola vez */}
+                  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[34px]">
+                    <div className="absolute inset-y-0 left-0 hidden w-1/4 bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:block group-hover:animate-button-shine" />
+                  </div>
                 </div>
                 <span className="sr-only">Contáctanos</span>
               </Link>
