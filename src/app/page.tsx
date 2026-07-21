@@ -475,7 +475,9 @@ export default async function HomePage() {
                   </div>
                 </div>
                 {/* Right — form */}
-                <ContactForm />
+                <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.05)] p-8">
+                  <ContactForm />
+                </div>
               </div>
             </div>
 
@@ -513,8 +515,10 @@ export default async function HomePage() {
                 </div>
               </div>
               {/* Grupo 2: formulario completo */}
-              <div className="absolute" style={{ top: "29px", left: "381px", width: "535px", height: "267px" }}>
-                <ContactForm />
+              <div className="absolute" style={{ top: "29px", left: "381px", width: "535px" }}>
+                <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.05)] p-8">
+                  <ContactForm />
+                </div>
               </div>
             </div>
           </div>
