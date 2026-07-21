@@ -354,7 +354,7 @@ export default async function HomePage() {
                 style={{ top: "313px", left: "218px", width: "275px", height: "76px" }}
               >
                 <ExperienciaButtonOneArt />
-                <div className="absolute inset-0 opacity-0 blur-[6px] transition-[opacity,filter] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:blur-[0px]">
+                <div className="absolute inset-0 opacity-0 blur-[6px] transition-[opacity,filter] duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 group-hover:blur-[0px]">
                   <ExperienciaButtonTwoArt />
                 </div>
                 <span className="sr-only">Contáctanos</span>
