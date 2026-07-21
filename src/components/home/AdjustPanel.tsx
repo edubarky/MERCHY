@@ -3,21 +3,30 @@
 import { useEffect, useState } from "react";
 
 // Panel temporal de ajuste visual para la sección "Contáctanos"
-// (badge, título, divisor, párrafo, imagen y formulario). Eliminar este
-// archivo y su uso en page.tsx cuando el usuario termine de ajustar.
+// (rectángulo/panel, badge, título, divisor, párrafo, imagen y formulario).
+// Eliminar este archivo y su uso en page.tsx cuando el usuario termine de ajustar.
 type Box = { top: number; left: number; width: number; height: number };
 
-const TARGETS = ["ctc-badge", "ctc-title", "ctc-divider", "ctc-paragraph", "ctc-image", "ctc-form"] as const;
+const TARGETS = [
+  "ctc-panel",
+  "ctc-badge",
+  "ctc-title",
+  "ctc-divider",
+  "ctc-paragraph",
+  "ctc-image",
+  "ctc-form",
+] as const;
 
-const LABELS = ["Badge", "Título", "Divisor", "Párrafo", "Imagen", "Formulario"];
+const LABELS = ["Rectángulo (panel)", "Badge", "Título", "Divisor", "Párrafo", "Imagen", "Formulario"];
 
 const INITIAL: Record<(typeof TARGETS)[number], Box> = {
-  "ctc-badge": { top: 49, left: 49, width: 177, height: 20 },
-  "ctc-title": { top: 81, left: 49, width: 535, height: 40 },
-  "ctc-divider": { top: 125, left: 49, width: 40, height: 4 },
-  "ctc-paragraph": { top: 145, left: 49, width: 535, height: 46 },
-  "ctc-image": { top: 223, left: 49, width: 535, height: 373 },
-  "ctc-form": { top: 49, left: 632, width: 535, height: 267 },
+  "ctc-panel": { top: 64, left: 32, width: 1216, height: 742 },
+  "ctc-badge": { top: -2, left: 45, width: 295, height: 40 },
+  "ctc-title": { top: 37, left: 49, width: 535, height: 40 },
+  "ctc-divider": { top: 93, left: 49, width: 40, height: 4 },
+  "ctc-paragraph": { top: 116, left: 49, width: 535, height: 46 },
+  "ctc-image": { top: 154, left: -61, width: 535, height: 373 },
+  "ctc-form": { top: 57, left: 632, width: 535, height: 267 },
 };
 
 export default function AdjustPanel() {
@@ -55,7 +64,7 @@ export default function AdjustPanel() {
                 <input
                   type="range"
                   min={field === "top" || field === "left" ? -300 : 0}
-                  max={900}
+                  max={1300}
                   value={boxes[id][field]}
                   onChange={(e) => update(id, field, Number(e.target.value))}
                 />

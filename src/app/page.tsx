@@ -450,8 +450,11 @@ export default async function HomePage() {
 
       {/* ── CONTACTO ── */}
       <section className="bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:p-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:min-h-[870px]">
+          <div
+            id="ctc-panel"
+            className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:absolute lg:p-12 lg:top-[64px] lg:left-[32px] lg:w-[1216px] lg:h-[742px]"
+          >
             {/* Mobile / tablet: composición original en flujo normal */}
             <div className="contents lg:hidden">
               <div className="grid lg:grid-cols-2 gap-12 items-start">
@@ -483,7 +486,7 @@ export default async function HomePage() {
               <span
                 id="ctc-badge"
                 className="absolute inline-flex items-center gap-2 text-primary text-sm font-medium"
-                style={{ top: "49px", left: "49px", width: "177px", height: "20px" }}
+                style={{ top: "-2px", left: "45px", width: "295px", height: "40px" }}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -493,26 +496,26 @@ export default async function HomePage() {
               <h2
                 id="ctc-title"
                 className="absolute font-display font-bold text-4xl text-foreground"
-                style={{ top: "81px", left: "49px", width: "535px", height: "40px" }}
+                style={{ top: "37px", left: "49px", width: "535px", height: "40px" }}
               >
                 Contáctanos
               </h2>
               <div
                 id="ctc-divider"
                 className="absolute bg-primary rounded-full"
-                style={{ top: "125px", left: "49px", width: "40px", height: "4px" }}
+                style={{ top: "93px", left: "49px", width: "40px", height: "4px" }}
               />
               <p
                 id="ctc-paragraph"
                 className="absolute text-ui-gray text-sm leading-relaxed"
-                style={{ top: "145px", left: "49px", width: "535px", height: "46px" }}
+                style={{ top: "116px", left: "49px", width: "535px", height: "46px" }}
               >
                 Cuéntanos sobre tu proyecto<br />y te respondemos lo antes posible.
               </p>
-              <div id="ctc-image" className="absolute" style={{ top: "223px", left: "49px", width: "535px", height: "373px" }}>
+              <div id="ctc-image" className="absolute" style={{ top: "154px", left: "-61px", width: "535px", height: "373px" }}>
                 <img src={"/Home/CONTÁCTANOS/Group 1158 (glass).svg"} alt="" className="w-full max-w-md" />
               </div>
-              <div id="ctc-form" className="absolute" style={{ top: "49px", left: "632px", width: "535px", height: "267px" }}>
+              <div id="ctc-form" className="absolute" style={{ top: "57px", left: "632px", width: "535px", height: "267px" }}>
                 <ContactForm />
               </div>
             </div>
