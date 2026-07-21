@@ -465,9 +465,9 @@ export default async function HomePage() {
                 <p className="text-ui-gray text-sm leading-relaxed mb-8">
                   Cuéntanos sobre tu proyecto<br />y te respondemos lo antes posible.
                 </p>
-                <div className="flex items-end gap-4">
-                  <span className="text-7xl">👕</span>
-                  <span className="text-6xl mb-2">🧢</span>
+                <div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={"/Home/CONTÁCTANOS/Group 1158.svg"} alt="" className="w-full max-w-md" />
                 </div>
               </div>
               {/* Right — form */}
