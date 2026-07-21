@@ -467,7 +467,7 @@ export default async function HomePage() {
                 </p>
                 <div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={"/Home/CONTÁCTANOS/Group 1158.svg"} alt="" className="w-full max-w-md" />
+                  <img src={"/Home/CONTÁCTANOS/Group 1158 (glass).svg"} alt="" className="w-full max-w-md" />
                 </div>
               </div>
               {/* Right — form */}
