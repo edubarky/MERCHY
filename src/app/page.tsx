@@ -4,6 +4,7 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
+import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
@@ -450,28 +451,70 @@ export default async function HomePage() {
       {/* ── CONTACTO ── */}
       <section className="bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:p-12">
-            <div className="grid lg:grid-cols-2 gap-12 items-start">
-              {/* Left */}
-              <div>
-                <span className="inline-flex items-center gap-2 text-primary text-sm font-medium mb-3">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Estamos para ayudarte
-                </span>
-                <h2 className="font-display font-bold text-4xl text-foreground mb-1">Contáctanos</h2>
-                <div className="w-10 h-1 bg-primary rounded-full mb-4" />
-                <p className="text-ui-gray text-sm leading-relaxed mb-8">
-                  Cuéntanos sobre tu proyecto<br />y te respondemos lo antes posible.
-                </p>
+          <div className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:p-12">
+            {/* Mobile / tablet: composición original en flujo normal */}
+            <div className="contents lg:hidden">
+              <div className="grid lg:grid-cols-2 gap-12 items-start">
+                {/* Left */}
                 <div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={"/Home/CONTÁCTANOS/Group 1158 (glass).svg"} alt="" className="w-full max-w-md" />
+                  <span className="inline-flex items-center gap-2 text-primary text-sm font-medium mb-3">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Estamos para ayudarte
+                  </span>
+                  <h2 className="font-display font-bold text-4xl text-foreground mb-1">Contáctanos</h2>
+                  <div className="w-10 h-1 bg-primary rounded-full mb-4" />
+                  <p className="text-ui-gray text-sm leading-relaxed mb-8">
+                    Cuéntanos sobre tu proyecto<br />y te respondemos lo antes posible.
+                  </p>
+                  <div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={"/Home/CONTÁCTANOS/Group 1158 (glass).svg"} alt="" className="w-full max-w-md" />
+                  </div>
                 </div>
+                {/* Right — form */}
+                <ContactForm />
               </div>
-              {/* Right — form */}
-              <ContactForm />
+            </div>
+
+            {/* Desktop (lg+): piezas independientes movibles */}
+            <div className="hidden lg:block relative" style={{ minHeight: "644px" }}>
+              <span
+                id="ctc-badge"
+                className="absolute inline-flex items-center gap-2 text-primary text-sm font-medium"
+                style={{ top: "49px", left: "49px", width: "177px", height: "20px" }}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Estamos para ayudarte
+              </span>
+              <h2
+                id="ctc-title"
+                className="absolute font-display font-bold text-4xl text-foreground"
+                style={{ top: "81px", left: "49px", width: "535px", height: "40px" }}
+              >
+                Contáctanos
+              </h2>
+              <div
+                id="ctc-divider"
+                className="absolute bg-primary rounded-full"
+                style={{ top: "125px", left: "49px", width: "40px", height: "4px" }}
+              />
+              <p
+                id="ctc-paragraph"
+                className="absolute text-ui-gray text-sm leading-relaxed"
+                style={{ top: "145px", left: "49px", width: "535px", height: "46px" }}
+              >
+                Cuéntanos sobre tu proyecto<br />y te respondemos lo antes posible.
+              </p>
+              <div id="ctc-image" className="absolute" style={{ top: "223px", left: "49px", width: "535px", height: "373px" }}>
+                <img src={"/Home/CONTÁCTANOS/Group 1158 (glass).svg"} alt="" className="w-full max-w-md" />
+              </div>
+              <div id="ctc-form" className="absolute" style={{ top: "49px", left: "632px", width: "535px", height: "267px" }}>
+                <ContactForm />
+              </div>
             </div>
           </div>
         </div>
@@ -546,6 +589,8 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
+
+      <AdjustPanel />
     </main>
   );
 }
