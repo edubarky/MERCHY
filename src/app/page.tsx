@@ -481,41 +481,41 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Desktop (lg+): piezas independientes movibles */}
+            {/* Desktop (lg+): 3 grupos independientes movibles */}
             <div className="hidden lg:block relative" style={{ minHeight: "644px" }}>
-              <span
-                id="ctc-badge"
-                className="absolute inline-flex items-center gap-2 text-primary text-sm font-medium"
-                style={{ top: "-2px", left: "45px", width: "295px", height: "40px" }}
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Estamos para ayudarte
-              </span>
-              <h2
-                id="ctc-title"
-                className="absolute font-display font-bold text-4xl text-foreground"
-                style={{ top: "37px", left: "49px", width: "535px", height: "40px" }}
-              >
-                Contáctanos
-              </h2>
-              <div
-                id="ctc-divider"
-                className="absolute bg-primary rounded-full"
-                style={{ top: "93px", left: "49px", width: "40px", height: "4px" }}
-              />
-              <p
-                id="ctc-paragraph"
-                className="absolute text-ui-gray text-sm leading-relaxed"
-                style={{ top: "116px", left: "49px", width: "535px", height: "46px" }}
-              >
-                Cuéntanos sobre tu proyecto<br />y te respondemos lo antes posible.
-              </p>
-              <div id="ctc-image" className="absolute" style={{ top: "154px", left: "-61px", width: "535px", height: "373px" }}>
-                <img src={"/Home/CONTÁCTANOS/Group 1158 (glass).svg"} alt="" className="w-full max-w-md" />
+              {/* Grupo 1: bloque izquierdo completo (badge, título, divisor, párrafo, imagen) */}
+              <div id="ctc-left" className="absolute" style={{ top: "-2px", left: "-61px", width: "645px", height: "529px" }}>
+                <span
+                  className="absolute inline-flex items-center gap-2 text-primary text-sm font-medium"
+                  style={{ top: "0px", left: "106px", width: "295px", height: "40px" }}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Estamos para ayudarte
+                </span>
+                <h2
+                  className="absolute font-display font-bold text-4xl text-foreground"
+                  style={{ top: "39px", left: "110px", width: "535px", height: "40px" }}
+                >
+                  Contáctanos
+                </h2>
+                <div
+                  className="absolute bg-primary rounded-full"
+                  style={{ top: "95px", left: "110px", width: "40px", height: "4px" }}
+                />
+                <p
+                  className="absolute text-ui-gray text-sm leading-relaxed"
+                  style={{ top: "118px", left: "110px", width: "535px", height: "46px" }}
+                >
+                  Cuéntanos sobre tu proyecto<br />y te respondemos lo antes posible.
+                </p>
+                <div className="absolute" style={{ top: "156px", left: "0px", width: "535px", height: "373px" }}>
+                  <img src={"/Home/CONTÁCTANOS/Group 1158 (glass).svg"} alt="" className="w-full max-w-md" />
+                </div>
               </div>
-              <div id="ctc-form" className="absolute" style={{ top: "57px", left: "632px", width: "535px", height: "267px" }}>
+              {/* Grupo 2: formulario completo */}
+              <div id="ctc-right" className="absolute" style={{ top: "57px", left: "632px", width: "535px", height: "267px" }}>
                 <ContactForm />
               </div>
             </div>

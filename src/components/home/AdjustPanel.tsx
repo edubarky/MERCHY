@@ -2,31 +2,20 @@
 
 import { useEffect, useState } from "react";
 
-// Panel temporal de ajuste visual para la sección "Contáctanos"
-// (rectángulo/panel, badge, título, divisor, párrafo, imagen y formulario).
+// Panel temporal de ajuste visual para la sección "Contáctanos", organizado
+// en 3 grupos independientes: Grupo 1 (bloque izquierdo completo), Grupo 2
+// (formulario completo) y Grupo 3 (contenedor/panel completo).
 // Eliminar este archivo y su uso en page.tsx cuando el usuario termine de ajustar.
 type Box = { top: number; left: number; width: number; height: number };
 
-const TARGETS = [
-  "ctc-panel",
-  "ctc-badge",
-  "ctc-title",
-  "ctc-divider",
-  "ctc-paragraph",
-  "ctc-image",
-  "ctc-form",
-] as const;
+const TARGETS = ["ctc-panel", "ctc-left", "ctc-right"] as const;
 
-const LABELS = ["Rectángulo (panel)", "Badge", "Título", "Divisor", "Párrafo", "Imagen", "Formulario"];
+const LABELS = ["Grupo 3: Contenedor completo", "Grupo 1: Bloque izquierdo", "Grupo 2: Formulario"];
 
 const INITIAL: Record<(typeof TARGETS)[number], Box> = {
   "ctc-panel": { top: 64, left: 32, width: 1216, height: 742 },
-  "ctc-badge": { top: -2, left: 45, width: 295, height: 40 },
-  "ctc-title": { top: 37, left: 49, width: 535, height: 40 },
-  "ctc-divider": { top: 93, left: 49, width: 40, height: 4 },
-  "ctc-paragraph": { top: 116, left: 49, width: 535, height: 46 },
-  "ctc-image": { top: 154, left: -61, width: 535, height: 373 },
-  "ctc-form": { top: 57, left: 632, width: 535, height: 267 },
+  "ctc-left": { top: -2, left: -61, width: 645, height: 529 },
+  "ctc-right": { top: 57, left: 632, width: 535, height: 267 },
 };
 
 export default function AdjustPanel() {
