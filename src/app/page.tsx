@@ -4,7 +4,6 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
-import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
@@ -450,10 +449,9 @@ export default async function HomePage() {
 
       {/* ── CONTACTO ── */}
       <section className="bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:min-h-[870px]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[45px] lg:min-h-[870px]">
           <div
-            id="ctc-panel"
-            className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:absolute lg:p-12 lg:top-[64px] lg:left-[32px] lg:w-[1216px] lg:h-[742px]"
+            className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:absolute lg:p-12 lg:-top-[45px] lg:left-[134px] lg:w-[1026px] lg:h-[410px]"
           >
             {/* Mobile / tablet: composición original en flujo normal */}
             <div className="contents lg:hidden">
@@ -484,7 +482,7 @@ export default async function HomePage() {
             {/* Desktop (lg+): 3 grupos independientes movibles */}
             <div className="hidden lg:block relative" style={{ minHeight: "644px" }}>
               {/* Grupo 1: bloque izquierdo completo (badge, título, divisor, párrafo, imagen) */}
-              <div id="ctc-left" className="absolute" style={{ top: "-2px", left: "-61px", width: "645px", height: "529px" }}>
+              <div className="absolute" style={{ top: "-22px", left: "-102px", width: "783px", height: "283px" }}>
                 <span
                   className="absolute inline-flex items-center gap-2 text-primary text-sm font-medium"
                   style={{ top: "0px", left: "106px", width: "295px", height: "40px" }}
@@ -515,7 +513,7 @@ export default async function HomePage() {
                 </div>
               </div>
               {/* Grupo 2: formulario completo */}
-              <div id="ctc-right" className="absolute" style={{ top: "57px", left: "632px", width: "535px", height: "267px" }}>
+              <div className="absolute" style={{ top: "29px", left: "381px", width: "535px", height: "267px" }}>
                 <ContactForm />
               </div>
             </div>
@@ -592,8 +590,6 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
-
-      <AdjustPanel />
     </main>
   );
 }
