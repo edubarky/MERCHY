@@ -182,7 +182,7 @@ export default async function HomePage() {
   favoritosProducts.splice(1, 0, sudaderaSandProduct);
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background overflow-x-hidden">
       <PublicHeader />
 
       {/* ── HERO ── */}
