@@ -4,6 +4,7 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
+import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
@@ -466,6 +467,8 @@ export default async function HomePage() {
         />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
+          {/* Mobile / tablet: composición original en flujo normal */}
+          <div className="contents lg:hidden">
           {/* Brand + columnas */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2 lg:col-span-1">
@@ -503,8 +506,54 @@ export default async function HomePage() {
           </div>
 
           <p className="text-xs text-ui-gray text-center mt-8">© 2026 Merchy. Todos los derechos reservados.</p>
+          </div>
+
+          {/* Desktop (lg+): 6 grupos independientes movibles */}
+          <div id="ftr-content" className="hidden lg:block relative" style={{ minHeight: "460px" }}>
+            <div id="ftr-logo" className="absolute" style={{ top: "64px", left: "32px", width: "280px", height: "192px" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Home/PARRILLA FINAL/MERCHY.svg" alt="Merchy" className="h-auto w-auto max-w-[257px]" />
+            </div>
+            <div id="ftr-empresa" className="absolute" style={{ top: "64px", left: "344px", width: "87px", height: "171px" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Home/PARRILLA FINAL/EMPRESA.svg" alt="Empresa: Nosotros, Catálogo, Blog, Contacto" className="h-auto w-auto" />
+            </div>
+            <div id="ftr-ayuda" className="absolute" style={{ top: "64px", left: "656px", width: "184px", height: "172px" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Home/PARRILLA FINAL/AYUDA.svg" alt="Ayuda: Preguntas frecuentes, Envíos y entregas, Cambios y devoluciones, Términos y condiciones" className="h-auto w-auto" />
+            </div>
+            <div id="ftr-recursos" className="absolute" style={{ top: "64px", left: "968px", width: "151px", height: "171px" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Home/PARRILLA FINAL/RECURSOS.svg" alt="Recursos: Cotizador, Plantillas, Materiales, Consejos de marca" className="h-auto w-auto" />
+            </div>
+            <div id="ftr-pill" className="absolute" style={{ top: "304px", left: "32px", width: "1216px", height: "84px" }}>
+              <div className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Home/PARRILLA FINAL/Group 1160.svg" alt="" aria-hidden="true" className="w-full h-auto" />
+                {/* Columnas alineadas exactamente con las líneas divisorias ya
+                    dibujadas dentro de Group 1160.svg (en x=462 y x=880 de 1281). */}
+                <div className="absolute inset-0 grid items-center" style={{ gridTemplateColumns: "36.065% 32.631% 31.304%" }}>
+                  <div className="flex justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/Home/PARRILLA FINAL/Group 1159.svg" alt="Llámanos +52 000 000 000" className="h-auto w-auto" />
+                  </div>
+                  <div className="flex justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/Home/PARRILLA FINAL/Group 1158.svg" alt="Escríbenos contacto@merchy.com" className="h-auto w-auto" />
+                  </div>
+                  <div className="flex justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/Home/PARRILLA FINAL/Group 1051.svg" alt="Visítanos CDMX, México" className="h-auto w-auto" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p id="ftr-copyright" className="absolute text-xs text-ui-gray text-center" style={{ top: "420px", left: "32px", width: "1216px", height: "16px" }}>© 2026 Merchy. Todos los derechos reservados.</p>
+          </div>
         </div>
       </footer>
+
+      <AdjustPanel />
     </main>
   );
 }
