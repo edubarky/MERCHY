@@ -4,6 +4,7 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
+import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
@@ -451,6 +452,7 @@ export default async function HomePage() {
       <section className="bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[45px] lg:min-h-[870px]">
           <div
+            id="ctc-panel"
             className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:absolute lg:p-12 lg:-top-[45px] lg:left-[134px] lg:w-[1026px] lg:h-[410px]"
           >
             {/* Mobile / tablet: composición original en flujo normal */}
@@ -515,7 +517,7 @@ export default async function HomePage() {
                 </div>
               </div>
               {/* Grupo 2: formulario completo */}
-              <div className="absolute" style={{ top: "29px", left: "381px", width: "535px" }}>
+              <div id="ctc-right" className="absolute" style={{ top: "29px", left: "381px", width: "535px", height: "331px" }}>
                 <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.05)] p-8">
                   <ContactForm />
                 </div>
@@ -594,6 +596,8 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
+
+      <AdjustPanel />
     </main>
   );
 }
