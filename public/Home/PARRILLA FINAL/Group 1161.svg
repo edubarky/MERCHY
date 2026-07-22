@@ -11,20 +11,20 @@
 </g>
 <path d="M456 307.532C456 308.085 455.552 308.532 455 308.532C454.448 308.532 454 308.085 454 307.532L454 122.532C454 121.98 454.448 121.532 455 121.532C455.552 121.532 456 121.98 456 122.532L456 307.532Z" fill="#EEEEF1"/>
 <defs>
-<filter id="filter0_f_2030_7474" x="1148.35" y="0" width="393.94" height="566.938" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<filter id="filter0_f_2030_7474" x="998.35" y="-150" width="693.94" height="866.938" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
 <feFlood flood-opacity="0" result="BackgroundImageFix"/>
 <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-<feGaussianBlur stdDeviation="0" result="effect1_foregroundBlur_2030_7474"/>
+<feGaussianBlur stdDeviation="45" result="effect1_foregroundBlur_2030_7474"/>
 </filter>
-<filter id="filter1_f_2030_7474" x="1334.86" y="62.5635" width="108.497" height="195.604" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<filter id="filter1_f_2030_7474" x="1274.86" y="2.5635" width="228.497" height="315.604" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
 <feFlood flood-opacity="0" result="BackgroundImageFix"/>
 <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-<feGaussianBlur stdDeviation="1" result="effect1_foregroundBlur_2030_7474"/>
+<feGaussianBlur stdDeviation="18" result="effect1_foregroundBlur_2030_7474"/>
 </filter>
-<filter id="filter2_f_2030_7474" x="1241.47" y="317.611" width="201.904" height="167.97" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<filter id="filter2_f_2030_7474" x="1181.47" y="257.611" width="321.904" height="287.97" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
 <feFlood flood-opacity="0" result="BackgroundImageFix"/>
 <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-<feGaussianBlur stdDeviation="1" result="effect1_foregroundBlur_2030_7474"/>
+<feGaussianBlur stdDeviation="18" result="effect1_foregroundBlur_2030_7474"/>
 </filter>
 <linearGradient id="paint0_linear_2030_7474" x1="1248.35" y1="283.113" x2="1635.57" y2="283.848" gradientUnits="userSpaceOnUse">
 <stop stop-color="#D1F4F2" stop-opacity="0.17"/>

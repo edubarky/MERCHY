@@ -449,7 +449,7 @@ export default async function HomePage() {
 
       {/* ── CONTACTO ── */}
       <section className="bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[75px] lg:min-h-[560px]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[75px] lg:min-h-[500px]">
           <div
             id="ctc-panel"
             className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:absolute lg:p-12 lg:-top-[99px] lg:left-[30px] lg:w-[998px] lg:h-[414px] lg:origin-top-left lg:scale-[1.22]"
@@ -556,13 +556,21 @@ export default async function HomePage() {
           <div className="relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/Home/PARRILLA FINAL/Group 1160.svg" alt="" aria-hidden="true" className="w-full h-auto" />
-            <div className="absolute inset-0 flex items-center justify-around px-6 lg:px-10">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/Home/PARRILLA FINAL/Group 1159.svg" alt="Llámanos +52 000 000 000" className="h-auto w-auto" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/Home/PARRILLA FINAL/Group 1158.svg" alt="Escríbenos contacto@merchy.com" className="h-auto w-auto" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/Home/PARRILLA FINAL/Group 1051.svg" alt="Visítanos CDMX, México" className="h-auto w-auto" />
+            {/* Columnas alineadas exactamente con las líneas divisorias ya
+                dibujadas dentro de Group 1160.svg (en x=462 y x=880 de 1281). */}
+            <div className="absolute inset-0 grid items-center" style={{ gridTemplateColumns: "36.065% 32.631% 31.304%" }}>
+              <div className="flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Home/PARRILLA FINAL/Group 1159.svg" alt="Llámanos +52 000 000 000" className="h-auto w-auto" />
+              </div>
+              <div className="flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Home/PARRILLA FINAL/Group 1158.svg" alt="Escríbenos contacto@merchy.com" className="h-auto w-auto" />
+              </div>
+              <div className="flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Home/PARRILLA FINAL/Group 1051.svg" alt="Visítanos CDMX, México" className="h-auto w-auto" />
+              </div>
             </div>
           </div>
 
