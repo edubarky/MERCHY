@@ -449,7 +449,7 @@ export default async function HomePage() {
 
       {/* ── CONTACTO ── */}
       <section className="bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[75px] lg:min-h-[870px]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[75px] lg:min-h-[560px]">
           <div
             id="ctc-panel"
             className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:absolute lg:p-12 lg:-top-[99px] lg:left-[30px] lg:w-[998px] lg:h-[414px] lg:origin-top-left lg:scale-[1.22]"
@@ -527,72 +527,46 @@ export default async function HomePage() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="bg-white border-t border-ui-border">
-        {/* Contact strip */}
-        <div className="border-b border-ui-border">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { icon: "📞", label: "Llámanos", value: "+52 000 000 000" },
-              { icon: "✉️", label: "Escríbenos", value: "contacto@merchy.com" },
-              { icon: "📍", label: "Visítanos", value: "CDMX, México" },
-            ].map((c) => (
-              <div key={c.label} className="flex items-center gap-3">
-                <span className="text-2xl">{c.icon}</span>
-                <div>
-                  <p className="text-xs text-ui-gray">{c.label}</p>
-                  <p className="text-sm font-semibold text-foreground">{c.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <footer className="relative overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/Home/PARRILLA FINAL/Group 1161.svg"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full"
+          style={{ objectFit: "cover" }}
+        />
 
-        {/* Main footer */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Brand */}
-          <div className="col-span-2 lg:col-span-1">
-            <img src="/logo.png" alt="Merchy" className="h-8 w-auto mb-3" />
-            <p className="text-sm text-ui-gray leading-relaxed mb-4">
-              Productos promocionales personalizados que impulsan tu marca.
-            </p>
-            <div className="flex gap-3">
-              {["f", "in", "▶", "📷"].map((s, i) => (
-                <button key={i} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs text-ui-gray hover:bg-primary/10 hover:text-primary transition-colors">
-                  {s}
-                </button>
-              ))}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
+          {/* Brand + columnas */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+            <div className="col-span-2 lg:col-span-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Home/PARRILLA FINAL/MERCHY.svg" alt="Merchy" className="h-auto w-auto max-w-[257px]" />
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/Home/PARRILLA FINAL/EMPRESA.svg" alt="Empresa: Nosotros, Catálogo, Blog, Contacto" className="h-auto w-auto" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/Home/PARRILLA FINAL/AYUDA.svg" alt="Ayuda: Preguntas frecuentes, Envíos y entregas, Cambios y devoluciones, Términos y condiciones" className="h-auto w-auto" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/Home/PARRILLA FINAL/RECURSOS.svg" alt="Recursos: Cotizador, Plantillas, Materiales, Consejos de marca" className="h-auto w-auto" />
+          </div>
+
+          {/* Pastilla de contacto */}
+          <div className="relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/Home/PARRILLA FINAL/Group 1160.svg" alt="" aria-hidden="true" className="w-full h-auto" />
+            <div className="absolute inset-0 flex items-center justify-around px-6 lg:px-10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Home/PARRILLA FINAL/Group 1159.svg" alt="Llámanos +52 000 000 000" className="h-auto w-auto" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Home/PARRILLA FINAL/Group 1158.svg" alt="Escríbenos contacto@merchy.com" className="h-auto w-auto" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Home/PARRILLA FINAL/Group 1051.svg" alt="Visítanos CDMX, México" className="h-auto w-auto" />
             </div>
           </div>
 
-          {/* Links */}
-          {[
-            { title: "Empresa", links: ["Nosotros", "Catálogo", "Blog", "Contacto"] },
-            { title: "Ayuda", links: ["Preguntas frecuentes", "Envíos y entregas", "Cambios y devoluciones", "Términos y condiciones"] },
-            { title: "Recursos", links: ["Cotizador", "Plantillas", "Materiales", "Consejos de marca"] },
-          ].map((col) => (
-            <div key={col.title}>
-              <p className="text-sm font-semibold text-foreground mb-3">{col.title}</p>
-              <div className="w-6 h-0.5 bg-primary rounded-full mb-4" />
-              <ul className="space-y-2">
-                {col.links.map((link) => (
-                  <li key={link}>
-                    <a href="#" className="text-sm text-ui-gray hover:text-primary transition-colors flex items-center gap-1.5">
-                      <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <div className="border-t border-ui-border">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-            <p className="text-xs text-ui-gray">© 2026 Merchy. Todos los derechos reservados.</p>
-          </div>
+          <p className="text-xs text-ui-gray text-center mt-8">© 2026 Merchy. Todos los derechos reservados.</p>
         </div>
       </footer>
     </main>
