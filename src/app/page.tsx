@@ -4,6 +4,7 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
+import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
@@ -451,6 +452,7 @@ export default async function HomePage() {
       <section className="bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[75px] lg:min-h-[870px]">
           <div
+            id="ctc-panel"
             className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:absolute lg:p-12 lg:-top-[75px] lg:left-[125px] lg:w-[998px] lg:h-[414px]"
           >
             {/* Mobile / tablet: composición original en flujo normal */}
@@ -482,7 +484,7 @@ export default async function HomePage() {
             </div>
 
             {/* Desktop (lg+): 3 grupos independientes movibles */}
-            <div className="hidden lg:block relative" style={{ minHeight: "644px" }}>
+            <div id="ctc-content" className="hidden lg:block absolute" style={{ top: "49px", left: "49px", width: "900px", height: "644px" }}>
               {/* Grupo 1: bloque izquierdo completo (badge, título, divisor, párrafo, imagen) */}
               <div className="absolute" style={{ top: "-22px", left: "-102px", width: "783px", height: "283px" }}>
                 <span
@@ -594,6 +596,8 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
+
+      <AdjustPanel />
     </main>
   );
 }
