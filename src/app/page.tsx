@@ -108,78 +108,6 @@ export default async function HomePage() {
   const safeTiers = (priceTiers ?? []) as PriceTier[];
   const safeCategories = (categories ?? []) as Category[];
 
-  // Segunda tarjeta fija de "Favoritos del momento" — no viene de Supabase, se
-  // muestra tal cual con el mismo componente FavoritoProductCard.
-  const sudaderaSandProduct: Product & { variants: NonNullable<Product["variants"]> } = {
-    id: "static-sudadera-sand",
-    sku: "STATIC-SUDADERA-SAND",
-    name: "Sudadera Sand",
-    description: null,
-    category_id: "static-sudaderas",
-    composition: null,
-    sizes_available: [],
-    costo: 145.2,
-    supplier: null,
-    supplier_link: null,
-    active: true,
-    created_at: new Date().toISOString(),
-    category: { id: "static-sudaderas", name: "Sudaderas", slug: "sudaderas", icon: "🧥", sort_order: 2, active: true },
-    variants: [
-      {
-        id: "static-sudadera-sand-beige",
-        product_id: "static-sudadera-sand",
-        sku: "STATIC-SUDADERA-SAND-BEIGE",
-        color_name: "Beige",
-        color_hex: "#CDBCB1",
-        images: ["/Home/FAVORITOS%20DEL%20MOMENTO/sudadera-sand.jpg"],
-        stock: 0,
-        active: true,
-      },
-      {
-        id: "static-sudadera-sand-azul-marino",
-        product_id: "static-sudadera-sand",
-        sku: "STATIC-SUDADERA-SAND-AZUL-MARINO",
-        color_name: "Azul marino",
-        color_hex: "#114C8F",
-        images: ["/Home/FAVORITOS%20DEL%20MOMENTO/sudadera-sand-azul-marino.jpg"],
-        stock: 0,
-        active: true,
-      },
-      {
-        id: "static-sudadera-sand-verde-olivo",
-        product_id: "static-sudadera-sand",
-        sku: "STATIC-SUDADERA-SAND-VERDE-OLIVO",
-        color_name: "Verde olivo",
-        color_hex: "#2F352B",
-        images: ["/Home/FAVORITOS%20DEL%20MOMENTO/sudadera-sand-verde-olivo.png"],
-        stock: 0,
-        active: true,
-      },
-      {
-        id: "static-sudadera-sand-blanco",
-        product_id: "static-sudadera-sand",
-        sku: "STATIC-SUDADERA-SAND-BLANCO",
-        color_name: "Blanco",
-        color_hex: "#FFFFFF",
-        images: [],
-        stock: 0,
-        active: true,
-      },
-      {
-        id: "static-sudadera-sand-gris",
-        product_id: "static-sudadera-sand",
-        sku: "STATIC-SUDADERA-SAND-GRIS",
-        color_name: "Gris",
-        color_hex: "#8A8D91",
-        images: [],
-        stock: 0,
-        active: true,
-      },
-    ],
-  };
-  const favoritosProducts = [...safeProducts];
-  favoritosProducts.splice(1, 0, sudaderaSandProduct);
-
   return (
     <main className="min-h-screen bg-background overflow-x-hidden">
       <PublicHeader />
@@ -250,7 +178,7 @@ export default async function HomePage() {
       {/* ── FAVORITOS + DESTACA ── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
         <div className="grid lg:grid-cols-2 gap-8 items-start">
-          <FavoritosSection products={favoritosProducts} priceTiers={safeTiers} categories={safeCategories} />
+          <FavoritosSection products={safeProducts} priceTiers={safeTiers} categories={safeCategories} />
 
           {/* Destaca tu diseño: composición de las 5 capas exportadas de Figma, montadas dentro de un único SVG maestro con el viewBox nativo de Rectangle 33 (714x753). Cada capa usa sus coordenadas y tamaño exactos de Figma (escala 1:1, sin estirar), y un clipPath con el path real de Rectangle 33 (esquina superior izq. de 150px, esquinas inferiores de 6px, superior derecha recta) recorta todo el contenido exactamente a la forma de la tarjeta, para que nada sobresalga sin depender de un overflow:hidden rectangular. El SVG en sí NO cambió: mismo viewBox, mismo width, mismas coordenadas internas. */}
           <div className="relative">
