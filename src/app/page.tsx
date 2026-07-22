@@ -4,7 +4,6 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
-import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
@@ -190,7 +189,7 @@ export default async function HomePage() {
       <section className="relative overflow-hidden bg-[#E3FAF7]" style={{ height: "min(540px, calc(100vh - 210px))" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/Home/FONDO.svg" alt="" aria-hidden="true"
-          className="absolute inset-0 w-full h-full" style={{ objectFit: "fill" }} />
+          className="absolute inset-0 w-full h-full" style={{ objectFit: "cover" }} />
 
         {/* max-w-1280 centrado: a 1440px el blob blanco del FONDO empieza en x=551,
             la columna derecha arranca en x=550 (margin80 + px10*2 = nope, solo left:
@@ -450,7 +449,7 @@ export default async function HomePage() {
 
       {/* ── CONTACTO ── */}
       <section className="bg-background">
-        <div id="ctc-wrapper" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[75px] lg:min-h-[500px]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[75px] lg:min-h-[437px]">
           <div
             id="ctc-panel"
             className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:absolute lg:p-12 lg:-top-[99px] lg:left-[30px] lg:w-[998px] lg:h-[414px] lg:origin-top-left lg:scale-[1.22]"
@@ -578,8 +577,6 @@ export default async function HomePage() {
           <p className="text-xs text-ui-gray text-center mt-8">© 2026 Merchy. Todos los derechos reservados.</p>
         </div>
       </footer>
-
-      <AdjustPanel />
     </main>
   );
 }
