@@ -92,7 +92,7 @@ export default function AdjustPanel() {
       {field("Top", "top", -2000, 800)}
       {field("Left", "left", -200, 400)}
       {field("Width", "width", 400, 2200)}
-      {field("Height", "height", 200, 1400)}
+      {field("Height", "height", 0, 1400)}
     </div>
   );
 }
