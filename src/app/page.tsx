@@ -376,7 +376,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── CONTACTO ── */}
-      <section className="relative z-10 bg-background">
+      <section className="relative z-10 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[75px] lg:min-h-[437px]">
           <div
             id="ctc-panel"
@@ -455,7 +455,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="relative">
+      <footer className="relative bg-white">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 lg:min-h-[564px]">
           {/* Mobile / tablet: composición original en flujo normal */}
           <div className="contents lg:hidden">
