@@ -4,7 +4,6 @@ import CategoryCardsGrid from "@/components/home/CategoryCardsGrid";
 import FavoritosSection from "@/components/home/FavoritosSection";
 import DestacaFeatures from "@/components/home/DestacaFeatures";
 import ContactForm from "@/components/home/ContactForm";
-import AdjustPanel from "@/components/home/AdjustPanel";
 import ExperienciaCardArt from "@/components/home/ExperienciaCardArt";
 import ExperienciaGlowArt from "@/components/home/ExperienciaGlowArt";
 import ExperienciaIconArt from "@/components/home/ExperienciaIconArt";
@@ -510,7 +509,7 @@ export default async function HomePage() {
 
           {/* Desktop (lg+): 6 grupos independientes movibles */}
           <div id="ftr-content" className="hidden lg:block relative" style={{ minHeight: "460px" }}>
-            <div id="ftr-top" className="absolute" style={{ top: "-36px", left: "52px", width: "1067px", height: "182px" }}>
+            <div className="absolute" style={{ top: "-39px", left: "52px", width: "1067px", height: "182px" }}>
               <div className="absolute" style={{ top: "0px", left: "0px", width: "380px", height: "0px" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/Home/PARRILLA FINAL/MERCHY.svg" alt="Merchy" className="h-auto w-auto max-w-[257px]" />
@@ -528,7 +527,7 @@ export default async function HomePage() {
                 <img src="/Home/PARRILLA FINAL/RECURSOS.svg" alt="Recursos: Cotizador, Plantillas, Materiales, Consejos de marca" className="h-auto w-auto" />
               </div>
             </div>
-            <div id="ftr-pill" className="absolute" style={{ top: "204px", left: "32px", width: "1216px", height: "84px" }}>
+            <div className="absolute" style={{ top: "204px", left: "32px", width: "1216px", height: "84px" }}>
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/Home/PARRILLA FINAL/Group 1160.svg" alt="" aria-hidden="true" className="w-full h-auto" />
@@ -554,8 +553,6 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
-
-      <AdjustPanel />
     </main>
   );
 }
