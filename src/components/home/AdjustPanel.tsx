@@ -74,7 +74,7 @@ export default function AdjustPanel() {
       }}
     >
       <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 13 }}>Ajuste Fondo Footer</div>
-      {field("Top", "top", -200, 800)}
+      {field("Top", "top", -2000, 800)}
       {field("Left", "left", -200, 400)}
       {field("Width", "width", 400, 2200)}
       {field("Height", "height", 200, 1400)}

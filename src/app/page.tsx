@@ -464,7 +464,7 @@ export default async function HomePage() {
           src="/Home/PARRILLA FINAL/Group 1161.svg"
           alt=""
           aria-hidden="true"
-          className="absolute z-0 pointer-events-none w-full"
+          className="absolute -z-10 pointer-events-none w-full"
           style={{ top: "0px", left: "0px", height: "700px", objectFit: "cover" }}
         />
 
