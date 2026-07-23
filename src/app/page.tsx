@@ -116,7 +116,7 @@ export default async function HomePage() {
 
       {/* ── HERO ── */}
       {/* altura: hasta 540px, pero siempre deja el trust strip (124px) + header (64px) en pantalla */}
-      <section className="relative overflow-hidden bg-[#E3FAF7]" style={{ height: "min(540px, calc(100vh - 210px))" }}>
+      <section className="relative z-10 overflow-hidden bg-[#E3FAF7]" style={{ height: "min(540px, calc(100vh - 210px))" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/Home/FONDO.svg" alt="" aria-hidden="true"
           className="absolute inset-0 w-full h-full" style={{ objectFit: "cover" }} />
@@ -173,12 +173,12 @@ export default async function HomePage() {
       </section>
 
       {/* ── CATEGORIES GRID ── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <CategoryCardsGrid categories={STATIC_CATEGORIES} />
       </section>
 
       {/* ── FAVORITOS + DESTACA ── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
+      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           <FavoritosSection products={safeProducts} priceTiers={safeTiers} categories={safeCategories} />
 
@@ -237,7 +237,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── EXPERIENCE + LO QUE OFRECEMOS ── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="relative grid items-stretch lg:grid-cols-2 gap-6 lg:min-h-[370px]">
           {/* Teal card */}
           <div className="relative overflow-hidden bg-gradient-to-br from-primary to-primary-dark rounded-none p-10 flex flex-col justify-between min-h-[260px] lg:p-0 lg:absolute lg:-top-[57px] lg:-left-[100px] lg:w-[722px] lg:h-[426px]">
@@ -378,7 +378,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── CONTACTO ── */}
-      <section className="bg-background">
+      <section className="relative z-10 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[75px] lg:min-h-[437px]">
           <div
             id="ctc-panel"
@@ -464,7 +464,7 @@ export default async function HomePage() {
           src="/Home/PARRILLA FINAL/Group 1161.svg"
           alt=""
           aria-hidden="true"
-          className="absolute -z-10 pointer-events-none w-full"
+          className="absolute z-0 pointer-events-none w-full"
           style={{ top: "0px", left: "0px", height: "700px", objectFit: "cover" }}
         />
 
