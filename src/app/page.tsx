@@ -465,7 +465,7 @@ export default async function HomePage() {
           style={{ objectFit: "cover" }}
         />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 lg:min-h-[564px]">
           {/* Mobile / tablet: composición original en flujo normal */}
           <div className="contents lg:hidden">
           {/* Brand + columnas */}
@@ -508,7 +508,7 @@ export default async function HomePage() {
           </div>
 
           {/* Desktop (lg+): 6 grupos independientes movibles */}
-          <div id="ftr-content" className="hidden lg:block relative" style={{ minHeight: "460px" }}>
+          <div id="ftr-content" className="hidden lg:block absolute" style={{ top: "64px", left: "32px", width: "1216px", height: "460px" }}>
             <div className="absolute" style={{ top: "-39px", left: "52px", width: "1067px", height: "182px" }}>
               <div className="absolute" style={{ top: "0px", left: "0px", width: "380px", height: "0px" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
