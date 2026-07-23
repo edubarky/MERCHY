@@ -534,7 +534,7 @@ export default async function HomePage() {
                 <img src="/Home/PARRILLA FINAL/RECURSOS.svg" alt="Recursos: Cotizador, Plantillas, Materiales, Consejos de marca" className="h-auto w-auto" />
               </div>
             </div>
-            <div className="absolute" style={{ top: "204px", left: "32px", width: "1216px", height: "84px" }}>
+            <div id="ftr-pill-rect" className="absolute" style={{ top: "204px", left: "32px", width: "1216px", height: "84px" }}>
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/Home/PARRILLA FINAL/Group 1160.svg" alt="" aria-hidden="true" className="w-full h-auto" />

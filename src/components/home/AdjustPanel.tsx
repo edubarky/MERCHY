@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-const TARGET = "ctc-rect";
+const TARGET = "ftr-pill-rect";
 
 type Box = { top: number; left: number; width: number; height: number };
 
-const initial: Box = { top: -99, left: 30, width: 1218, height: 538 };
+const initial: Box = { top: 204, left: 32, width: 1216, height: 84 };
 
 export default function AdjustPanel() {
   const [box, setBox] = useState<Box>(initial);
@@ -61,11 +61,11 @@ export default function AdjustPanel() {
         fontFamily: "sans-serif",
       }}
     >
-      <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 13 }}>Ajuste Rectángulo</div>
-      {field("Top", "top", -300, 300)}
-      {field("Left", "left", -200, 300)}
+      <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 13 }}>Ajuste Píldora</div>
+      {field("Top", "top", -100, 500)}
+      {field("Left", "left", -100, 300)}
       {field("Width", "width", 400, 1400)}
-      {field("Height", "height", 200, 900)}
+      {field("Height", "height", 20, 300)}
     </div>
   );
 }
