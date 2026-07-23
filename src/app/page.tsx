@@ -15,6 +15,7 @@ import ExperienciaButtonTwoPill from "@/components/home/ExperienciaButtonTwoPill
 import ExperienciaButtonTwoText from "@/components/home/ExperienciaButtonTwoText";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product, PriceTier } from "@/types";
+import AdjustPanel from "@/components/home/AdjustPanel";
 
 export const metadata = {
   title: "Merchy — Productos Promocionales Personalizados",
@@ -110,6 +111,7 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-background overflow-x-hidden">
+      <AdjustPanel />
       <PublicHeader />
 
       {/* ── HERO ── */}
@@ -379,8 +381,13 @@ export default async function HomePage() {
       <section className="bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[75px] lg:min-h-[437px]">
           <div
+            id="ctc-rect"
+            className="hidden lg:block absolute rounded-t-[18px] border border-b-0 border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)]"
+            style={{ top: "-99px", left: "30px", width: "1218px", height: "538px" }}
+          />
+          <div
             id="ctc-panel"
-            className="relative rounded-[18px] lg:rounded-t-[18px] lg:rounded-b-none border lg:border-b-0 border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:absolute lg:p-12 lg:-top-[99px] lg:left-[30px] lg:w-[998px] lg:h-[441px] lg:origin-top-left lg:scale-[1.22]"
+            className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none lg:absolute lg:p-12 lg:-top-[99px] lg:left-[30px] lg:w-[998px] lg:h-[441px] lg:origin-top-left lg:scale-[1.22]"
           >
             {/* Mobile / tablet: composición original en flujo normal */}
             <div className="contents lg:hidden">
