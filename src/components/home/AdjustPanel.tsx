@@ -2,23 +2,35 @@
 
 import { useEffect, useState } from "react";
 
-const TARGET = "ftr-content";
+const TARGET = "ftr-bg-rect";
 
 type Box = { top: number; left: number; width: number; height: number };
 
-const initial: Box = { top: 64, left: 32, width: 1216, height: 460 };
+const initial: Box = { top: 0, left: 0, width: 1400, height: 700 };
 
 export default function AdjustPanel() {
   const [box, setBox] = useState<Box>(initial);
+  const [measured, setMeasured] = useState(false);
+
+  // Al montar, mide el ancho real (actualmente w-full/responsive) para que el
+  // panel arranque mostrando el valor exacto que ya se ve en pantalla.
+  useEffect(() => {
+    const el = document.getElementById(TARGET);
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setBox((b) => ({ ...b, width: Math.round(rect.width) }));
+    setMeasured(true);
+  }, []);
 
   useEffect(() => {
+    if (!measured) return;
     const el = document.getElementById(TARGET);
     if (!el) return;
     el.style.top = `${box.top}px`;
     el.style.left = `${box.left}px`;
     el.style.width = `${box.width}px`;
     el.style.height = `${box.height}px`;
-  }, [box]);
+  }, [box, measured]);
 
   function field(label: string, key: keyof Box, min: number, max: number) {
     return (
@@ -61,11 +73,11 @@ export default function AdjustPanel() {
         fontFamily: "sans-serif",
       }}
     >
-      <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 13 }}>Ajuste Footer (rectángulo)</div>
-      {field("Top", "top", -100, 500)}
-      {field("Left", "left", -100, 300)}
-      {field("Width", "width", 400, 1400)}
-      {field("Height", "height", 200, 900)}
+      <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 13 }}>Ajuste Fondo Footer</div>
+      {field("Top", "top", -200, 800)}
+      {field("Left", "left", -200, 400)}
+      {field("Width", "width", 400, 2200)}
+      {field("Height", "height", 200, 1400)}
     </div>
   );
 }

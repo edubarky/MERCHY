@@ -457,17 +457,18 @@ export default async function HomePage() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="relative overflow-hidden">
+      <footer className="relative">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          id="ftr-bg-rect"
           src="/Home/PARRILLA FINAL/Group 1161.svg"
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full"
-          style={{ objectFit: "cover" }}
+          className="absolute z-0 pointer-events-none w-full"
+          style={{ top: "0px", left: "0px", height: "700px", objectFit: "cover" }}
         />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 lg:min-h-[564px]">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 lg:min-h-[564px]">
           {/* Mobile / tablet: composición original en flujo normal */}
           <div className="contents lg:hidden">
           {/* Brand + columnas */}
