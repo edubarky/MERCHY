@@ -15,7 +15,6 @@ import ExperienciaButtonTwoPill from "@/components/home/ExperienciaButtonTwoPill
 import ExperienciaButtonTwoText from "@/components/home/ExperienciaButtonTwoText";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product, PriceTier } from "@/types";
-import AdjustPanel from "@/components/home/AdjustPanel";
 
 export const metadata = {
   title: "Merchy — Productos Promocionales Personalizados",
@@ -111,7 +110,6 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-background overflow-x-hidden">
-      <AdjustPanel />
       <PublicHeader />
 
       {/* ── HERO ── */}
@@ -458,16 +456,6 @@ export default async function HomePage() {
 
       {/* ── FOOTER ── */}
       <footer className="relative">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          id="ftr-bg-rect"
-          src="/Home/PARRILLA FINAL/Group 1161.svg"
-          alt=""
-          aria-hidden="true"
-          className="absolute z-0 pointer-events-none w-full"
-          style={{ top: "0px", left: "0px", height: "700px", objectFit: "cover" }}
-        />
-
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 lg:min-h-[564px]">
           {/* Mobile / tablet: composición original en flujo normal */}
           <div className="contents lg:hidden">
