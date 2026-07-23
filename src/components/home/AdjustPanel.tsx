@@ -11,6 +11,7 @@ const initial: Box = { top: 0, left: 0, width: 1400, height: 700 };
 export default function AdjustPanel() {
   const [box, setBox] = useState<Box>(initial);
   const [measured, setMeasured] = useState(false);
+  const [preview, setPreview] = useState(false);
 
   // Al montar, mide el ancho real (actualmente w-full/responsive) para que el
   // panel arranque mostrando el valor exacto que ya se ve en pantalla.
@@ -31,6 +32,16 @@ export default function AdjustPanel() {
     el.style.width = `${box.width}px`;
     el.style.height = `${box.height}px`;
   }, [box, measured]);
+
+  // Modo vista previa: sube el rectángulo temporalmente encima de todo para
+  // verlo completo mientras se ajusta. Al desactivarlo vuelve a su capa real
+  // (detrás de todo el contenido).
+  useEffect(() => {
+    const el = document.getElementById(TARGET);
+    if (!el) return;
+    el.style.zIndex = preview ? "99998" : "0";
+    el.style.outline = preview ? "2px dashed #3b82f6" : "none";
+  }, [preview]);
 
   function field(label: string, key: keyof Box, min: number, max: number) {
     return (
@@ -74,6 +85,10 @@ export default function AdjustPanel() {
       }}
     >
       <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 13 }}>Ajuste Fondo Footer</div>
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, marginBottom: 12, cursor: "pointer" }}>
+        <input type="checkbox" checked={preview} onChange={(e) => setPreview(e.target.checked)} />
+        Ver rectángulo completo (temporal)
+      </label>
       {field("Top", "top", -2000, 800)}
       {field("Left", "left", -200, 400)}
       {field("Width", "width", 400, 2200)}
