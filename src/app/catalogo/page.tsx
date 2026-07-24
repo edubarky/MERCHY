@@ -87,10 +87,6 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <h1 className="text-center font-display font-black text-7xl sm:text-9xl text-primary py-12">
-          HOLA
-        </h1>
-
         {/* Search + top filters row */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
           <Suspense>
