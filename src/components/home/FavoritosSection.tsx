@@ -45,7 +45,7 @@ export default function FavoritosSection({ products, priceTiers, categories }: P
     ? products.filter((p) => (p.category as Category | null)?.slug === activeSlug)
     : products;
 
-  const visible = filtered.slice(0, 4);
+  const visible = filtered.slice(0, 2);
 
   return (
     <div>
