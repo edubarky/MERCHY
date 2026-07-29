@@ -44,7 +44,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                 alt={`${product.name} — ${selectedVariant?.color_name}`}
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover"
+                className="object-contain"
                 priority
               />
             ) : (
@@ -67,7 +67,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                     i === selectedImage ? "border-primary" : "border-ui-border hover:border-gray-300"
                   }`}
                 >
-                  <Image src={url} alt="" fill sizes="64px" className="object-cover" />
+                  <Image src={url} alt="" fill sizes="64px" className="object-contain" />
                 </button>
               ))}
             </div>
