@@ -463,6 +463,11 @@ export default async function HomePage() {
 
       {/* ── FOOTER ── */}
       <footer className="relative bg-white">
+        <div
+          id="ftr-rect"
+          className="hidden lg:block absolute w-full bg-white"
+          style={{ top: "0px", left: "0px", height: "564px" }}
+        />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 lg:min-h-[564px]">
           {/* Mobile / tablet: composición original en flujo normal */}
           <div className="contents lg:hidden">
