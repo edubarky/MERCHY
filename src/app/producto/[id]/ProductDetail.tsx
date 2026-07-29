@@ -39,14 +39,16 @@ export default function ProductDetail({ product, priceTiers }: Props) {
           {/* Main image */}
           <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-ui-border relative">
             {images[selectedImage] ? (
-              <Image
-                src={images[selectedImage]}
-                alt={`${product.name} — ${selectedVariant?.color_name}`}
-                fill
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-contain"
-                priority
-              />
+              <div className="absolute inset-[5%]">
+                <Image
+                  src={images[selectedImage]}
+                  alt={`${product.name} — ${selectedVariant?.color_name}`}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-contain"
+                  priority
+                />
+              </div>
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-teal-light to-gray-100">
                 <span className="text-5xl font-display font-bold text-primary opacity-30 select-none">
@@ -67,7 +69,9 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                     i === selectedImage ? "border-primary" : "border-ui-border hover:border-gray-300"
                   }`}
                 >
-                  <Image src={url} alt="" fill sizes="64px" className="object-contain" />
+                  <div className="absolute inset-[5%]">
+                    <Image src={url} alt="" fill sizes="64px" className="object-contain" />
+                  </div>
                 </button>
               ))}
             </div>
