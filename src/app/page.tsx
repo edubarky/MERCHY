@@ -383,7 +383,7 @@ export default async function HomePage() {
           <div
             id="ctc-rect"
             className="hidden lg:block absolute rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)]"
-            style={{ top: "-114px", left: "30px", width: "998px", height: "447px", transform: "scale(1.22)", transformOrigin: "top left" }}
+            style={{ top: "-139px", left: "30px", width: "998px", height: "468px", transform: "scale(1.22)", transformOrigin: "top left" }}
           />
           <div
             id="ctc-panel"
