@@ -15,6 +15,7 @@ import ExperienciaButtonTwoPill from "@/components/home/ExperienciaButtonTwoPill
 import ExperienciaButtonTwoText from "@/components/home/ExperienciaButtonTwoText";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Product, PriceTier } from "@/types";
+import AdjustPanel from "@/components/home/AdjustPanel";
 
 export const metadata = {
   title: "Merchy — Productos Promocionales Personalizados",
@@ -110,6 +111,7 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-background overflow-x-hidden">
+      <AdjustPanel />
       <PublicHeader />
 
       {/* ── HERO ── */}
