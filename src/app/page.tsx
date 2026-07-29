@@ -380,7 +380,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:relative lg:mt-[75px] lg:min-h-[437px]">
           <div
             id="ctc-panel"
-            className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:absolute lg:p-12 lg:-top-[99px] lg:left-[30px] lg:w-[998px] lg:h-[414px] lg:origin-top-left lg:scale-[1.22]"
+            className="relative rounded-[18px] border border-[#EBECEF] bg-[#F9FAFB] shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-8 lg:absolute lg:p-12 lg:-top-[139px] lg:left-[30px] lg:w-[998px] lg:h-[447px] lg:origin-top-left lg:scale-[1.22]"
           >
             {/* Mobile / tablet: composición original en flujo normal */}
             <div className="contents lg:hidden">
