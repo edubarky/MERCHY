@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  AdminCard, FieldLabel, AdminInput, AdminTextarea, AdminSelect, Btn
+  AdminCard, FieldLabel, AdminInput, AdminTextarea, AdminSelect, Btn, ModalOverlay
 } from "@/components/admin/ui";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Único"];
@@ -161,10 +161,7 @@ export default function NuevoProductoForm({
 
       {/* Modal nuevo proveedor */}
       {showModal && createPortal(
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
-        >
+        <ModalOverlay onClose={() => setShowModal(false)}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-display font-bold text-base">Nuevo proveedor</h3>
@@ -238,7 +235,7 @@ export default function NuevoProductoForm({
               <Btn variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Btn>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       , document.body)}
     </>
   );

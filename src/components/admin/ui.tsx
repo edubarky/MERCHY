@@ -147,3 +147,28 @@ export function EmptyState({ message }: { message: string }) {
     <div className="py-16 text-center text-ui-gray text-sm">{message}</div>
   );
 }
+
+// Fondo semitransparente + centrado de los modales del admin — antes
+// copiado a mano en cada archivo. zIndex/bgClassName opcionales para
+// modales apilados (uno encima de otro).
+export function ModalOverlay({
+  onClose,
+  zIndex = 50,
+  bgClassName = "bg-black/50",
+  children,
+}: {
+  onClose: () => void;
+  zIndex?: number;
+  bgClassName?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`fixed inset-0 flex items-center justify-center ${bgClassName} p-4`}
+      style={{ zIndex }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      {children}
+    </div>
+  );
+}

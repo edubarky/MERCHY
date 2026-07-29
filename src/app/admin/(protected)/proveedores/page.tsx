@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 import {
   PageHeader, AdminCard, Table, Td, Btn,
-  FieldLabel, AdminInput, AdminTextarea, EmptyState,
+  FieldLabel, AdminInput, AdminTextarea, EmptyState, ModalOverlay,
 } from "@/components/admin/ui";
 
 const EMPTY = { name: "", contact_name: "", phone: "", email: "", website: "", notes: "" };
@@ -105,10 +105,7 @@ export default function ProveedoresPage() {
 
       {/* Modal — rendered at body level to escape overflow:hidden layout */}
       {showModal && createPortal(
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
-        >
+        <ModalOverlay onClose={() => setShowModal(false)}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-display font-bold text-base">
@@ -184,7 +181,7 @@ export default function ProveedoresPage() {
               <Btn variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Btn>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       , document.body)}
     </div>
   );

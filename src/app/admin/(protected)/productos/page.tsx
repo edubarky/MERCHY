@@ -7,8 +7,9 @@ import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import {
   PageHeader, AdminCard, Table, Td, Btn,
-  FieldLabel, AdminInput, AdminTextarea, AdminSelect, EmptyState,
+  FieldLabel, AdminInput, AdminTextarea, AdminSelect, EmptyState, ModalOverlay,
 } from "@/components/admin/ui";
+import { money } from "@/lib/format";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Único"];
 const EMPTY_P = { name: "", description: "", composition: "", category_id: "", costo: "" };
@@ -153,7 +154,7 @@ export default function ProductosPage() {
                 <Td><span className="text-ui-gray">{p.category?.name ?? "—"}</span></Td>
                 <Td><span className="text-ui-gray">{p.supplier?.name ?? "—"}</span></Td>
                 <Td><span className="text-ui-gray">{p.variants?.length ?? 0} colores</span></Td>
-                <Td><span className="font-medium">${Number(p.costo).toLocaleString("es-MX")}</span></Td>
+                <Td><span className="font-medium">${money(p.costo)}</span></Td>
                 <Td>
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${p.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                     {p.active ? "Activo" : "Inactivo"}
@@ -177,10 +178,7 @@ export default function ProductosPage() {
 
       {/* Modal nuevo producto */}
       {showModal && createPortal(
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
-        >
+        <ModalOverlay onClose={() => setShowModal(false)}>
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-ui-border">
               <h3 className="font-display font-bold text-base">Nuevo producto</h3>
@@ -294,16 +292,13 @@ export default function ProductosPage() {
               </Btn>
             </div>
           </div>
-        </div>,
+        </ModalOverlay>,
         document.body
       )}
 
       {/* Sub-modal nuevo proveedor */}
       {showSupModal && createPortal(
-        <div
-          className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowSupModal(false); }}
-        >
+        <ModalOverlay onClose={() => setShowSupModal(false)} zIndex={60} bgClassName="bg-black/60">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-display font-bold text-base">Nuevo proveedor</h3>
@@ -344,7 +339,7 @@ export default function ProductosPage() {
               <Btn variant="secondary" onClick={() => setShowSupModal(false)}>Cancelar</Btn>
             </div>
           </div>
-        </div>,
+        </ModalOverlay>,
         document.body
       )}
     </div>
