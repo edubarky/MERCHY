@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, AdminCard, Table, Td, Badge, Btn, EmptyState } from "@/components/admin/ui";
+import { money } from "@/lib/format";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 
@@ -110,7 +111,7 @@ export default async function ProyectosPage({
                 <Td><span className="text-xs text-ui-gray">{fmt(p.scheduled_delivery_at)}</span></Td>
                 <Td><span className="text-xs text-ui-gray">{fmt(p.delivered_at)}</span></Td>
                 <Td>{p.status ? <Badge color={p.status.color}>{p.status.name}</Badge> : <span className="text-ui-gray text-xs">—</span>}</Td>
-                <Td><span className="font-semibold text-sm">${Number(p.total_amount).toLocaleString("es-MX")}</span></Td>
+                <Td><span className="font-semibold text-sm">${money(p.total_amount)}</span></Td>
                 <Td><Link href={`/admin/proyectos/${p.id}`}><Btn size="sm" variant="secondary">Ver</Btn></Link></Td>
               </tr>
             ))}

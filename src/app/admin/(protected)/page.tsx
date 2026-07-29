@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, AdminCard, Badge } from "@/components/admin/ui";
+import { money } from "@/lib/format";
 import Link from "next/link";
 
 export default async function AdminDashboard() {
@@ -73,7 +74,7 @@ export default async function AdminDashboard() {
                 <div className="flex items-center gap-3">
                   {p.status && <Badge color={p.status.color}>{p.status.name}</Badge>}
                   <span className="text-sm font-semibold text-foreground">
-                    ${Number(p.total_amount).toLocaleString("es-MX")}
+                    ${money(p.total_amount)}
                   </span>
                 </div>
               </Link>

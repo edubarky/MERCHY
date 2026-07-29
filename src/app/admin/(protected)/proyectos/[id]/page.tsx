@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader, AdminCard, AdminSelect, AdminTextarea, AdminInput, FieldLabel, Btn, Badge } from "@/components/admin/ui";
+import { money } from "@/lib/format";
 import Link from "next/link";
 
 export default function ProyectoDetailPage() {
@@ -119,7 +120,7 @@ export default function ProyectoDetailPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-ui-gray">Monto</span>
-                <span className="font-bold">${Number(project.total_amount).toLocaleString("es-MX")}</span>
+                <span className="font-bold">${money(project.total_amount)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-ui-gray">Agente</span>
