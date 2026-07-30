@@ -16,34 +16,34 @@ const REVIEWS = [
   { name: "Ana López", rating: 5, comment: "Excelente producto. Muy buena calidad y envío rápido." },
 ];
 
-function DocIcon() {
+function DocIcon({ className = "" }: { className?: string }) {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <svg className={`w-4 h-4 shrink-0 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
   );
 }
 
-function RulerIcon() {
+function RulerIcon({ className = "" }: { className?: string }) {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <svg className={`w-4 h-4 shrink-0 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8h18M3 8v8a1 1 0 001 1h16a1 1 0 001-1V8M7 8v3m4-3v3m4-3v3m4-3v3" />
     </svg>
   );
 }
 
-function TagIcon() {
+function TagIcon({ className = "" }: { className?: string }) {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <svg className={`w-4 h-4 shrink-0 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.169.659 1.591l9.581 9.581a2.25 2.25 0 003.182 0l4.318-4.318a2.25 2.25 0 000-3.182L10.409 3.66A2.25 2.25 0 008.818 3z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
     </svg>
   );
 }
 
-function ThreadIcon() {
+function ThreadIcon({ className = "" }: { className?: string }) {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <svg className={`w-4 h-4 shrink-0 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2m0 14v2M5.6 5.6l1.4 1.4m10 10l1.4 1.4M3 12h2m14 0h2M5.6 18.4l1.4-1.4m10-10l1.4-1.4" />
       <circle cx="12" cy="12" r="3.5" />
     </svg>
@@ -70,7 +70,7 @@ function StarIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
 
 function InfoLink({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <button type="button" className="flex items-center gap-1.5 text-ui-gray hover:text-primary transition-colors">
+    <button type="button" className="flex items-center gap-1.5 text-foreground hover:text-primary transition-colors text-left">
       {icon}
       <span>{label}</span>
     </button>
@@ -162,25 +162,28 @@ export default function ProductDetail({ product, priceTiers }: Props) {
           )}
 
           {/* Info row */}
-          <div className="flex flex-col gap-2 text-xs">
-            <div className="flex justify-end">
-              <InfoLink icon={<TagIcon />} label="Descuento por cantidad" />
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-              {product.composition && (
-                <span className="flex items-center gap-1.5 text-ui-gray">
-                  <ThreadIcon />
-                  Composición: <span className="text-foreground">{product.composition}</span>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-foreground">
+            {product.composition && (
+              <span className="flex items-start gap-1.5">
+                <ThreadIcon className="mt-0.5 shrink-0" />
+                <span>
+                  <span className="font-semibold">Composición:</span> {product.composition}
                 </span>
-              )}
-              <InfoLink icon={<DocIcon />} label="Ficha técnica" />
-              {sizes.length > 0 && (
-                <span className="flex items-center gap-1.5 text-ui-gray">
-                  <RulerIcon /> Tallas: {sizes.length > 1 ? `${sizes[0]} - ${sizes[sizes.length - 1]}` : sizes[0]}
+              </span>
+            )}
+            <InfoLink icon={<DocIcon />} label="Ficha técnica" />
+            {sizes.length > 0 && (
+              <span className="flex items-center gap-1.5">
+                <RulerIcon />
+                <span>
+                  <span className="font-semibold">Tallas:</span>{" "}
+                  {sizes.length > 1 ? `${sizes[0]} - ${sizes[sizes.length - 1]}` : sizes[0]}
                 </span>
-              )}
-              <InfoLink icon={<RulerIcon />} label="Guía de Tallas" />
-            </div>
+              </span>
+            )}
+            <InfoLink icon={<RulerIcon />} label="Guía de Tallas" />
+            <span />
+            <InfoLink icon={<TagIcon className="text-[#F27A6E]" />} label="Descuento por cantidad" />
           </div>
 
           {/* Color selector */}
