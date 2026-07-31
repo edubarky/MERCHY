@@ -124,11 +124,30 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(10);
+  // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
+  const [sizeQuantities, setSizeQuantities] = useState<Record<string, Record<string, number>>>({});
 
   const images = selectedVariant?.images ?? [];
   const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers);
   const totalPrice = unitPrice * quantity;
   const sizes = product.sizes_available;
+
+  function defaultSizeQty(variant: ProductVariant) {
+    return Math.max(1, Math.floor(variant.stock / Math.max(1, sizes.length)));
+  }
+
+  function getSizeQty(variant: ProductVariant, size: string) {
+    const existing = sizeQuantities[variant.id]?.[size];
+    return existing !== undefined ? existing : defaultSizeQty(variant);
+  }
+
+  function changeSizeQty(variant: ProductVariant, size: string, delta: number) {
+    setSizeQuantities((prev) => {
+      const current = prev[variant.id]?.[size] ?? defaultSizeQty(variant);
+      const next = Math.max(0, current + delta);
+      return { ...prev, [variant.id]: { ...prev[variant.id], [size]: next } };
+    });
+  }
 
   function toggleMulticolor() {
     setMulticolor((m) => {
@@ -356,14 +375,35 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                 >
                   <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {sizes.map((size) => (
-                      <div key={size} className="flex flex-col items-center px-3 py-1 rounded-lg bg-primary/10 text-primary min-w-[44px]">
-                        <span className="text-xs font-semibold">{size}</span>
-                        <span className="text-[10px] border-t border-primary/30 mt-0.5 pt-0.5 w-full text-center">
-                          {Math.max(1, Math.floor(s.variant.stock / Math.max(1, sizes.length)))}
-                        </span>
-                      </div>
-                    ))}
+                    {sizes.map((size) => {
+                      const qty = getSizeQty(s.variant, size);
+                      return (
+                        <div key={size} className="flex flex-col items-center px-3 py-1 rounded-lg bg-primary/10 text-primary min-w-[44px]">
+                          <span className="text-xs font-semibold">{size}</span>
+                          <span className="flex items-center justify-center gap-1 border-t border-primary/30 mt-0.5 pt-0.5 w-full">
+                            <button
+                              type="button"
+                              onClick={() => changeSizeQty(s.variant, size, -1)}
+                              aria-label={`Restar ${size}`}
+                              className="text-[10px] leading-none text-primary hover:opacity-70 active:scale-90 transition-transform"
+                            >
+                              −
+                            </button>
+                            <span key={qty} className="text-[10px] w-3 text-center animate-badge-in" style={{ animationDuration: "180ms" }}>
+                              {qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => changeSizeQty(s.variant, size, 1)}
+                              aria-label={`Sumar ${size}`}
+                              className="text-[10px] leading-none text-primary hover:opacity-70 active:scale-90 transition-transform"
+                            >
+                              +
+                            </button>
+                          </span>
+                        </div>
+                      );
+                    })}
                     <span className="ml-2 px-3 py-2 rounded-lg bg-gray-100 border border-ui-border text-xs font-medium text-foreground">
                       {s.variant.stock} pzas
                     </span>
