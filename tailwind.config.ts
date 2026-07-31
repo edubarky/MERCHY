@@ -58,7 +58,7 @@ const config: Config = {
         },
         totalPulse: {
           "0%": { transform: "scale(1)" },
-          "50%": { transform: "scale(1.05)" },
+          "50%": { transform: "scale(1.06)" },
           "100%": { transform: "scale(1)" },
         },
       },
@@ -67,7 +67,7 @@ const config: Config = {
         "heart-pop": "heartPop 380ms cubic-bezier(0.22,1,0.36,1)",
         "circle-pop": "circlePop 380ms cubic-bezier(0.22,1,0.36,1)",
         "button-shine": "buttonShine 900ms cubic-bezier(0.22,1,0.36,1) both",
-        "total-pulse": "totalPulse 200ms ease-out",
+        "total-pulse": "totalPulse 200ms cubic-bezier(0.33,1,0.68,1)",
       },
     },
   },

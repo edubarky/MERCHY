@@ -188,6 +188,22 @@ function SizeCounter({ qty, onChange }: { qty: number; onChange: (next: number) 
   );
 }
 
+// Tarjeta cuadrada premium con el total de piezas seleccionadas para un color.
+function TotalPzasCard({ total }: { total: number }) {
+  return (
+    <div
+      className="ml-[30px] w-20 h-20 shrink-0 flex flex-col items-center justify-center bg-white border-2 border-primary rounded-[22px] shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-all duration-[180ms] hover:shadow-[0_6px_20px_rgba(0,0,0,0.1)] hover:-translate-y-0.5"
+    >
+      <span key={total} className="font-display font-bold text-[32px] leading-none text-primary animate-total-pulse">
+        {total}
+      </span>
+      <span className="font-display font-medium text-[12px] uppercase tracking-wide text-foreground mt-1.5">
+        Piezas
+      </span>
+    </div>
+  );
+}
+
 export default function ProductDetail({ product, priceTiers }: Props) {
   const activeVariants = product.variants.filter((v) => v.active);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
@@ -455,15 +471,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                         />
                       </div>
                     ))}
-                    <span className="ml-2 px-3 py-2 rounded-lg bg-gray-100 border border-ui-border text-xs font-medium text-foreground">
-                      <span
-                        key={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)}
-                        className="inline-block animate-total-pulse"
-                      >
-                        {sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)}
-                      </span>{" "}
-                      pzas
-                    </span>
+                    <TotalPzasCard total={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)} />
                   </div>
                 </AnimatedSizeSection>
               ))}
