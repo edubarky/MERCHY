@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { Product, ProductVariant, PriceTier } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
@@ -116,6 +116,78 @@ function AnimatedSizeSection({
   );
 }
 
+// Contador − / número / + de una talla. El número es clicable y se
+// convierte en un input editable (Enter o blur confirman el valor).
+function SizeCounter({ qty, onChange }: { qty: number; onChange: (next: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(qty));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!editing) setDraft(String(qty));
+  }, [qty, editing]);
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  function commit() {
+    const parsed = parseInt(draft, 10);
+    onChange(Number.isNaN(parsed) ? qty : Math.max(0, parsed));
+    setEditing(false);
+  }
+
+  return (
+    <span className="flex items-center justify-center gap-1 border-t border-primary/30 mt-0.5 pt-0.5 w-full">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(0, qty - 1))}
+        aria-label="Restar"
+        className="text-[10px] leading-none text-primary hover:opacity-70 active:scale-90 transition-transform"
+      >
+        −
+      </button>
+      {editing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, ""))}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          className="text-[10px] w-6 text-center bg-transparent outline-none text-primary"
+        />
+      ) : (
+        <span
+          key={qty}
+          onClick={() => {
+            setDraft(String(qty));
+            setEditing(true);
+          }}
+          className="text-[10px] w-3 text-center animate-badge-in cursor-text"
+          style={{ animationDuration: "180ms" }}
+        >
+          {qty}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={() => onChange(qty + 1)}
+        aria-label="Sumar"
+        className="text-[10px] leading-none text-primary hover:opacity-70 active:scale-90 transition-transform"
+      >
+        +
+      </button>
+    </span>
+  );
+}
+
 export default function ProductDetail({ product, priceTiers }: Props) {
   const activeVariants = product.variants.filter((v) => v.active);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
@@ -141,12 +213,11 @@ export default function ProductDetail({ product, priceTiers }: Props) {
     return existing !== undefined ? existing : defaultSizeQty(variant);
   }
 
-  function changeSizeQty(variant: ProductVariant, size: string, delta: number) {
-    setSizeQuantities((prev) => {
-      const current = prev[variant.id]?.[size] ?? defaultSizeQty(variant);
-      const next = Math.max(0, current + delta);
-      return { ...prev, [variant.id]: { ...prev[variant.id], [size]: next } };
-    });
+  function setSizeQty(variant: ProductVariant, size: string, value: number) {
+    setSizeQuantities((prev) => ({
+      ...prev,
+      [variant.id]: { ...prev[variant.id], [size]: Math.max(0, value) },
+    }));
   }
 
   function toggleMulticolor() {
@@ -375,35 +446,15 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                 >
                   <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {sizes.map((size) => {
-                      const qty = getSizeQty(s.variant, size);
-                      return (
-                        <div key={size} className="flex flex-col items-center px-3 py-1 rounded-lg bg-primary/10 text-primary min-w-[44px]">
-                          <span className="text-xs font-semibold">{size}</span>
-                          <span className="flex items-center justify-center gap-1 border-t border-primary/30 mt-0.5 pt-0.5 w-full">
-                            <button
-                              type="button"
-                              onClick={() => changeSizeQty(s.variant, size, -1)}
-                              aria-label={`Restar ${size}`}
-                              className="text-[10px] leading-none text-primary hover:opacity-70 active:scale-90 transition-transform"
-                            >
-                              −
-                            </button>
-                            <span key={qty} className="text-[10px] w-3 text-center animate-badge-in" style={{ animationDuration: "180ms" }}>
-                              {qty}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => changeSizeQty(s.variant, size, 1)}
-                              aria-label={`Sumar ${size}`}
-                              className="text-[10px] leading-none text-primary hover:opacity-70 active:scale-90 transition-transform"
-                            >
-                              +
-                            </button>
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {sizes.map((size) => (
+                      <div key={size} className="flex flex-col items-center px-3 py-1 rounded-lg bg-primary/10 text-primary min-w-[44px]">
+                        <span className="text-xs font-semibold">{size}</span>
+                        <SizeCounter
+                          qty={getSizeQty(s.variant, size)}
+                          onChange={(next) => setSizeQty(s.variant, size, next)}
+                        />
+                      </div>
+                    ))}
                     <span className="ml-2 px-3 py-2 rounded-lg bg-gray-100 border border-ui-border text-xs font-medium text-foreground">
                       {s.variant.stock} pzas
                     </span>
