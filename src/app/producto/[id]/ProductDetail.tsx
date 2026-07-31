@@ -162,28 +162,31 @@ export default function ProductDetail({ product, priceTiers }: Props) {
           )}
 
           {/* Info row */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-foreground">
-            {product.composition && (
-              <span className="flex items-start gap-1.5">
-                <ThreadIcon className="mt-0.5 shrink-0" />
-                <span>
-                  <span className="font-semibold">Composición:</span> {product.composition}
+          <div className="flex gap-x-6 text-sm text-foreground">
+            <div className="flex-1 flex flex-col gap-3">
+              {product.composition && (
+                <span className="flex items-start gap-1.5">
+                  <ThreadIcon className="mt-0.5 shrink-0" />
+                  <span>
+                    <span className="font-semibold">Composición:</span> {product.composition}
+                  </span>
                 </span>
-              </span>
-            )}
-            <InfoLink icon={<DocIcon />} label="Ficha técnica" />
-            {sizes.length > 0 && (
-              <span className="flex items-center gap-1.5">
-                <RulerIcon />
-                <span>
-                  <span className="font-semibold">Tallas:</span>{" "}
-                  {sizes.length > 1 ? `${sizes[0]} - ${sizes[sizes.length - 1]}` : sizes[0]}
+              )}
+              {sizes.length > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <RulerIcon />
+                  <span>
+                    <span className="font-semibold">Tallas:</span>{" "}
+                    {sizes.length > 1 ? `${sizes[0]} - ${sizes[sizes.length - 1]}` : sizes[0]}
+                  </span>
                 </span>
-              </span>
-            )}
-            <InfoLink icon={<RulerIcon />} label="Guía de Tallas" />
-            <span />
-            <InfoLink icon={<TagIcon className="text-[#F27A6E]" />} label="Descuento por cantidad" />
+              )}
+            </div>
+            <div className="flex-1 flex flex-col gap-3">
+              <InfoLink icon={<DocIcon />} label="Ficha técnica" />
+              <InfoLink icon={<RulerIcon />} label="Guía de Tallas" />
+              <InfoLink icon={<TagIcon className="text-[#F27A6E]" />} label="Descuento por cantidad" />
+            </div>
           </div>
 
           {/* Color selector */}
