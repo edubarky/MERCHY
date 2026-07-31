@@ -140,51 +140,47 @@ function SizeCounter({ qty, onChange }: { qty: number; onChange: (next: number) 
     setEditing(false);
   }
 
+  const buttonClass =
+    "text-base leading-none text-primary hover:scale-105 active:scale-90 transition-transform duration-150";
+
   return (
-    <span className="flex items-center justify-center gap-1 border-t border-primary/30 mt-0.5 pt-0.5 w-full">
-      <button
-        type="button"
-        onClick={() => onChange(Math.max(0, qty - 1))}
-        aria-label="Restar"
-        className="text-[10px] leading-none text-primary hover:opacity-70 active:scale-90 transition-transform"
-      >
-        −
-      </button>
-      {editing ? (
-        <input
-          ref={inputRef}
-          type="text"
-          inputMode="numeric"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, ""))}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") e.currentTarget.blur();
-          }}
-          className="text-[10px] w-6 text-center bg-transparent outline-none text-primary"
-        />
-      ) : (
-        <span
-          key={qty}
-          onClick={() => {
-            setDraft(String(qty));
-            setEditing(true);
-          }}
-          className="text-[10px] w-3 text-center animate-badge-in cursor-text"
-          style={{ animationDuration: "180ms" }}
-        >
-          {qty}
-        </span>
-      )}
-      <button
-        type="button"
-        onClick={() => onChange(qty + 1)}
-        aria-label="Sumar"
-        className="text-[10px] leading-none text-primary hover:opacity-70 active:scale-90 transition-transform"
-      >
-        +
-      </button>
-    </span>
+    <>
+      <span className="block w-3/5 border-t border-gray-200 mt-2 pt-2.5" />
+      <span className="flex items-center justify-center gap-3">
+        <button type="button" onClick={() => onChange(Math.max(0, qty - 1))} aria-label="Restar" className={buttonClass}>
+          −
+        </button>
+        {editing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="numeric"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, ""))}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+            }}
+            className="font-display font-semibold text-[20px] w-7 text-center bg-transparent outline-none text-foreground"
+          />
+        ) : (
+          <span
+            key={qty}
+            onClick={() => {
+              setDraft(String(qty));
+              setEditing(true);
+            }}
+            className="font-display font-semibold text-[20px] w-7 text-center text-foreground animate-badge-in cursor-text"
+            style={{ animationDuration: "180ms" }}
+          >
+            {qty}
+          </span>
+        )}
+        <button type="button" onClick={() => onChange(qty + 1)} aria-label="Sumar" className={buttonClass}>
+          +
+        </button>
+      </span>
+    </>
   );
 }
 
@@ -461,10 +457,13 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                   onExited={() => handleSectionExited(s.id)}
                 >
                   <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-3 flex-wrap">
                     {sizes.map((size) => (
-                      <div key={size} className="flex flex-col items-center px-3 py-1 rounded-lg bg-primary/10 text-primary min-w-[44px]">
-                        <span className="text-xs font-semibold">{size}</span>
+                      <div
+                        key={size}
+                        className="flex flex-col items-center px-5 py-3.5 rounded-[18px] bg-white min-w-[64px] shadow-[0_8px_28px_rgba(15,23,42,0.05),0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 ease-out hover:shadow-[0_14px_34px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:-translate-y-[3px]"
+                      >
+                        <span className="font-display font-bold text-[19px] text-primary text-center">{size}</span>
                         <SizeCounter
                           qty={getSizeQty(s.variant, size)}
                           onChange={(next) => setSizeQty(s.variant, size, next)}
