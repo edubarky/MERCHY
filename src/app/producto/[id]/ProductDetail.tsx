@@ -456,7 +456,13 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                       </div>
                     ))}
                     <span className="ml-2 px-3 py-2 rounded-lg bg-gray-100 border border-ui-border text-xs font-medium text-foreground">
-                      {s.variant.stock} pzas
+                      <span
+                        key={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)}
+                        className="inline-block animate-total-pulse"
+                      >
+                        {sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)}
+                      </span>{" "}
+                      pzas
                     </span>
                   </div>
                 </AnimatedSizeSection>
