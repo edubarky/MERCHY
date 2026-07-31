@@ -52,10 +52,11 @@ function ThreadIcon({ className = "" }: { className?: string }) {
 
 function DotsIcon() {
   return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="6" cy="8" r="2.4" />
-      <circle cx="12" cy="16" r="2.4" />
-      <circle cx="18" cy="8" r="2.4" />
+    <svg className="w-4 h-4" viewBox="0 0 16 16">
+      <circle cx="4" cy="4" r="2.6" fill="#F472B6" />
+      <circle cx="12" cy="4" r="2.6" fill="#38BDF8" />
+      <circle cx="4" cy="12" r="2.6" fill="#FBBF24" />
+      <circle cx="12" cy="12" r="2.6" fill="#1E2532" />
     </svg>
   );
 }
@@ -196,17 +197,19 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                 <p className="text-sm font-semibold text-foreground">
                   1. Selecciona Color: <span className="font-normal text-ui-gray">{selectedVariant?.color_name}</span>
                 </p>
-                <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer select-none">
+                <label className="flex items-center gap-2.5 bg-white rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.08)] pl-3.5 pr-1.5 py-1.5 cursor-pointer select-none">
                   <DotsIcon />
-                  Multicolor
+                  <span className="text-sm font-bold text-foreground">Multicolor</span>
                   <button
                     type="button"
                     onClick={() => setMulticolor((m) => !m)}
-                    className={`relative w-9 h-5 rounded-full transition-colors ${multicolor ? "bg-primary" : "bg-gray-300"}`}
+                    className={`relative w-11 h-6 rounded-full transition-colors bg-gradient-to-b ${
+                      multicolor ? "from-gray-400 to-gray-500" : "from-gray-200 to-gray-300"
+                    }`}
                   >
                     <span
-                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                        multicolor ? "translate-x-4" : ""
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.3)] border border-gray-200 transition-transform ${
+                        multicolor ? "translate-x-5" : ""
                       }`}
                     />
                   </button>
