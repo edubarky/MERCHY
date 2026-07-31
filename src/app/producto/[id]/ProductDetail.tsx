@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import type { Product, ProductVariant, PriceTier } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
@@ -78,11 +78,51 @@ function InfoLink({ icon, label }: { icon: React.ReactNode; label: string }) {
   );
 }
 
+// Envoltura de animación de entrada/salida para cada sección de tallas por
+// color. Entrada: opacity 0→1 + translateY 12px→0 (300ms ease-out).
+// Salida: opacity 1→0 + translateY 0→-12px (200ms ease-out); al terminar
+// la transición, avisa al padre (onExited) para quitarla del DOM.
+function AnimatedSizeSection({
+  leaving,
+  onExited,
+  children,
+}: {
+  leaving: boolean;
+  onExited: () => void;
+  children: React.ReactNode;
+}) {
+  const [entered, setEntered] = useState(false);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <div
+      onTransitionEnd={(e) => {
+        if (e.propertyName === "opacity" && leaving) onExited();
+      }}
+      className={`transition-all ${
+        leaving
+          ? "opacity-0 -translate-y-3 duration-200 ease-out"
+          : entered
+          ? "opacity-100 translate-y-0 duration-300 ease-out"
+          : "opacity-0 translate-y-3"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function ProductDetail({ product, priceTiers }: Props) {
   const activeVariants = product.variants.filter((v) => v.active);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
   const [selectedImage, setSelectedImage] = useState(0);
   const [multicolor, setMulticolor] = useState(false);
+  // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
+  const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(10);
 
   const images = selectedVariant?.images ?? [];
@@ -90,12 +130,50 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const totalPrice = unitPrice * quantity;
   const sizes = product.sizes_available;
 
-  function selectVariant(v: ProductVariant) {
-    setSelectedVariant(v);
-    setSelectedImage(0);
+  function toggleMulticolor() {
+    setMulticolor((m) => {
+      const next = !m;
+      if (next) setSelectedColorIds([]); // al activar, arranca sin ninguna sección
+      return next;
+    });
   }
 
-  const sizeColumns = multicolor ? activeVariants : activeVariants.filter((v) => v.id === selectedVariant?.id);
+  function selectVariant(v: ProductVariant) {
+    // La imagen de galería siempre sigue al último color tocado, en ambos modos.
+    setSelectedVariant(v);
+    setSelectedImage(0);
+    if (multicolor) {
+      setSelectedColorIds((prev) =>
+        prev.includes(v.id) ? prev.filter((id) => id !== v.id) : [...prev, v.id]
+      );
+    }
+  }
+
+  const targetVariants = multicolor
+    ? (selectedColorIds.map((id) => activeVariants.find((v) => v.id === id)).filter(Boolean) as ProductVariant[])
+    : activeVariants.filter((v) => v.id === selectedVariant?.id);
+  const targetKey = targetVariants.map((v) => v.id).join("|");
+
+  const [sections, setSections] = useState<{ id: string; variant: ProductVariant; leaving: boolean }[]>(
+    targetVariants.map((v) => ({ id: v.id, variant: v, leaving: false }))
+  );
+
+  useEffect(() => {
+    setSections((prev) => {
+      const targetIds = targetVariants.map((v) => v.id);
+      const kept = prev.map((s) => (targetIds.includes(s.id) ? { ...s, leaving: false } : { ...s, leaving: true }));
+      const existingIds = kept.map((s) => s.id);
+      const additions = targetVariants
+        .filter((v) => !existingIds.includes(v.id))
+        .map((v) => ({ id: v.id, variant: v, leaving: false }));
+      return [...kept, ...additions];
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetKey]);
+
+  function handleSectionExited(id: string) {
+    setSections((prev) => prev.filter((s) => s.id !== id));
+  }
 
   const avgRating = REVIEWS.length ? REVIEWS.reduce((s, r) => s + r.rating, 0) / REVIEWS.length : 0;
   const ratingCounts = [5, 4, 3, 2, 1].map((star) => REVIEWS.filter((r) => r.rating === star).length);
@@ -202,7 +280,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                   <span className="text-sm font-bold text-foreground">Multicolor</span>
                   <button
                     type="button"
-                    onClick={() => setMulticolor((m) => !m)}
+                    onClick={toggleMulticolor}
                     className={`relative w-9 h-5 rounded-full transition-colors ${
                       multicolor ? "bg-primary" : "bg-gradient-to-b from-gray-200 to-gray-300"
                     }`}
@@ -216,19 +294,22 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                 </label>
               </div>
               <div className="flex flex-wrap gap-2">
-                {activeVariants.map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => selectVariant(v)}
-                    title={v.color_name}
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${
-                      selectedVariant?.id === v.id
-                        ? "border-primary scale-110 ring-2 ring-primary/30"
-                        : "border-white ring-1 ring-ui-border hover:scale-105"
-                    }`}
-                    style={{ backgroundColor: v.color_hex }}
-                  />
-                ))}
+                {activeVariants.map((v) => {
+                  const isHighlighted = multicolor ? selectedColorIds.includes(v.id) : selectedVariant?.id === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => selectVariant(v)}
+                      title={v.color_name}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        isHighlighted
+                          ? "border-primary scale-110 ring-2 ring-primary/30"
+                          : "border-white ring-1 ring-ui-border hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: v.color_hex }}
+                    />
+                  );
+                })}
               </div>
             </div>
           )}
@@ -267,23 +348,27 @@ export default function ProductDetail({ product, priceTiers }: Props) {
           {/* Tallas por color */}
           {sizes.length > 0 && (
             <div className="space-y-3">
-              {sizeColumns.map((v) => (
-                <div key={v.id}>
-                  <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {v.color_name}</p>
+              {sections.map((s) => (
+                <AnimatedSizeSection
+                  key={s.id}
+                  leaving={s.leaving}
+                  onExited={() => handleSectionExited(s.id)}
+                >
+                  <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {sizes.map((size) => (
                       <div key={size} className="flex flex-col items-center px-3 py-1 rounded-lg bg-primary/10 text-primary min-w-[44px]">
                         <span className="text-xs font-semibold">{size}</span>
                         <span className="text-[10px] border-t border-primary/30 mt-0.5 pt-0.5 w-full text-center">
-                          {Math.max(1, Math.floor(v.stock / Math.max(1, sizes.length)))}
+                          {Math.max(1, Math.floor(s.variant.stock / Math.max(1, sizes.length)))}
                         </span>
                       </div>
                     ))}
                     <span className="ml-2 px-3 py-2 rounded-lg bg-gray-100 border border-ui-border text-xs font-medium text-foreground">
-                      {v.stock} pzas
+                      {s.variant.stock} pzas
                     </span>
                   </div>
-                </div>
+                </AnimatedSizeSection>
               ))}
             </div>
           )}
