@@ -203,13 +203,13 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                   <button
                     type="button"
                     onClick={() => setMulticolor((m) => !m)}
-                    className={`relative w-11 h-6 rounded-full transition-colors bg-gradient-to-b ${
-                      multicolor ? "from-gray-400 to-gray-500" : "from-gray-200 to-gray-300"
+                    className={`relative w-9 h-5 rounded-full transition-colors ${
+                      multicolor ? "bg-primary" : "bg-gradient-to-b from-gray-200 to-gray-300"
                     }`}
                   >
                     <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.3)] border border-gray-200 transition-transform ${
-                        multicolor ? "translate-x-5" : ""
+                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.3)] border border-gray-200 transition-transform ${
+                        multicolor ? "translate-x-4" : ""
                       }`}
                     />
                   </button>
