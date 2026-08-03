@@ -452,7 +452,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
         </div>
 
         {/* ── Info ── */}
-        <div className="space-y-[29px] bg-white rounded-[28px] border border-[#F2F2F2] shadow-[0_8px_30px_rgba(0,0,0,0.03)] p-8">
+        <div className="space-y-[29px]">
           <div>
             <p className="text-sm text-ui-gray mb-2">{product.category?.name}</p>
             <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-foreground uppercase tracking-tight">{product.name}</h1>
