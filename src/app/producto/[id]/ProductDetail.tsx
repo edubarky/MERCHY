@@ -82,6 +82,98 @@ function DotsIcon() {
   );
 }
 
+// Switch "Multicolor" premium. OFF conserva el diseño original (blanco,
+// texto negro, track gris, sin degradados/glow). ON revela un degradado
+// rosa→violeta→cian con un wipe de izquierda a derecha (550ms, spring en
+// el thumb), halo ambiental rosa/cian, y una respiración/shine muy sutil
+// mientras permanece activo. `pulse` dispara, una sola vez por activación,
+// la animación de los puntos + el efecto "wow" en los swatches de color.
+function MulticolorSwitch({
+  checked,
+  pulse,
+  onToggle,
+}: {
+  checked: boolean;
+  pulse: number;
+  onToggle: () => void;
+}) {
+  const justActivated = checked && pulse > 0;
+
+  return (
+    <label
+      className="relative flex items-center gap-2.5 rounded-full overflow-hidden pl-3.5 pr-1.5 py-1.5 cursor-pointer select-none bg-white transition-shadow duration-500 ease-out"
+      style={{
+        boxShadow: checked
+          ? "0 2px 10px rgba(0,0,0,0.08), -10px 0 26px rgba(255,77,184,0.28), 10px 0 26px rgba(0,212,255,0.28)"
+          : "0 2px 10px rgba(0,0,0,0.08), -10px 0 26px rgba(255,77,184,0), 10px 0 26px rgba(0,212,255,0)",
+      }}
+    >
+      {/* Fill de degradado — se revela de izquierda a derecha al activar */}
+      <span
+        aria-hidden
+        className={`absolute inset-0 rounded-full transition-[clip-path] duration-[550ms] ease-out ${
+          checked ? "animate-multicolor-drift" : ""
+        }`}
+        style={{
+          backgroundImage: "linear-gradient(90deg, #FF4DB8 0%, #7B61FF 50%, #00D4FF 100%)",
+          backgroundSize: "160% 100%",
+          clipPath: checked ? "inset(0 0% 0 0 round 999px)" : "inset(0 100% 0 0 round 999px)",
+        }}
+      />
+      {/* Halo que "respira" muy sutilmente mientras el switch está activo */}
+      {checked && (
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-full pointer-events-none animate-multicolor-breathe"
+          style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.15)" }}
+        />
+      )}
+      {/* Brillo tipo vidrio que recorre el botón cada ~7s */}
+      {checked && (
+        <span
+          aria-hidden
+          className="absolute inset-y-0 left-0 w-8 bg-white/60 blur-md animate-multicolor-shine"
+        />
+      )}
+
+      <span key={`dots-${pulse}`} className={`relative z-10 ${justActivated ? "animate-dots-activate" : ""}`}>
+        <DotsIcon />
+        {justActivated && (
+          <span aria-hidden className="absolute -inset-1.5 rounded-full bg-white/70 animate-sparkle-out" />
+        )}
+      </span>
+
+      <span
+        className={`relative z-10 text-sm font-bold transition-colors duration-300 ${
+          checked ? "text-white" : "text-foreground"
+        }`}
+      >
+        Multicolor
+      </span>
+
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`relative z-10 w-9 h-5 rounded-full transition-colors duration-500 ${
+          checked ? "bg-white/25" : "bg-gradient-to-b from-gray-200 to-gray-300"
+        }`}
+      >
+        <span
+          className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white"
+          style={{
+            transform: checked ? "translateX(16px)" : "translateX(0)",
+            transition: "transform 550ms cubic-bezier(0.34,1.56,0.64,1)",
+            boxShadow:
+              "inset 0 -1px 1px rgba(0,0,0,0.06), inset 0 1px 1px rgba(255,255,255,0.9), 0 1px 3px rgba(0,0,0,0.25)",
+          }}
+        >
+          <span className="absolute top-[2px] left-1/2 -translate-x-1/2 w-2 h-[3px] rounded-full bg-white/90 blur-[1px]" />
+        </span>
+      </button>
+    </label>
+  );
+}
+
 function StarIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="currentColor">
@@ -512,6 +604,9 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
   const [selectedImage, setSelectedImage] = useState(0);
   const [multicolor, setMulticolor] = useState(false);
+  // Se incrementa cada vez que Multicolor se activa; dispara, una sola
+  // vez por activación, la animación de los puntos y el "wow" en swatches.
+  const [colorPulse, setColorPulse] = useState(0);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [quantityDiscountOpen, setQuantityDiscountOpen] = useState(false);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
@@ -544,7 +639,10 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   function toggleMulticolor() {
     setMulticolor((m) => {
       const next = !m;
-      if (next) setSelectedColorIds([]); // al activar, arranca sin ninguna sección
+      if (next) {
+        setSelectedColorIds([]); // al activar, arranca sin ninguna sección
+        setColorPulse((p) => p + 1);
+      }
       return next;
     });
   }
@@ -731,38 +829,27 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                 <p className="text-sm font-semibold text-foreground">
                   1. Selecciona Color: <span className="font-normal text-ui-gray">{selectedVariant?.color_name}</span>
                 </p>
-                <label className="flex items-center gap-2.5 bg-white rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.08)] pl-3.5 pr-1.5 py-1.5 cursor-pointer select-none">
-                  <DotsIcon />
-                  <span className="text-sm font-bold text-foreground">Multicolor</span>
-                  <button
-                    type="button"
-                    onClick={toggleMulticolor}
-                    className={`relative w-9 h-5 rounded-full transition-colors ${
-                      multicolor ? "bg-primary" : "bg-gradient-to-b from-gray-200 to-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.3)] border border-gray-200 transition-transform ${
-                        multicolor ? "translate-x-4" : ""
-                      }`}
-                    />
-                  </button>
-                </label>
+                <MulticolorSwitch checked={multicolor} pulse={colorPulse} onToggle={toggleMulticolor} />
               </div>
               <div className="flex flex-wrap gap-2">
-                {activeVariants.map((v) => {
+                {activeVariants.map((v, i) => {
                   const isHighlighted = multicolor ? selectedColorIds.includes(v.id) : selectedVariant?.id === v.id;
                   return (
                     <button
-                      key={v.id}
+                      key={`${v.id}-${colorPulse}`}
                       onClick={() => selectVariant(v)}
                       title={v.color_name}
+                      style={{
+                        backgroundColor: v.color_hex,
+                        animationDelay: colorPulse > 0 ? `${i * 40}ms` : undefined,
+                      }}
                       className={`w-8 h-8 rounded-full border-2 transition-all duration-[250ms] ease-in-out ${
+                        colorPulse > 0 ? "animate-swatch-wow" : ""
+                      } ${
                         isHighlighted
                           ? "border-primary scale-110 ring-2 ring-primary/30 shadow-[0_0_0_4px_rgba(87,224,217,0.12)]"
                           : "border-white ring-1 ring-ui-border hover:scale-105"
                       }`}
-                      style={{ backgroundColor: v.color_hex }}
                     />
                   );
                 })}

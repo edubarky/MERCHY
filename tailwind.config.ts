@@ -61,6 +61,32 @@ const config: Config = {
           "50%": { transform: "scale(1.06)" },
           "100%": { transform: "scale(1)" },
         },
+        multicolorShine: {
+          "0%, 88%, 100%": { transform: "translateX(-60px) skewX(-20deg)", opacity: "0" },
+          "94%": { transform: "translateX(60px) skewX(-20deg)", opacity: "0.5" },
+        },
+        multicolorBreathe: {
+          "0%, 100%": { opacity: "0.75" },
+          "50%": { opacity: "1" },
+        },
+        multicolorDrift: {
+          "0%, 100%": { backgroundPositionX: "0%" },
+          "50%": { backgroundPositionX: "8%" },
+        },
+        dotsActivate: {
+          "0%": { transform: "rotate(0deg) scale(1)" },
+          "45%": { transform: "rotate(20deg) scale(1.1)" },
+          "100%": { transform: "rotate(0deg) scale(1)" },
+        },
+        sparkleOut: {
+          "0%": { transform: "scale(0.4)", opacity: "0.9" },
+          "100%": { transform: "scale(1.8)", opacity: "0" },
+        },
+        swatchWow: {
+          "0%": { transform: "scale(1)", boxShadow: "0 0 0 0 rgba(87,224,217,0)" },
+          "40%": { transform: "scale(1.05)", boxShadow: "0 0 0 6px rgba(87,224,217,0.25)" },
+          "100%": { transform: "scale(1)", boxShadow: "0 0 0 0 rgba(87,224,217,0)" },
+        },
       },
       animation: {
         "badge-in": "badgeIn 450ms cubic-bezier(0.22,1,0.36,1) both",
@@ -68,6 +94,12 @@ const config: Config = {
         "circle-pop": "circlePop 380ms cubic-bezier(0.22,1,0.36,1)",
         "button-shine": "buttonShine 900ms cubic-bezier(0.22,1,0.36,1) both",
         "total-pulse": "totalPulse 200ms cubic-bezier(0.33,1,0.68,1)",
+        "multicolor-shine": "multicolorShine 7000ms ease-in-out infinite",
+        "multicolor-breathe": "multicolorBreathe 7000ms ease-in-out infinite",
+        "multicolor-drift": "multicolorDrift 8000ms ease-in-out infinite",
+        "dots-activate": "dotsActivate 480ms cubic-bezier(0.34,1.56,0.64,1) both",
+        "sparkle-out": "sparkleOut 450ms ease-out both",
+        "swatch-wow": "swatchWow 480ms ease-out both",
       },
     },
   },
