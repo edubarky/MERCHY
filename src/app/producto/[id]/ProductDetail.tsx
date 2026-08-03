@@ -1,4 +1,5 @@
 "use client";
+// Force-rebuild marker: trivial touch to bust a stale Vercel build cache.
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
