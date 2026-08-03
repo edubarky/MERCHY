@@ -207,7 +207,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const [multicolor, setMulticolor] = useState(false);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
-  const [quantity, setQuantity] = useState(10);
+  const [quantity, setQuantity] = useState(0);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
   const [sizeQuantities, setSizeQuantities] = useState<Record<string, Record<string, number>>>({});
 
@@ -216,13 +216,8 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const totalPrice = unitPrice * quantity;
   const sizes = product.sizes_available;
 
-  function defaultSizeQty(variant: ProductVariant) {
-    return Math.max(1, Math.floor(variant.stock / Math.max(1, sizes.length)));
-  }
-
   function getSizeQty(variant: ProductVariant, size: string) {
-    const existing = sizeQuantities[variant.id]?.[size];
-    return existing !== undefined ? existing : defaultSizeQty(variant);
+    return sizeQuantities[variant.id]?.[size] ?? 0;
   }
 
   function setSizeQty(variant: ProductVariant, size: string, value: number) {
