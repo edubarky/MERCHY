@@ -69,10 +69,25 @@ function StarIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
   );
 }
 
-function InfoLink({ icon, label }: { icon: React.ReactNode; label: string }) {
+function InfoLink({
+  icon,
+  label,
+  accent = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  accent?: boolean;
+}) {
   return (
-    <button type="button" className="flex items-center gap-1.5 text-foreground hover:text-primary transition-colors text-left">
-      {icon}
+    <button
+      type="button"
+      className={`group flex items-center gap-1.5 font-semibold transition-colors duration-200 text-left cursor-pointer ${
+        accent ? "text-foreground hover:text-[#FF5843]" : "text-foreground hover:text-primary"
+      }`}
+    >
+      <span className={accent ? "inline-flex transition-transform duration-200 group-hover:translate-x-0.5" : "inline-flex"}>
+        {icon}
+      </span>
       <span>{label}</span>
     </button>
   );
@@ -366,7 +381,11 @@ export default function ProductDetail({ product, priceTiers }: Props) {
             <div className="flex-1 flex flex-col gap-3">
               <InfoLink icon={<DocIcon />} label="Ficha técnica" />
               <InfoLink icon={<RulerIcon />} label="Guía de Tallas" />
-              <InfoLink icon={<TagIcon className="text-[#F27A6E]" />} label="Descuento por cantidad" />
+              <InfoLink
+                icon={<TagIcon className="text-[#F27A6E] transition-colors duration-200 group-hover:text-[#FF5843]" />}
+                label="Descuento por cantidad"
+                accent
+              />
             </div>
           </div>
 
