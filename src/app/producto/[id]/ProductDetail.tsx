@@ -141,12 +141,12 @@ function SizeCounter({ qty, onChange }: { qty: number; onChange: (next: number) 
   }
 
   const buttonClass =
-    "text-xs leading-none text-primary hover:scale-105 active:scale-90 transition-transform duration-150";
+    "text-[10px] leading-none text-primary hover:scale-105 active:scale-90 transition-transform duration-150";
 
   return (
     <>
-      <span className="block w-3/5 border-t border-gray-200 mt-1 pt-1.5" />
-      <span className="flex items-center justify-center gap-2.5">
+      <span className="block w-3/5 border-t border-gray-200 mt-0.5 pt-1" />
+      <span className="flex items-center justify-center gap-2">
         <button type="button" onClick={() => onChange(Math.max(0, qty - 1))} aria-label="Restar" className={buttonClass}>
           −
         </button>
@@ -161,7 +161,7 @@ function SizeCounter({ qty, onChange }: { qty: number; onChange: (next: number) 
             onKeyDown={(e) => {
               if (e.key === "Enter") e.currentTarget.blur();
             }}
-            className="font-display font-semibold text-[15px] w-5 text-center bg-transparent outline-none text-foreground"
+            className="font-display font-semibold text-[12px] w-4 text-center bg-transparent outline-none text-foreground"
           />
         ) : (
           <span
@@ -170,7 +170,7 @@ function SizeCounter({ qty, onChange }: { qty: number; onChange: (next: number) 
               setDraft(String(qty));
               setEditing(true);
             }}
-            className="font-display font-semibold text-[15px] w-5 text-center text-foreground animate-badge-in cursor-text"
+            className="font-display font-semibold text-[12px] w-4 text-center text-foreground animate-badge-in cursor-text"
             style={{ animationDuration: "180ms" }}
           >
             {qty}
@@ -461,9 +461,9 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                     {sizes.map((size) => (
                       <div
                         key={size}
-                        className="flex flex-col items-center justify-center w-16 h-16 shrink-0 rounded-[16px] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05),0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 ease-out hover:shadow-[0_14px_34px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:-translate-y-[3px]"
+                        className="flex flex-col items-center justify-center w-[58px] h-[58px] shrink-0 rounded-[16px] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05),0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 ease-out hover:shadow-[0_14px_34px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:-translate-y-[3px]"
                       >
-                        <span className="font-display font-bold text-[19px] text-primary text-center">{size}</span>
+                        <span className="font-display font-bold text-[15px] text-primary text-center">{size}</span>
                         <SizeCounter
                           qty={getSizeQty(s.variant, size)}
                           onChange={(next) => setSizeQty(s.variant, size, next)}
