@@ -10,11 +10,32 @@ interface Props {
   priceTiers: PriceTier[];
 }
 
-// Reseñas de muestra — se conectarán a datos reales en la fase de "reseñas e interacciones".
-const REVIEWS = [
-  { name: "Juan Pérez", rating: 5, comment: "Excelente producto. Muy buena calidad y envío rápido." },
-  { name: "Ana López", rating: 5, comment: "Excelente producto. Muy buena calidad y envío rápido." },
+interface Review {
+  id: string;
+  name: string;
+  rating: number;
+  comment: string;
+  date: Date;
+}
+
+// Reseñas de muestra — no persisten en base de datos; viven en estado del cliente.
+const REVIEWS_SEED: Review[] = [
+  { id: "seed-1", name: "Juan Pérez", rating: 5, comment: "Excelente producto. Muy buena calidad y envío rápido.", date: new Date("2026-06-10") },
+  { id: "seed-2", name: "Ana López", rating: 5, comment: "Excelente producto. Muy buena calidad y envío rápido.", date: new Date("2026-05-02") },
 ];
+
+function getInitials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+}
+
+function formatReviewDate(date: Date) {
+  return date.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
+}
 
 function DocIcon({ className = "" }: { className?: string }) {
   return (
@@ -66,6 +87,43 @@ function StarIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
     <svg className={className} viewBox="0 0 20 20" fill="currentColor">
       <path d="M10 1.5l2.6 5.27 5.82.85-4.21 4.1 1 5.78L10 14.9l-5.21 2.6 1-5.78-4.21-4.1 5.82-.85L10 1.5z" />
     </svg>
+  );
+}
+
+// Selector de estrellas interactivo: ilumina progresivamente en hover
+// (200ms, amarillo premium) y confirma la calificación al hacer clic.
+function StarRatingInput({
+  value,
+  onSelect,
+  size = "md",
+}: {
+  value: number;
+  onSelect: (n: number) => void;
+  size?: "md" | "lg";
+}) {
+  const [hover, setHover] = useState(0);
+  const starClass = size === "lg" ? "w-9 h-9" : "w-6 h-6";
+  const display = hover || value;
+
+  return (
+    <div className="flex gap-1" onMouseLeave={() => setHover(0)}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <button
+          key={i}
+          type="button"
+          onMouseEnter={() => setHover(i)}
+          onClick={() => onSelect(i)}
+          aria-label={`${i} estrella${i === 1 ? "" : "s"}`}
+          className="focus:outline-none"
+        >
+          <StarIcon
+            className={`${starClass} transition-colors duration-200 ${
+              display >= i ? "text-[#FDBA12]" : "text-gray-200"
+            }`}
+          />
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -183,6 +241,145 @@ function InfoModal({
         </button>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={imgSrc} alt={alt} className="max-w-[90vw] max-h-[85vh] w-auto h-auto block" />
+      </div>
+    </div>
+  );
+}
+
+const REVIEW_MAX_LENGTH = 500;
+
+// Modal para calificar y escribir una reseña — mismo lenguaje visual que
+// InfoModal (overlay negro 45%, fade+scale ~220ms, foco atrapado, Esc/click
+// afuera cierran), pero con un formulario interactivo en vez de una imagen.
+function ReviewModal({
+  open,
+  onClose,
+  initialRating,
+  onSubmit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  initialRating: number;
+  onSubmit: (data: { rating: number; comment: string }) => void;
+}) {
+  const [entered, setEntered] = useState(false);
+  const [rating, setRating] = useState(initialRating);
+  const [comment, setComment] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setEntered(false);
+      return;
+    }
+    setRating(initialRating);
+    setComment("");
+    const raf = requestAnimationFrame(() => setEntered(true));
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.focus();
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key === "Tab") {
+        const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable || focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialRating]);
+
+  if (!open) return null;
+
+  const canPublish = rating > 0 && comment.trim().length > 0;
+
+  function handlePublish() {
+    if (!canPublish) return;
+    onSubmit({ rating, comment: comment.trim() });
+    onClose();
+  }
+
+  return (
+    <div
+      className={`fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/45 transition-opacity duration-[220ms] ease-out ${
+        entered ? "opacity-100" : "opacity-0"
+      }`}
+      onClick={onClose}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Escribir una reseña"
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+        className={`relative w-full max-w-md bg-white rounded-[24px] p-6 sm:p-8 outline-none transition-all duration-[220ms] ease-out ${
+          entered ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar"
+          className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center text-foreground hover:text-primary transition-colors"
+        >
+          ✕
+        </button>
+
+        <h2 className="font-display font-bold text-lg text-foreground mb-4">¿Qué te pareció este producto?</h2>
+
+        <StarRatingInput value={rating} onSelect={setRating} size="lg" />
+
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value.slice(0, REVIEW_MAX_LENGTH))}
+          maxLength={REVIEW_MAX_LENGTH}
+          rows={4}
+          placeholder="Cuéntanos tu experiencia con el producto..."
+          className="mt-4 w-full resize-none rounded-2xl border border-ui-border bg-gray-50 p-3 text-sm text-foreground placeholder:text-ui-gray/70 focus:outline-none focus:border-primary transition-colors duration-200"
+        />
+        <p className="text-xs text-ui-gray text-right mt-1">
+          {comment.length}/{REVIEW_MAX_LENGTH}
+        </p>
+
+        <div className="flex gap-3 mt-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-3 rounded-full border border-ui-border text-foreground font-semibold text-sm hover:bg-gray-50 transition-colors duration-200"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handlePublish}
+            disabled={!canPublish}
+            className="flex-1 py-3 rounded-full bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] hover:shadow-[0_8px_24px_rgba(40,43,52,0.22)] hover:opacity-90 transition-all duration-300 ease-in-out disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-[0_4px_16px_rgba(40,43,52,0.15)]"
+          >
+            Publicar reseña
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -321,6 +518,10 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
   const [sizeQuantities, setSizeQuantities] = useState<Record<string, Record<string, number>>>({});
+  const [reviews, setReviews] = useState<Review[]>(REVIEWS_SEED);
+  const [reviewSort, setReviewSort] = useState<"recent" | "best" | "worst">("recent");
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [modalInitialRating, setModalInitialRating] = useState(0);
 
   const images = selectedVariant?.images ?? [];
   const sizes = product.sizes_available;
@@ -389,8 +590,21 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const unitPrice = getProductUnitPrice(product.costo, totalQuantity, priceTiers);
   const totalPrice = unitPrice * totalQuantity;
 
-  const avgRating = REVIEWS.length ? REVIEWS.reduce((s, r) => s + r.rating, 0) / REVIEWS.length : 0;
-  const ratingCounts = [5, 4, 3, 2, 1].map((star) => REVIEWS.filter((r) => r.rating === star).length);
+  const avgRating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
+  const ratingCounts = [5, 4, 3, 2, 1].map((star) => reviews.filter((r) => r.rating === star).length);
+
+  const sortedReviews = [...reviews].sort((a, b) => {
+    if (reviewSort === "best") return b.rating - a.rating || b.date.getTime() - a.date.getTime();
+    if (reviewSort === "worst") return a.rating - b.rating || b.date.getTime() - a.date.getTime();
+    return b.date.getTime() - a.date.getTime();
+  });
+
+  function handlePublishReview(data: { rating: number; comment: string }) {
+    setReviews((prev) => [
+      { id: `${Date.now()}`, name: "Tú", rating: data.rating, comment: data.comment, date: new Date() },
+      ...prev,
+    ]);
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -630,50 +844,96 @@ export default function ProductDetail({ product, priceTiers }: Props) {
       </div>
 
       {/* ── Reseñas ── */}
-      <div className="mt-14 bg-white rounded-2xl border border-ui-border p-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8">
-        <div>
-          <p className="flex items-center gap-2 text-3xl font-bold text-foreground">
-            {avgRating.toFixed(1)}
-            <span className="flex text-amber-400">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <StarIcon key={i} className="w-5 h-5" />
-              ))}
-            </span>
-          </p>
-          <p className="text-sm text-ui-gray mb-4">
-            Basado en {REVIEWS.length} reseña{REVIEWS.length === 1 ? "" : "s"}
-          </p>
-          <div className="space-y-1.5">
-            {[5, 4, 3, 2, 1].map((star, i) => (
-              <div key={star} className="flex items-center gap-2 text-xs text-ui-gray">
-                <span className="w-2">{star}</span>
-                <StarIcon className="w-3 h-3 text-amber-400" />
-                <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
-                  <div
-                    className="h-full bg-amber-400"
-                    style={{ width: `${(ratingCounts[i] / REVIEWS.length) * 100}%` }}
-                  />
-                </div>
-                <span className="w-4 text-right">{ratingCounts[i]}</span>
-              </div>
-            ))}
-          </div>
+      <div className="mt-14 bg-white rounded-2xl border border-ui-border p-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-display font-bold text-lg text-foreground">Calificaciones y Reseñas</h2>
+          <button
+            type="button"
+            onClick={() => {
+              setModalInitialRating(0);
+              setReviewModalOpen(true);
+            }}
+            className="text-sm font-semibold text-ui-gray hover:text-primary-dark transition-colors duration-200"
+          >
+            Escribir una reseña
+          </button>
         </div>
-        <div className="divide-y divide-ui-border">
-          {REVIEWS.map((r) => (
-            <div key={r.name} className="py-4 first:pt-0 flex gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">{r.name}</p>
-                <p className="flex text-amber-400 mb-1">
-                  {Array.from({ length: r.rating }).map((_, i) => (
-                    <StarIcon key={i} />
-                  ))}
-                </p>
-                <p className="text-sm text-ui-gray">{r.comment}</p>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8">
+          <div>
+            <p className="flex items-center gap-2 text-3xl font-bold text-foreground">
+              {avgRating.toFixed(1)}
+              <span className="flex text-amber-400">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <StarIcon key={i} className="w-5 h-5" />
+                ))}
+              </span>
+            </p>
+            <p className="text-sm text-ui-gray mb-4">
+              Basado en {reviews.length} reseña{reviews.length === 1 ? "" : "s"}
+            </p>
+            <div className="space-y-1.5 mb-6">
+              {[5, 4, 3, 2, 1].map((star, i) => (
+                <div key={star} className="flex items-center gap-2 text-xs text-ui-gray">
+                  <span className="w-2">{star}</span>
+                  <StarIcon className="w-3 h-3 text-amber-400" />
+                  <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400 transition-all duration-300 ease-out"
+                      style={{ width: `${reviews.length ? (ratingCounts[i] / reviews.length) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <span className="w-4 text-right">{ratingCounts[i]}</span>
+                </div>
+              ))}
             </div>
-          ))}
+            <div>
+              <p className="text-sm font-semibold text-foreground mb-2">Califica este producto</p>
+              <StarRatingInput
+                value={0}
+                onSelect={(n) => {
+                  setModalInitialRating(n);
+                  setReviewModalOpen(true);
+                }}
+              />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-end mb-3">
+              <select
+                value={reviewSort}
+                onChange={(e) => setReviewSort(e.target.value as "recent" | "best" | "worst")}
+                className="text-xs text-ui-gray border border-ui-border rounded-full px-3 py-1.5 bg-white focus:outline-none focus:border-primary transition-colors duration-200"
+              >
+                <option value="recent">Más recientes</option>
+                <option value="best">Mejor calificadas</option>
+                <option value="worst">Menor calificación</option>
+              </select>
+            </div>
+            <div className="divide-y divide-ui-border">
+              {sortedReviews.map((r) => (
+                <div
+                  key={r.id}
+                  className="py-4 first:pt-0 flex gap-3 px-2 -mx-2 rounded-xl transition-all duration-[250ms] ease-in-out hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(0,0,0,0.05)]"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0 flex items-center justify-center text-xs font-semibold text-ui-gray">
+                    {getInitials(r.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-foreground">{r.name}</p>
+                      <p className="text-xs text-ui-gray shrink-0">{formatReviewDate(r.date)}</p>
+                    </div>
+                    <p className="flex text-amber-400 mb-1">
+                      {Array.from({ length: r.rating }).map((_, i) => (
+                        <StarIcon key={i} />
+                      ))}
+                    </p>
+                    <p className="text-sm text-ui-gray">{r.comment}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -688,6 +948,12 @@ export default function ProductDetail({ product, priceTiers }: Props) {
         onClose={() => setQuantityDiscountOpen(false)}
         imgSrc="/Home/PAG 3/DESCUENTO POR CANTIDAD.svg"
         alt="Descuento por cantidad"
+      />
+      <ReviewModal
+        open={reviewModalOpen}
+        onClose={() => setReviewModalOpen(false)}
+        initialRating={modalInitialRating}
+        onSubmit={handlePublishReview}
       />
     </div>
   );
