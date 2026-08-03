@@ -117,13 +117,15 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
 
         <div className="flex gap-8">
           {/* Desktop sidebar */}
-          <Suspense>
-            <CategoryFilter
-              categories={safeCategories}
-              selected={categoria}
-              total={count ?? 0}
-            />
-          </Suspense>
+          <div className="hidden lg:block">
+            <Suspense>
+              <CategoryFilter
+                categories={safeCategories}
+                selected={categoria}
+                total={count ?? 0}
+              />
+            </Suspense>
+          </div>
 
           {/* Product grid */}
           <div className="flex-1 min-w-0">
