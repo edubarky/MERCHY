@@ -415,7 +415,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               style={{ background: "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5), transparent 55%)" }}
             />
             {images[selectedImage] ? (
-              <div className="absolute inset-[1%]">
+              <div className="absolute inset-[9%]">
                 <Image
                   src={images[selectedImage]}
                   alt={`${product.name} — ${selectedVariant?.color_name}`}
