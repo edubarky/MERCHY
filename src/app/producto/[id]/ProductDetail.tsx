@@ -207,13 +207,10 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const [multicolor, setMulticolor] = useState(false);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
-  const [quantity, setQuantity] = useState(0);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
   const [sizeQuantities, setSizeQuantities] = useState<Record<string, Record<string, number>>>({});
 
   const images = selectedVariant?.images ?? [];
-  const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers);
-  const totalPrice = unitPrice * quantity;
   const sizes = product.sizes_available;
 
   function getSizeQty(variant: ProductVariant, size: string) {
@@ -271,6 +268,14 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   function handleSectionExited(id: string) {
     setSections((prev) => prev.filter((s) => s.id !== id));
   }
+
+  // "Selecciona Cantidad" ya no es un contador independiente: es la suma en
+  // vivo de las tallas seleccionadas en las secciones de color visibles.
+  const totalQuantity = sections
+    .filter((s) => !s.leaving)
+    .reduce((sum, s) => sum + sizes.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
+  const unitPrice = getProductUnitPrice(product.costo, totalQuantity, priceTiers);
+  const totalPrice = unitPrice * totalQuantity;
 
   const avgRating = REVIEWS.length ? REVIEWS.reduce((s, r) => s + r.rating, 0) / REVIEWS.length : 0;
   const ratingCounts = [5, 4, 3, 2, 1].map((star) => REVIEWS.filter((r) => r.rating === star).length);
@@ -418,16 +423,22 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               <div className="flex items-center gap-4 bg-gray-50 border border-ui-border rounded-full px-2 py-1.5 w-fit">
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="w-7 h-7 flex items-center justify-center text-lg text-ui-gray hover:text-foreground"
+                  disabled
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  className="w-7 h-7 flex items-center justify-center text-lg text-ui-gray/40 cursor-default"
                 >
                   −
                 </button>
-                <span className="text-sm font-semibold text-foreground w-6 text-center">{quantity}</span>
+                <span key={totalQuantity} className="text-sm font-semibold text-foreground w-8 text-center animate-badge-in">
+                  {totalQuantity}
+                </span>
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => q + 1)}
-                  className="w-7 h-7 flex items-center justify-center text-lg text-ui-gray hover:text-foreground"
+                  disabled
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  className="w-7 h-7 flex items-center justify-center text-lg text-ui-gray/40 cursor-default"
                 >
                   +
                 </button>
