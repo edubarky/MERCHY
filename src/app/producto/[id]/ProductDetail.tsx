@@ -401,12 +401,21 @@ export default function ProductDetail({ product, priceTiers }: Props) {
         <span className="text-foreground">{product.name}</span>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* ── Galería ── */}
         <div className="space-y-4">
-          <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-ui-border relative">
+          <div className="aspect-square rounded-[28px] overflow-hidden bg-white border border-[#F1F1F1] shadow-[0_20px_60px_rgba(0,0,0,0.06)] relative">
+            {/* Halos de profundidad — luz difusa turquesa, muy sutil, detrás del producto */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: "radial-gradient(circle at 48% 42%, rgba(87,224,217,0.06), transparent 62%)" }}
+            />
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: "radial-gradient(circle at 58% 60%, rgba(87,224,217,0.045), transparent 46%)" }}
+            />
             {images[selectedImage] ? (
-              <div className="absolute inset-[5%]">
+              <div className="absolute inset-[1%]">
                 <Image
                   src={images[selectedImage]}
                   alt={`${product.name} — ${selectedVariant?.color_name}`}
@@ -443,15 +452,15 @@ export default function ProductDetail({ product, priceTiers }: Props) {
         </div>
 
         {/* ── Info ── */}
-        <div className="space-y-6">
+        <div className="space-y-[29px] bg-white rounded-[28px] border border-[#F2F2F2] shadow-[0_8px_30px_rgba(0,0,0,0.03)] p-8">
           <div>
-            <p className="text-sm text-ui-gray mb-1">{product.category?.name}</p>
-            <h1 className="font-display font-bold text-2xl sm:text-3xl text-foreground uppercase">{product.name}</h1>
-            <p className="text-xs text-ui-gray mt-1">{product.sku}</p>
+            <p className="text-sm text-ui-gray mb-2">{product.category?.name}</p>
+            <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-foreground uppercase tracking-tight">{product.name}</h1>
+            <p className="text-xs text-ui-gray mt-2">{product.sku}</p>
           </div>
 
           {product.description && (
-            <p className="text-sm text-ui-gray leading-relaxed">{product.description}</p>
+            <p className="text-sm text-ui-gray leading-[1.9]">{product.description}</p>
           )}
 
           {/* Info row */}
@@ -520,9 +529,9 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                       key={v.id}
                       onClick={() => selectVariant(v)}
                       title={v.color_name}
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                      className={`w-8 h-8 rounded-full border-2 transition-all duration-[250ms] ease-in-out ${
                         isHighlighted
-                          ? "border-primary scale-110 ring-2 ring-primary/30"
+                          ? "border-primary scale-110 ring-2 ring-primary/30 shadow-[0_0_0_4px_rgba(87,224,217,0.12)]"
                           : "border-white ring-1 ring-ui-border hover:scale-105"
                       }`}
                       style={{ backgroundColor: v.color_hex }}
@@ -562,10 +571,10 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-3xl font-extrabold text-foreground tracking-tight">
                 {formatMXN(totalPrice)} <span className="text-sm font-normal text-ui-gray">MXN</span>
               </p>
-              <p className="text-xs text-ui-gray">IVA incluido c/u</p>
+              <p className="text-xs text-ui-gray mt-2">IVA incluido c/u</p>
               <p className="text-xs text-ui-gray">{formatMXN(unitPrice)}</p>
             </div>
           </div>
@@ -580,7 +589,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                   onExited={() => handleSectionExited(s.id)}
                 >
                   <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
-                  <div className="flex items-center gap-2 flex-nowrap">
+                  <div className="flex items-center gap-3 flex-nowrap">
                     {sizes.map((size) => (
                       <div
                         key={size}
@@ -604,7 +613,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
           <div className="flex gap-3">
             <button
               type="button"
-              className="flex-1 py-3.5 rounded-full bg-[#282B34] text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+              className="flex-1 py-3.5 rounded-full bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] hover:shadow-[0_8px_24px_rgba(40,43,52,0.22)] hover:opacity-90 hover:-translate-y-[1px] transition-all duration-300 ease-in-out"
             >
               Personalizar producto
             </button>
@@ -612,7 +621,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               href={`https://wa.me/5215500000000?text=${encodeURIComponent(`Hola, me interesa cotizar: ${product.name} (SKU: ${product.sku})`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center py-3.5 rounded-full bg-[#282B34] text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+              className="flex-1 flex items-center justify-center py-3.5 rounded-full bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] hover:shadow-[0_8px_24px_rgba(40,43,52,0.22)] hover:opacity-90 hover:-translate-y-[1px] transition-all duration-300 ease-in-out"
             >
               Agregar al carrito
             </a>

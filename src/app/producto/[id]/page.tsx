@@ -36,7 +36,7 @@ export default async function ProductoPage({ params }: { params: { id: string } 
   const safeProduct = product as unknown as Product & { variants: ProductVariant[] };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#FAFAFA]">
       <PublicHeader />
       <ProductDetail
         product={safeProduct}
