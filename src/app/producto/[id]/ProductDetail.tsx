@@ -73,14 +73,17 @@ function InfoLink({
   icon,
   label,
   accent = false,
+  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   accent?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className={`group flex items-center gap-1.5 font-semibold transition-colors duration-200 text-left cursor-pointer ${
         accent ? "text-foreground hover:text-[#FF5843]" : "text-foreground hover:text-primary"
       }`}
@@ -90,6 +93,98 @@ function InfoLink({
       </span>
       <span>{label}</span>
     </button>
+  );
+}
+
+// Modal centrado (overlay negro 45% + fade/scale ~220ms) para mostrar los
+// editables existentes de "Guía de Tallas" y "Descuento por cantidad" tal
+// cual, sin rediseñarlos. Cierra con click afuera, Esc o el botón X.
+function InfoModal({
+  open,
+  onClose,
+  imgSrc,
+  alt,
+}: {
+  open: boolean;
+  onClose: () => void;
+  imgSrc: string;
+  alt: string;
+}) {
+  const [entered, setEntered] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setEntered(false);
+      return;
+    }
+    const raf = requestAnimationFrame(() => setEntered(true));
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.focus();
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key === "Tab") {
+        const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable || focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className={`fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/45 transition-opacity duration-[220ms] ease-out ${
+        entered ? "opacity-100" : "opacity-0"
+      }`}
+      onClick={onClose}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={alt}
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+        className={`relative max-w-[90vw] max-h-[85vh] outline-none transition-all duration-[220ms] ease-out ${
+          entered ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar"
+          className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center text-foreground hover:text-primary transition-colors"
+        >
+          ✕
+        </button>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={imgSrc} alt={alt} className="max-w-[90vw] max-h-[85vh] w-auto h-auto block" />
+      </div>
+    </div>
   );
 }
 
@@ -220,6 +315,8 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
   const [selectedImage, setSelectedImage] = useState(0);
   const [multicolor, setMulticolor] = useState(false);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const [quantityDiscountOpen, setQuantityDiscountOpen] = useState(false);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
@@ -380,10 +477,11 @@ export default function ProductDetail({ product, priceTiers }: Props) {
             </div>
             <div className="flex-1 flex flex-col gap-3">
               <InfoLink icon={<DocIcon />} label="Ficha técnica" />
-              <InfoLink icon={<RulerIcon />} label="Guía de Tallas" />
+              <InfoLink icon={<RulerIcon />} label="Guía de Tallas" onClick={() => setSizeGuideOpen(true)} />
               <InfoLink
                 icon={<TagIcon className="text-[#F27A6E] transition-colors duration-200 group-hover:text-[#FF5843]" />}
                 label="Descuento por cantidad"
+                onClick={() => setQuantityDiscountOpen(true)}
                 accent
               />
             </div>
@@ -569,6 +667,19 @@ export default function ProductDetail({ product, priceTiers }: Props) {
           ))}
         </div>
       </div>
+
+      <InfoModal
+        open={sizeGuideOpen}
+        onClose={() => setSizeGuideOpen(false)}
+        imgSrc="/Home/PAG 3/GUÍA DE TALLAS.svg"
+        alt="Guía de tallas"
+      />
+      <InfoModal
+        open={quantityDiscountOpen}
+        onClose={() => setQuantityDiscountOpen(false)}
+        imgSrc="/Home/PAG 3/DESCUENTO POR CANTIDAD.svg"
+        alt="Descuento por cantidad"
+      />
     </div>
   );
 }
