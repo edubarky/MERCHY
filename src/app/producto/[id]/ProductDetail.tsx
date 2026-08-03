@@ -404,15 +404,15 @@ export default function ProductDetail({ product, priceTiers }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* ── Galería ── */}
         <div className="space-y-4">
-          <div className="aspect-square rounded-[28px] overflow-hidden bg-white border border-[#F1F1F1] shadow-[0_20px_60px_rgba(0,0,0,0.06)] relative">
-            {/* Halos de profundidad — luz difusa turquesa, muy sutil, detrás del producto */}
+          <div className="aspect-square rounded-[28px] overflow-hidden bg-white border border-[#F1F1F1] shadow-[0_20px_60px_rgba(0,0,0,0.05)] relative">
+            {/* Halos de profundidad — iluminación ambiental muy sutil detrás del producto */}
             <div
               className="absolute inset-0 pointer-events-none"
-              style={{ background: "radial-gradient(circle at 48% 42%, rgba(87,224,217,0.06), transparent 62%)" }}
+              style={{ background: "radial-gradient(circle at 50% 45%, rgba(87,224,217,0.055), transparent 70%)" }}
             />
             <div
               className="absolute inset-0 pointer-events-none"
-              style={{ background: "radial-gradient(circle at 58% 60%, rgba(87,224,217,0.045), transparent 46%)" }}
+              style={{ background: "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5), transparent 55%)" }}
             />
             {images[selectedImage] ? (
               <div className="absolute inset-[1%]">
