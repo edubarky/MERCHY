@@ -519,6 +519,10 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
   const [sizeQuantities, setSizeQuantities] = useState<Record<string, Record<string, number>>>({});
   const [reviews, setReviews] = useState<Review[]>(REVIEWS_SEED);
+  // Calificaciones "solo estrellas" — cuentan para el promedio y la
+  // distribución, pero no generan una tarjeta de reseña visible.
+  const [standaloneRatings, setStandaloneRatings] = useState<number[]>([]);
+  const [quickRating, setQuickRating] = useState(0);
   const [reviewSort, setReviewSort] = useState<"recent" | "best" | "worst">("recent");
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [modalInitialRating, setModalInitialRating] = useState(0);
@@ -590,14 +594,24 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const unitPrice = getProductUnitPrice(product.costo, totalQuantity, priceTiers);
   const totalPrice = unitPrice * totalQuantity;
 
-  const avgRating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
-  const ratingCounts = [5, 4, 3, 2, 1].map((star) => reviews.filter((r) => r.rating === star).length);
+  // El promedio y la distribución consideran tanto las reseñas escritas
+  // como las calificaciones "solo estrellas" (sin tarjeta de comentario).
+  const allRatingValues = [...reviews.map((r) => r.rating), ...standaloneRatings];
+  const totalRatingsCount = allRatingValues.length;
+  const avgRating = totalRatingsCount ? allRatingValues.reduce((s, r) => s + r, 0) / totalRatingsCount : 0;
+  const ratingCounts = [5, 4, 3, 2, 1].map((star) => allRatingValues.filter((r) => r === star).length);
 
   const sortedReviews = [...reviews].sort((a, b) => {
     if (reviewSort === "best") return b.rating - a.rating || b.date.getTime() - a.date.getTime();
     if (reviewSort === "worst") return a.rating - b.rating || b.date.getTime() - a.date.getTime();
     return b.date.getTime() - a.date.getTime();
   });
+
+  function handleSendQuickRating() {
+    if (quickRating === 0) return;
+    setStandaloneRatings((prev) => [...prev, quickRating]);
+    setQuickRating(0);
+  }
 
   function handlePublishReview(data: { rating: number; comment: string }) {
     setReviews((prev) => [
@@ -869,7 +883,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               </span>
             </p>
             <p className="text-sm text-ui-gray mb-4">
-              Basado en {reviews.length} reseña{reviews.length === 1 ? "" : "s"}
+              Basado en {totalRatingsCount} {totalRatingsCount === 1 ? "calificación" : "calificaciones"}
             </p>
             <div className="space-y-1.5 mb-6">
               {[5, 4, 3, 2, 1].map((star, i) => (
@@ -879,7 +893,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                   <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
                     <div
                       className="h-full bg-amber-400 transition-all duration-300 ease-out"
-                      style={{ width: `${reviews.length ? (ratingCounts[i] / reviews.length) * 100 : 0}%` }}
+                      style={{ width: `${totalRatingsCount ? (ratingCounts[i] / totalRatingsCount) * 100 : 0}%` }}
                     />
                   </div>
                   <span className="w-4 text-right">{ratingCounts[i]}</span>
@@ -888,13 +902,32 @@ export default function ProductDetail({ product, priceTiers }: Props) {
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground mb-2">Califica este producto</p>
-              <StarRatingInput
-                value={0}
-                onSelect={(n) => {
-                  setModalInitialRating(n);
-                  setReviewModalOpen(true);
-                }}
-              />
+              <StarRatingInput value={quickRating} onSelect={setQuickRating} />
+              {quickRating > 0 && (
+                <div className="mt-3 space-y-2">
+                  <button
+                    type="button"
+                    onClick={handleSendQuickRating}
+                    className="py-2 px-5 rounded-full bg-[#282B34] text-white font-semibold text-xs shadow-[0_4px_16px_rgba(40,43,52,0.15)] hover:shadow-[0_8px_24px_rgba(40,43,52,0.22)] hover:opacity-90 transition-all duration-300 ease-in-out"
+                  >
+                    Enviar calificación
+                  </button>
+                  <p className="text-xs text-ui-gray">
+                    ¿Quieres compartir más detalles?{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalInitialRating(quickRating);
+                        setQuickRating(0);
+                        setReviewModalOpen(true);
+                      }}
+                      className="font-semibold text-primary-dark hover:text-primary transition-colors duration-200 underline underline-offset-2"
+                    >
+                      Escribe una reseña.
+                    </button>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           <div>
