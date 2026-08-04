@@ -158,7 +158,7 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`scale-[0.91] object-contain p-2 transition-[opacity_100ms_ease-out,transform_300ms_cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-[0.955] ${
+            className={`object-contain p-4 transition-[opacity_100ms_ease-out,transform_300ms_cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-[1.04] ${
               imageVisible ? "opacity-100" : "opacity-0"
             }`}
           />
