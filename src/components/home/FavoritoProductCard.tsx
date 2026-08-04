@@ -194,7 +194,9 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
 
       {/* Info */}
       <div className="flex flex-col gap-2.5 px-3 pb-3 pt-2.5">
-        <h3 className="text-center font-display text-lg font-bold text-foreground line-clamp-1">
+        {/* Altura fija para 2 líneas: todas las tarjetas miden lo mismo sin
+            importar si el nombre ocupa 1 o 2 líneas. */}
+        <h3 className="flex min-h-[2.75rem] items-center justify-center text-center font-display text-lg font-bold leading-tight text-foreground line-clamp-2">
           {toTitleCase(product.name)}
         </h3>
 
