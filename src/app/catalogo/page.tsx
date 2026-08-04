@@ -2,10 +2,10 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import PublicHeader from "@/components/PublicHeader";
 import type { Product, Category, PriceTier } from "@/types";
-import FavoritoProductCard from "@/components/home/FavoritoProductCard";
 import CategoryFilter from "./components/CategoryFilter";
 import SearchBar from "./components/SearchBar";
 import Pagination from "./components/Pagination";
+import CatalogGridWithFilters from "./components/CatalogGridWithFilters";
 
 const PAGE_SIZE = 12;
 
@@ -145,16 +145,7 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
                   {count} producto{count !== 1 ? "s" : ""}
                   {categoria ? ` en ${safeCategories.find((c) => c.slug === categoria)?.name}` : ""}
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {safeProducts.map((product, index) => (
-                    <FavoritoProductCard
-                      key={product.id}
-                      product={product}
-                      priceTiers={safeTiers}
-                      index={index}
-                    />
-                  ))}
-                </div>
+                <CatalogGridWithFilters products={safeProducts} priceTiers={safeTiers} />
                 <Suspense>
                   <Pagination
                     currentPage={page}
