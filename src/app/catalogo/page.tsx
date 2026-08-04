@@ -7,6 +7,20 @@ import CatalogGridWithFilters from "./components/CatalogGridWithFilters";
 
 const PAGE_SIZE = 12;
 
+// Las tarjetas de categoría de la home (Bebidas/Textiles/Deportivo) agrupan
+// varias categorías reales de la base de datos bajo un slug más amplio.
+const CATEGORY_GROUPS: Record<string, string[]> = {
+  bebidas: ["termos-y-bebidas"],
+  textiles: ["playeras", "sudaderas", "gorras", "mochilas"],
+  deportivo: ["deportivo"],
+};
+
+const CATEGORY_GROUP_LABELS: Record<string, string> = {
+  bebidas: "Bebidas",
+  textiles: "Textiles",
+  deportivo: "Deportivo",
+};
+
 interface PageProps {
   searchParams: {
     categoria?: string;
@@ -55,8 +69,11 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
     .range(from, to);
 
   if (categoria) {
-    const cat = (categories ?? []).find((c: Category) => c.slug === categoria);
-    if (cat) productsQuery = productsQuery.eq("category_id", cat.id);
+    const slugs = CATEGORY_GROUPS[categoria] ?? [categoria];
+    const matchingIds = (categories ?? [])
+      .filter((c: Category) => slugs.includes(c.slug))
+      .map((c: Category) => c.id);
+    if (matchingIds.length > 0) productsQuery = productsQuery.in("category_id", matchingIds);
   }
 
   if (query) {
@@ -101,7 +118,9 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
             <>
               <p className="text-sm text-ui-gray mb-4">
                 {count} producto{count !== 1 ? "s" : ""}
-                {categoria ? ` en ${safeCategories.find((c) => c.slug === categoria)?.name}` : ""}
+                {categoria
+                  ? ` en ${CATEGORY_GROUP_LABELS[categoria] ?? safeCategories.find((c) => c.slug === categoria)?.name}`
+                  : ""}
               </p>
               <CatalogGridWithFilters products={safeProducts} priceTiers={safeTiers} />
               <Suspense>
