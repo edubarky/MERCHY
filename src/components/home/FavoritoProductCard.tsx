@@ -150,7 +150,7 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
       {/* Imagen */}
       <Link
         href={`/producto/${product.id}`}
-        className="group/card relative block aspect-[5/6] bg-white"
+        className="group/card relative block aspect-[303/277] bg-white"
       >
         {displayedImage ? (
           <Image
@@ -194,16 +194,14 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
 
       {/* Info */}
       <div className="flex flex-col gap-2.5 px-3 pb-3 pt-2.5">
-        {/* Altura fija para 2 líneas: todas las tarjetas miden lo mismo sin
-            importar si el nombre ocupa 1 o 2 líneas. */}
-        <h3 className="flex min-h-[2.6rem] items-center justify-center text-center font-display text-lg font-bold leading-tight text-foreground line-clamp-2">
+        <h3 className="text-center font-display text-lg font-bold text-foreground line-clamp-1">
           {toTitleCase(product.name)}
         </h3>
 
         <div className="flex items-stretch">
           {/* Colores */}
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <span className="text-[10px] font-medium leading-tight text-foreground/80">
+            <span className="whitespace-nowrap text-[11px] font-medium text-foreground/80">
               Colores disponibles
             </span>
             {visibleVariants.length > 0 ? (
@@ -232,12 +230,12 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
           </div>
 
           {/* Divisor vertical */}
-          <div className="mx-2 w-px self-stretch bg-ui-border" />
+          <div className="mx-3 w-px self-stretch bg-ui-border" />
 
           {/* Precio + etiqueta */}
-          <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1">
+          <div className="grid min-w-0 flex-1 justify-start gap-1">
             <span
-              className="inline-flex items-center gap-1 rounded-full bg-[#EDF7F0] px-1.5 py-0.5 text-center text-[8px] font-semibold leading-tight text-[#30BE52] animate-badge-in"
+              className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-[#EDF7F0] px-1.5 py-0.5 text-[8px] font-semibold leading-tight text-[#30BE52] animate-badge-in"
               style={{ animationDelay: `${index * 80 + 250}ms` }}
             >
               <span className="shrink-0 [&_svg]:h-[8px] [&_svg]:w-[8px]">
@@ -245,7 +243,7 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
               </span>
               <span>Mejor precio por mayoreo</span>
             </span>
-            <p className="flex items-baseline gap-1">
+            <p className="flex items-baseline gap-1 justify-self-center">
               <span className="font-display text-xl font-bold leading-none text-foreground">
                 {formatMXN(precioDesde)}
               </span>
