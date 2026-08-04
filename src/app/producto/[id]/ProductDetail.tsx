@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import type { Product, ProductVariant, PriceTier } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 
@@ -927,12 +928,12 @@ export default function ProductDetail({ product, priceTiers }: Props) {
 
           {/* CTAs */}
           <div className="flex gap-3">
-            <button
-              type="button"
-              className="flex-1 py-3.5 rounded-full bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] hover:shadow-[0_8px_24px_rgba(40,43,52,0.22)] hover:opacity-90 hover:-translate-y-[1px] transition-all duration-300 ease-in-out"
+            <Link
+              href={`/producto/${product.id}/personalizar`}
+              className="flex-1 flex items-center justify-center py-3.5 rounded-full bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] hover:shadow-[0_8px_24px_rgba(40,43,52,0.22)] hover:opacity-90 hover:-translate-y-[1px] transition-all duration-300 ease-in-out"
             >
               Personalizar producto
-            </button>
+            </Link>
             <a
               href={`https://wa.me/5215500000000?text=${encodeURIComponent(`Hola, me interesa cotizar: ${product.name} (SKU: ${product.sku})`)}`}
               target="_blank"
