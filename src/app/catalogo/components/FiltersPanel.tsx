@@ -190,11 +190,9 @@ function ColorSwatch({
 }) {
   const isWhite = hex.toLowerCase() === "#ffffff";
   return (
-    <div className="relative flex flex-col items-center">
+    <div className="group relative flex flex-col items-center">
       <div
-        className={`pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-[#39D5D3] bg-[#F3F9FA] px-2.5 py-1 text-[11px] font-semibold text-[#00C5C9] transition-all duration-200 ease-out ${
-          selected ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
-        }`}
+        className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-[#39D5D3] bg-[#F3F9FA] px-2.5 py-1 text-[11px] font-semibold text-[#00C5C9] opacity-0 translate-y-1 transition-all duration-200 ease-out group-hover:opacity-100 group-hover:translate-y-0"
       >
         {name}
         <span className="absolute left-1/2 -bottom-[3px] -translate-x-1/2 h-2 w-2 rotate-45 border-b border-r border-[#39D5D3] bg-[#F3F9FA]" />
@@ -202,7 +200,7 @@ function ColorSwatch({
       <button
         type="button"
         onClick={onToggle}
-        title={name}
+        aria-label={name}
         aria-pressed={selected}
         className={`relative h-10 w-10 rounded-full transition-all duration-200 ease-out hover:scale-110 ${
           isWhite ? "border border-ui-border" : ""
@@ -323,19 +321,15 @@ export default function FiltersPanel({
           onClick={closeModal}
         >
           <div
-            ref={dialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Filtros"
-            onClick={(e) => e.stopPropagation()}
-            className={`relative w-full max-w-[540px] max-h-[88vh] overflow-y-auto rounded-[32px] bg-white shadow-[0_30px_70px_rgba(0,0,0,0.18)] transition-all duration-[280ms] ease-out ${
+            className={`relative w-full max-w-[540px] rounded-[32px] shadow-[0_30px_70px_rgba(0,0,0,0.18)] transition-all duration-[280ms] ease-out ${
               entered ? "opacity-100 scale-100" : "opacity-0 scale-95"
             }`}
           >
-            {/* Esquina decorativa (recurso original, sin recrear) */}
+            {/* Esquina decorativa (recurso original, sin recrear) — fuera del
+                contenedor con scroll para que su sombra/curva no se recorte. */}
             <div
               aria-hidden
-              className="pointer-events-none absolute -left-5 -top-5 h-32 w-32 overflow-hidden rounded-[20px]"
+              className="pointer-events-none absolute -left-5 -top-5 h-32 w-32 overflow-hidden rounded-[20px] z-0"
               style={{
                 backgroundImage: 'url("/Home/FILTROS/Group 901.svg")',
                 backgroundSize: "1464px 1706px",
@@ -343,6 +337,14 @@ export default function FiltersPanel({
               }}
             />
 
+            <div
+              ref={dialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Filtros"
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-h-[88vh] overflow-y-auto rounded-[32px] bg-white"
+            >
             <button
               type="button"
               onClick={closeModal}
@@ -532,6 +534,7 @@ export default function FiltersPanel({
             </div>
           </div>
         </div>
+      </div>
       )}
     </>
   );
