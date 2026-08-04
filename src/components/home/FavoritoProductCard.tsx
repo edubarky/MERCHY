@@ -158,7 +158,7 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
             alt={product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`object-contain p-4 transition-[opacity_100ms_ease-out,transform_300ms_cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-[1.04] ${
+            className={`scale-[0.91] object-contain p-2 transition-[opacity_100ms_ease-out,transform_300ms_cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-[0.955] ${
               imageVisible ? "opacity-100" : "opacity-0"
             }`}
           />
@@ -194,9 +194,7 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
 
       {/* Info */}
       <div className="flex flex-col gap-2.5 px-3 pb-3 pt-2.5">
-        {/* Altura fija para 2 líneas: todas las tarjetas miden lo mismo sin
-            importar si el nombre ocupa 1 o 2 líneas. */}
-        <h3 className="flex min-h-[2.75rem] items-center justify-center text-center font-display text-lg font-bold leading-tight text-foreground line-clamp-2">
+        <h3 className="text-center font-display text-lg font-bold text-foreground line-clamp-1">
           {toTitleCase(product.name)}
         </h3>
 
