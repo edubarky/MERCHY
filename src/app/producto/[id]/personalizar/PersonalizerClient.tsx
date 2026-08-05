@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { Product, ProductVariant, PriceTier, PrintTechnique } from "@/types";
+import { toPng } from "html-to-image";
+import type { Product, ProductVariant, PriceTier, PrintTechnique, CartItem, CustomizationElement } from "@/types";
 import { getProductUnitPrice, getTechniquePrice, formatMXN } from "@/lib/pricing";
+import { useCart } from "@/lib/cart/CartContext";
+import CartPopover from "@/components/cart/CartPopover";
 import {
   VIEW_ORDER,
   VIEW_LABELS,
@@ -84,11 +87,27 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
   const [printAreaPx, setPrintAreaPx] = useState<{ left: number; top: number; right: number; bottom: number } | null>(
     null
   );
+  const [cartOpen, setCartOpen] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
+
+  const { addItem, totalItems, justAdded } = useCart();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cartWrapperRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef({ history, historyIndex });
   historyRef.current = { history, historyIndex };
+
+  useEffect(() => {
+    if (!cartOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (cartWrapperRef.current && !cartWrapperRef.current.contains(e.target as Node)) {
+        setCartOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [cartOpen]);
 
   const asset = VIEW_ASSETS[activeView];
   const selectedElement = elements[activeView].find((e) => e.id === selectedId) ?? null;
@@ -263,6 +282,53 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
 
   const sizes = product.sizes_available;
 
+  async function handleAddToCart() {
+    if (addingToCart) return;
+    setAddingToCart(true);
+    try {
+      let canvasDataUrl = "";
+      if (canvasRef.current && numElements > 0) {
+        try {
+          canvasDataUrl = await toPng(canvasRef.current, { pixelRatio: 2 });
+        } catch {
+          canvasDataUrl = "";
+        }
+      }
+
+      const variant = product.variants.find((v) => v.active) ?? product.variants[0];
+      const logos: CustomizationElement[] = [];
+      const texts: CustomizationElement[] = [];
+      VIEW_ORDER.forEach((v) => {
+        elements[v].forEach((el) => {
+          const shared = { x: el.xPct, y: el.yPct, width: el.widthPct, height: el.heightPct, rotation: el.rotation };
+          if (el.type === "logo") logos.push({ type: "logo", url: el.src, ...shared });
+          else texts.push({ type: "text", text: el.text, ...shared });
+        });
+      });
+
+      const newItem: CartItem = {
+        id: uid(),
+        product,
+        variants: variant
+          ? [{ variant_id: variant.id, color_name: variant.color_name, color_hex: variant.color_hex, qty: quantity, sizes_breakdown: {} }]
+          : [],
+        total_quantity: quantity,
+        technique_id: selectedTechnique?.id ?? null,
+        technique: selectedTechnique ?? undefined,
+        num_elements: numElements,
+        customization_snapshot: numElements > 0 ? { canvas_data_url: canvasDataUrl, logos, texts, applied_to: "all" } : null,
+        unit_price: unitPrice,
+        total_price: total,
+      };
+
+      addItem(newItem);
+      setSelectedId(null);
+      setCartOpen(true);
+    } finally {
+      setAddingToCart(false);
+    }
+  }
+
   return (
     <div className="mx-auto flex max-w-[1680px] flex-col gap-8 px-6 py-8 lg:flex-row lg:items-start lg:gap-10">
       {/* ── Canvas (izquierda, ~65%) ── */}
@@ -294,19 +360,30 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
               })}
             </div>
 
-            <button
-              type="button"
-              onClick={() => setPreviewOpen(true)}
-              aria-label="Vista previa general"
-              className="relative flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-white text-foreground shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(0,0,0,0.14)]"
-            >
-              <CartIcon className="h-6 w-6" />
-              {numElements > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white">
-                  {numElements}
-                </span>
-              )}
-            </button>
+            <div ref={cartWrapperRef} className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedId(null);
+                  setCartOpen((v) => !v);
+                }}
+                aria-label="Carrito"
+                aria-expanded={cartOpen}
+                className="relative flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-white text-foreground shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(0,0,0,0.14)]"
+              >
+                <CartIcon className="h-6 w-6" />
+                {totalItems > 0 && (
+                  <span
+                    className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white ${
+                      justAdded ? "animate-total-pulse" : ""
+                    }`}
+                  >
+                    {totalItems}
+                  </span>
+                )}
+              </button>
+              <CartPopover open={cartOpen} />
+            </div>
           </div>
 
           {selectedElement && (
@@ -417,24 +494,34 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
             )}
           </div>
 
-          <div className="mt-8 flex items-center gap-3">
+          <div className="mt-8 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={undo}
+                disabled={!canUndo}
+                aria-label="Deshacer"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-foreground shadow-[0_2px_10px_rgba(0,0,0,0.08)] transition-all duration-200 ease-out hover:bg-primary hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-foreground"
+              >
+                <UndoIcon className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={redo}
+                disabled={!canRedo}
+                aria-label="Rehacer"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-foreground shadow-[0_2px_10px_rgba(0,0,0,0.08)] transition-all duration-200 ease-out hover:bg-primary hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-foreground"
+              >
+                <RedoIcon className="h-5 w-5" />
+              </button>
+            </div>
             <button
               type="button"
-              onClick={undo}
-              disabled={!canUndo}
-              aria-label="Deshacer"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-foreground shadow-[0_2px_10px_rgba(0,0,0,0.08)] transition-all duration-200 ease-out hover:bg-primary hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-foreground"
+              onClick={() => setPreviewOpen(true)}
+              className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-ui-gray transition-colors duration-150 ease-out hover:bg-gray-50 hover:text-foreground"
             >
-              <UndoIcon className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={redo}
-              disabled={!canRedo}
-              aria-label="Rehacer"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-foreground shadow-[0_2px_10px_rgba(0,0,0,0.08)] transition-all duration-200 ease-out hover:bg-primary hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-foreground"
-            >
-              <RedoIcon className="h-5 w-5" />
+              <EyeIcon className="h-4 w-4" />
+              Vista previa
             </button>
           </div>
         </div>
@@ -620,9 +707,11 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
             </Link>
             <button
               type="button"
-              className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)]"
+              onClick={handleAddToCart}
+              disabled={addingToCart}
+              className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)] disabled:opacity-60"
             >
-              Siguiente <ArrowRightIcon className="h-4 w-4" />
+              {addingToCart ? "Agregando..." : "Siguiente"} <ArrowRightIcon className="h-4 w-4" />
             </button>
           </div>
         </div>
