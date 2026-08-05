@@ -78,7 +78,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
   const [history, setHistory] = useState<ViewElements[]>([emptyViewElements()]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [areaVisible, setAreaVisible] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [selectedTechniqueId, setSelectedTechniqueId] = useState<string | null>(null);
@@ -430,18 +429,16 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
                 draggable={false}
               />
 
-              {areaVisible && (
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute rounded-2xl border-2 border-dashed border-white/70 transition-opacity duration-200 ease-out"
-                  style={{
-                    left: `${asset.printArea.xPct}%`,
-                    top: `${asset.printArea.yPct}%`,
-                    width: `${asset.printArea.widthPct}%`,
-                    height: `${asset.printArea.heightPct}%`,
-                  }}
-                />
-              )}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute rounded-2xl border-2 border-dashed border-white/70"
+                style={{
+                  left: `${asset.printArea.xPct}%`,
+                  top: `${asset.printArea.yPct}%`,
+                  width: `${asset.printArea.widthPct}%`,
+                  height: `${asset.printArea.heightPct}%`,
+                }}
+              />
 
               {elements[activeView].map((el) => (
                 <DesignElementView
@@ -457,13 +454,15 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
 
               <button
                 type="button"
-                onClick={() => setAreaVisible((v) => !v)}
-                aria-label={areaVisible ? "Ocultar área editable" : "Mostrar área editable"}
-                className={`absolute -bottom-6 -right-6 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out hover:scale-110 ${
-                  areaVisible ? "text-primary" : "text-ui-gray"
-                }`}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  setSelectedId(null);
+                  setPreviewOpen(true);
+                }}
+                aria-label="Vista previa del producto personalizado"
+                className="absolute -bottom-6 -right-6 flex h-14 w-14 items-center justify-center rounded-full bg-white text-primary shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out hover:scale-110"
               >
-                <EyeIcon open={areaVisible} className="h-6 w-6" />
+                <EyeIcon className="h-6 w-6" />
               </button>
             </div>
 
@@ -494,34 +493,24 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
             )}
           </div>
 
-          <div className="mt-8 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={undo}
-                disabled={!canUndo}
-                aria-label="Deshacer"
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-foreground shadow-[0_2px_10px_rgba(0,0,0,0.08)] transition-all duration-200 ease-out hover:bg-primary hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-foreground"
-              >
-                <UndoIcon className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={redo}
-                disabled={!canRedo}
-                aria-label="Rehacer"
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-foreground shadow-[0_2px_10px_rgba(0,0,0,0.08)] transition-all duration-200 ease-out hover:bg-primary hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-foreground"
-              >
-                <RedoIcon className="h-5 w-5" />
-              </button>
-            </div>
+          <div className="mt-8 flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setPreviewOpen(true)}
-              className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-ui-gray transition-colors duration-150 ease-out hover:bg-gray-50 hover:text-foreground"
+              onClick={undo}
+              disabled={!canUndo}
+              aria-label="Deshacer"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-foreground shadow-[0_2px_10px_rgba(0,0,0,0.08)] transition-all duration-200 ease-out hover:bg-primary hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-foreground"
             >
-              <EyeIcon className="h-4 w-4" />
-              Vista previa
+              <UndoIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={redo}
+              disabled={!canRedo}
+              aria-label="Rehacer"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-foreground shadow-[0_2px_10px_rgba(0,0,0,0.08)] transition-all duration-200 ease-out hover:bg-primary hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-foreground"
+            >
+              <RedoIcon className="h-5 w-5" />
             </button>
           </div>
         </div>
@@ -717,7 +706,17 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
         </div>
       </aside>
 
-      <PreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} elements={elements} productName={product.name} />
+      <PreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        elements={elements}
+        productName={product.name}
+        technique={selectedTechnique}
+        onConfirm={() => {
+          setPreviewOpen(false);
+          handleAddToCart();
+        }}
+      />
     </div>
   );
 }
