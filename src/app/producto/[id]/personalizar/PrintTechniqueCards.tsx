@@ -2,18 +2,38 @@
 
 import type { PrintTechnique } from "@/types";
 
-const VIEWBOX_W = 388;
-const VIEWBOX_H = 108;
+const SHEET_W = 388;
+const SHEET_H = 108;
 
-// Posiciones exactas de las 4 tarjetas dentro de "TÉCNICAS 2.svg" (carpeta
-// Personalizador) — se usa la imagen original sin modificar como fondo, y
-// solo se superponen botones transparentes + el indicador de selección.
+// Recorte de solo el ícono (sin la tarjeta ni el texto) dentro de
+// "TÉCNICAS 2.svg" — mismo recurso original, solo se cambia cómo se
+// posiciona/escala vía CSS, sin modificar el archivo.
 const CARD_SLOTS = [
-  { rect: { x: 10, y: 6, w: 86, h: 86 }, radio: { cx: 20.5, cy: 17.5 } },
-  { rect: { x: 103, y: 6, w: 87, h: 88 }, radio: { cx: 116.5, cy: 17.5 } },
-  { rect: { x: 197, y: 6, w: 87, h: 88 }, radio: { cx: 211.5, cy: 17.5 } },
-  { rect: { x: 291, y: 6, w: 87, h: 88 }, radio: { cx: 303.5, cy: 17.5 } },
+  { icon: { x: 22.9, y: 12.9, w: 60.2, h: 28 } },
+  { icon: { x: 116.0, y: 13.0, w: 60.9, h: 28 } },
+  { icon: { x: 210.0, y: 13.0, w: 60.9, h: 28 } },
+  { icon: { x: 304.0, y: 13.0, w: 60.9, h: 28 } },
 ];
+
+function TechniqueIcon({ slot }: { slot: (typeof CARD_SLOTS)[number] }) {
+  const displayW = 44;
+  const scale = displayW / slot.icon.w;
+  const displayH = slot.icon.h * scale;
+  return (
+    <span
+      aria-hidden
+      className="block"
+      style={{
+        width: displayW,
+        height: displayH,
+        backgroundImage: 'url("/Home/PERSONALIZADOR/TÉCNICAS 2.svg")',
+        backgroundSize: `${SHEET_W * scale}px ${SHEET_H * scale}px`,
+        backgroundPosition: `${-slot.icon.x * scale}px ${-slot.icon.y * scale}px`,
+        backgroundRepeat: "no-repeat",
+      }}
+    />
+  );
+}
 
 export default function PrintTechniqueCards({
   techniques,
@@ -25,13 +45,7 @@ export default function PrintTechniqueCards({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="relative w-full" style={{ aspectRatio: `${VIEWBOX_W} / ${VIEWBOX_H}` }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/Home/PERSONALIZADOR/TÉCNICAS 2.svg"
-        alt="Selecciona el tipo de impresión"
-        className="absolute inset-0 h-full w-full"
-      />
+    <div className="grid grid-cols-2 gap-4">
       {CARD_SLOTS.map((slot, i) => {
         const technique = techniques[i];
         if (!technique) return null;
@@ -42,32 +56,15 @@ export default function PrintTechniqueCards({
             type="button"
             onClick={() => onSelect(technique.id)}
             aria-pressed={isSelected}
-            title={technique.name}
-            className={`absolute rounded-[10px] transition-all duration-200 ease-out hover:-translate-y-0.5 ${
+            className={`flex h-[120px] w-full flex-col items-center justify-center gap-1.5 rounded-[18px] border transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] ${
               isSelected
-                ? "shadow-[0_6px_18px_rgba(87,224,217,0.35)] ring-2 ring-primary"
-                : "ring-1 ring-transparent hover:shadow-[0_4px_14px_rgba(0,0,0,0.08)]"
+                ? "scale-[1.03] border-primary bg-primary/10 shadow-[0_8px_20px_rgba(87,224,217,0.25)]"
+                : "border-ui-border bg-white hover:border-primary/50"
             }`}
-            style={{
-              left: `${(slot.rect.x / VIEWBOX_W) * 100}%`,
-              top: `${(slot.rect.y / VIEWBOX_H) * 100}%`,
-              width: `${(slot.rect.w / VIEWBOX_W) * 100}%`,
-              height: `${(slot.rect.h / VIEWBOX_H) * 100}%`,
-            }}
           >
-            {isSelected && (
-              <span
-                aria-hidden
-                className="absolute rounded-full bg-primary"
-                style={{
-                  left: `${((slot.radio.cx - slot.rect.x) / slot.rect.w) * 100}%`,
-                  top: `${((slot.radio.cy - slot.rect.y) / slot.rect.h) * 100}%`,
-                  width: "9%",
-                  height: "9%",
-                  transform: "translate(-50%, -50%)",
-                }}
-              />
-            )}
+            <TechniqueIcon slot={slot} />
+            <span className="text-sm font-bold text-foreground">{technique.name}</span>
+            <span className="px-2 text-center text-[11px] leading-tight text-ui-gray">{technique.description}</span>
           </button>
         );
       })}

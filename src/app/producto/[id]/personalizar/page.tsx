@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import PublicHeader from "@/components/PublicHeader";
 import type { Product, ProductVariant, PriceTier, PrintTechnique } from "@/types";
 import PersonalizerClient from "./PersonalizerClient";
 
@@ -34,8 +33,7 @@ export default async function PersonalizarPage({ params }: { params: { id: strin
   const safeProduct = product as unknown as Product & { variants: ProductVariant[] };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
-      <PublicHeader />
+    <div className="min-h-screen bg-white">
       <PersonalizerClient
         product={safeProduct}
         priceTiers={(priceTiers ?? []) as PriceTier[]}

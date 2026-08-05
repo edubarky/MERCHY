@@ -1,0 +1,103 @@
+// Iconos genéricos de línea (cursor, capas, deshacer/rehacer, flecha, ojo,
+// prenda de la pestaña) — no existe un recurso dedicado para estos en la
+// carpeta de diseño "Personalizador" (se revisaron los 24 SVG provistos);
+// se construyen aquí como trazos mínimos de un solo color para no romper
+// el lenguaje visual del resto de la interfaz.
+
+export function CursorIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none">
+      <path d="M5 3l4.5 16 2.3-6.2L18 10.5 5 3Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function TextToolIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+      <path d="M5 6h14M12 6v12" />
+    </svg>
+  );
+}
+
+export function ImageToolIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round">
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+      <circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none" />
+      <path d="M20 15l-5-5-9 9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function LayersIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round">
+      <path d="M12 3 3 8l9 5 9-5-9-5Z" />
+      <path d="M3 12l9 5 9-5" />
+      <path d="M3 16l9 5 9-5" />
+    </svg>
+  );
+}
+
+export function UndoIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 8H4V5" />
+      <path d="M4.5 14A8 8 0 1 0 6 7.3L4 8" />
+    </svg>
+  );
+}
+
+export function RedoIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 8h3V5" />
+      <path d="M19.5 14a8 8 0 1 1-1.5-6.7L20 8" />
+    </svg>
+  );
+}
+
+export function ArrowRightIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 10h12m0 0-4.5-4.5M16 10l-4.5 4.5" />
+    </svg>
+  );
+}
+
+export function GarmentTabIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round">
+      <path d="M9 4 6 6l-3 3 2.5 2.5L7 10v10h10V10l1.5 1.5L21 9l-3-3-3-2-1 2h-4l-1-2Z" />
+    </svg>
+  );
+}
+
+export function CartIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L20.5 8H6" />
+      <circle cx="9.5" cy="20" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="17" cy="20" r="1.3" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function EyeIcon({ className = "", open = true }: { className?: string; open?: boolean }) {
+  if (!open) {
+    return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3l18 18" />
+        <path d="M10.6 5.2A10.9 10.9 0 0 1 12 5c5 0 9 4 10 7-.6 1.7-1.8 3.6-3.5 5.1M6.5 6.9C4.7 8.3 3.4 10.2 2 12c1 3 5 7 10 7 1.4 0 2.7-.3 3.9-.8" />
+        <path d="M9.9 10a3 3 0 0 0 4.2 4.2" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round">
+      <path d="M2 12c1-3 5-7 10-7s9 4 10 7c-1 3-5 7-10 7s-9-4-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
