@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Product, ProductVariant, PriceTier, PrintTechnique } from "@/types";
 import PersonalizerClient from "./PersonalizerClient";
+import { resolveProductViewAssets } from "./resolveProductAssets";
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -31,6 +32,7 @@ export default async function PersonalizarPage({ params }: { params: { id: strin
   if (!product) notFound();
 
   const safeProduct = product as unknown as Product & { variants: ProductVariant[] };
+  const resolvedAssets = resolveProductViewAssets(safeProduct);
 
   return (
     <div className="min-h-screen bg-white">
@@ -38,6 +40,7 @@ export default async function PersonalizarPage({ params }: { params: { id: strin
         product={safeProduct}
         priceTiers={(priceTiers ?? []) as PriceTier[]}
         techniques={(techniques ?? []) as PrintTechnique[]}
+        resolvedAssets={resolvedAssets}
       />
     </div>
   );

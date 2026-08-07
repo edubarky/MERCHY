@@ -15,8 +15,11 @@ import {
   type DesignElement,
   type ViewElements,
   type LogoFileType,
+  type GarmentColor,
+  type ResolvedProductAssets,
 } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
+import { analyzeDesignLuminance, LUMINANCE_THRESHOLD } from "./colorAnalysis";
 import DesignElementView from "./DesignElementView";
 import SelectionToolbar from "./SelectionToolbar";
 import PrintTechniqueCards from "./PrintTechniqueCards";
@@ -38,6 +41,7 @@ interface Props {
   product: Product & { variants: ProductVariant[] };
   priceTiers: PriceTier[];
   techniques: PrintTechnique[];
+  resolvedAssets: ResolvedProductAssets;
 }
 
 function uid() {
@@ -71,7 +75,7 @@ function ToolDockButton({
   );
 }
 
-export default function PersonalizerClient({ product, priceTiers, techniques }: Props) {
+export default function PersonalizerClient({ product, priceTiers, techniques, resolvedAssets }: Props) {
   const [activeView, setActiveView] = useState<ViewName>("frente");
   const [filesTabView, setFilesTabView] = useState<ViewName>("frente");
   const [elements, setElements] = useState<ViewElements>(emptyViewElements());
@@ -88,6 +92,7 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
   );
   const [cartOpen, setCartOpen] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [garmentColor, setGarmentColor] = useState<GarmentColor>("blanco");
 
   const { addItem, totalItems, justAdded } = useCart();
 
@@ -107,6 +112,28 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [cartOpen]);
+
+  // Auto blanco/negro switch: re-analyzes every logo/text across all four
+  // views on every change and flips the whole garment to whichever color
+  // gives the design the most contrast. No elements → back to blanco.
+  useEffect(() => {
+    let cancelled = false;
+    analyzeDesignLuminance(elements).then((avg) => {
+      if (cancelled) return;
+      if (avg === null) {
+        setGarmentColor("blanco");
+        return;
+      }
+      setGarmentColor(avg > LUMINANCE_THRESHOLD ? "negro" : "blanco");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [elements]);
+
+  function getViewSrc(view: ViewName, color: GarmentColor): string {
+    return resolvedAssets[view][color] ?? VIEW_ASSETS[view].src;
+  }
 
   const asset = VIEW_ASSETS[activeView];
   const selectedElement = elements[activeView].find((e) => e.id === selectedId) ?? null;
@@ -421,13 +448,18 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
               style={{ height: "min(75vh, 720px)", aspectRatio: asset.aspect }}
               onMouseDown={() => setSelectedId(null)}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={asset.src}
-                alt={`${product.name} — ${VIEW_LABELS[activeView]}`}
-                className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
-                draggable={false}
-              />
+              {(["blanco", "negro"] as GarmentColor[]).map((c) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={c}
+                  src={getViewSrc(activeView, c)}
+                  alt={`${product.name} — ${VIEW_LABELS[activeView]}`}
+                  className={`pointer-events-none absolute inset-0 h-full w-full select-none object-contain transition-opacity duration-[250ms] ease-out ${
+                    garmentColor === c ? "opacity-100" : "opacity-0"
+                  }`}
+                  draggable={false}
+                />
+              ))}
 
               <div
                 aria-hidden
@@ -712,6 +744,8 @@ export default function PersonalizerClient({ product, priceTiers, techniques }: 
         elements={elements}
         productName={product.name}
         technique={selectedTechnique}
+        resolvedAssets={resolvedAssets}
+        garmentColor={garmentColor}
         onConfirm={() => {
           setPreviewOpen(false);
           handleAddToCart();

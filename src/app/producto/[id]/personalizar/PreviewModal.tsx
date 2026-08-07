@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import type { PrintTechnique } from "@/types";
-import { VIEW_ORDER, VIEW_LABELS, type ViewElements } from "./types";
+import { VIEW_ORDER, VIEW_LABELS, type ViewElements, type GarmentColor, type ResolvedProductAssets } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
 
 function DownloadIcon({ className = "" }: { className?: string }) {
@@ -38,11 +38,15 @@ function MiniView({
   elements,
   productName,
   technique,
+  resolvedAssets,
+  garmentColor,
 }: {
   view: (typeof VIEW_ORDER)[number];
   elements: ViewElements;
   productName: string;
   technique: PrintTechnique | null;
+  resolvedAssets: ResolvedProductAssets;
+  garmentColor: GarmentColor;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -52,6 +56,7 @@ function MiniView({
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
   const asset = VIEW_ASSETS[view];
+  const imgSrc = resolvedAssets[view][garmentColor] ?? asset.src;
   const viewElements = elements[view];
   const hasLogo = viewElements.some((e) => e.type === "logo");
   const hasText = viewElements.some((e) => e.type === "text");
@@ -156,7 +161,7 @@ function MiniView({
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={asset.src} alt={VIEW_LABELS[view]} className="absolute inset-0 h-full w-full select-none object-contain" draggable={false} />
+          <img src={imgSrc} alt={VIEW_LABELS[view]} className="absolute inset-0 h-full w-full select-none object-contain" draggable={false} />
           {viewElements.map((el) => (
             <div
               key={el.id}
@@ -221,6 +226,8 @@ export default function PreviewModal({
   elements,
   productName,
   technique,
+  resolvedAssets,
+  garmentColor,
   onConfirm,
 }: {
   open: boolean;
@@ -228,6 +235,8 @@ export default function PreviewModal({
   elements: ViewElements;
   productName: string;
   technique: PrintTechnique | null;
+  resolvedAssets: ResolvedProductAssets;
+  garmentColor: GarmentColor;
   onConfirm: () => void;
 }) {
   const [entered, setEntered] = useState(false);
@@ -283,7 +292,15 @@ export default function PreviewModal({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {VIEW_ORDER.map((view) => (
-            <MiniView key={view} view={view} elements={elements} productName={productName} technique={technique} />
+            <MiniView
+              key={view}
+              view={view}
+              elements={elements}
+              productName={productName}
+              technique={technique}
+              resolvedAssets={resolvedAssets}
+              garmentColor={garmentColor}
+            />
           ))}
         </div>
 

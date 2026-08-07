@@ -45,3 +45,23 @@ export type ViewElements = Record<ViewName, DesignElement[]>;
 export function emptyViewElements(): ViewElements {
   return { frente: [], reverso: [], izquierda: [], derecha: [] };
 }
+
+// ---- Per-product real photography (blanco/negro auto-switch) ----
+
+export type GarmentColor = "blanco" | "negro";
+
+export interface ResolvedViewAsset {
+  blanco: string | null;
+  negro: string | null;
+}
+
+export type ResolvedProductAssets = Record<ViewName, ResolvedViewAsset>;
+
+export function emptyResolvedAssets(): ResolvedProductAssets {
+  return {
+    frente: { blanco: null, negro: null },
+    reverso: { blanco: null, negro: null },
+    izquierda: { blanco: null, negro: null },
+    derecha: { blanco: null, negro: null },
+  };
+}
