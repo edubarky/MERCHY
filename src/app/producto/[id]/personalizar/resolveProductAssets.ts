@@ -22,9 +22,15 @@ import { VIEW_ORDER, type GarmentColor, type ResolvedProductAssets, emptyResolve
 // If a product only has one version per view (no color distinction), a
 // color-less file (e.g. "frente.png") is used for both blanco and negro —
 // the auto color-switch simply has no visible effect for that product.
-// If no matching product folder exists at all, every view falls back to
-// the shared generic mockup already used today (VIEW_ASSETS) — never a
-// blank/broken image.
+// If no matching product folder exists at all, every view resolves to null
+// and the Personalizador shows an empty state — there is no shared generic
+// mockup fallback anymore (removed on purpose, see PersonalizerClient.tsx).
+//
+// Important: matching is case/accent/whitespace-*tolerant* comparison of
+// real directory entries — it never transforms, slugifies, or invents a
+// path. fs.readdirSync always provides the real on-disk names; whichever
+// real entry name matches (after normalizing both sides for comparison
+// only) is the one actually used to build the returned URL.
 
 const EXTENSIONS = ["png", "webp", "jpg", "jpeg", "svg"];
 const PRODUCTS_ROOT_NAME = "VISTA DE PRODUCTOS";
@@ -75,25 +81,58 @@ function toPublicUrl(absPath: string, publicRoot: string): string {
   return `/${relative}`;
 }
 
+// TEMPORARY debug logging, requested explicitly to verify folder/file
+// resolution while real product photography is being added. Remove once
+// confirmed working end-to-end. Runs server-side only — shows up in the
+// terminal running `next dev`/`next start`, or in the Vercel function logs
+// in production, never in the browser console.
+const DEBUG = true;
+function log(...args: unknown[]) {
+  if (DEBUG) console.log("[Personalizador][resolveProductAssets]", ...args);
+}
+
 export function resolveProductViewAssets(product: Pick<Product, "id" | "name">): ResolvedProductAssets {
   const publicRoot = path.join(process.cwd(), "public");
   const productsRoot = path.join(publicRoot, PRODUCTS_ROOT_NAME);
+  const naiveAttemptedPath = path.join(productsRoot, product.name);
+
+  log("Producto seleccionado:", JSON.stringify(product.name));
+  log("Ruta exacta que se intenta abrir:", naiveAttemptedPath);
 
   const result = emptyResolvedAssets();
 
   const productDir = findMatchingDir(productsRoot, product.name);
-  if (!productDir) return result;
+  if (!productDir) {
+    log("Carpeta encontrada: NINGUNA — no existe ninguna subcarpeta dentro de", productsRoot, "cuyo nombre coincida con el producto.");
+    if (fs.existsSync(productsRoot)) {
+      log(
+        "Carpetas disponibles en",
+        productsRoot,
+        ":",
+        listDirs(productsRoot).map((d) => d.name)
+      );
+    } else {
+      log("Ni siquiera existe la carpeta raíz:", productsRoot);
+    }
+    return result;
+  }
+  log("Carpeta encontrada:", productDir);
 
   const ejesDir = findMatchingDir(productDir, "ejes");
   const baseDir = ejesDir ?? productDir;
+  log(ejesDir ? "Subcarpeta /ejes/ encontrada, se usa esa:" : "Sin subcarpeta /ejes/, se usa la carpeta del producto directamente:", baseDir);
+
   const fileIndex = buildFileIndex(baseDir);
+  log("Archivos encontrados dentro de esa carpeta:", Array.from(fileIndex.values()));
 
   for (const view of VIEW_ORDER) {
+    log("Vista solicitada:", view);
     const colorless = findFile(fileIndex, baseDir, view);
     for (const color of ["blanco", "negro"] as GarmentColor[]) {
       const withColor = findFile(fileIndex, baseDir, `${view}-${color}`);
       const resolved = withColor ?? colorless;
       result[view][color] = resolved ? toPublicUrl(resolved, publicRoot) : null;
+      log(`  ${view} (${color}):`, resolved ? toPublicUrl(resolved, publicRoot) : "no encontrada");
     }
   }
 
