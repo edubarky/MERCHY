@@ -477,17 +477,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                 </div>
               )}
 
-              <div
-                aria-hidden
-                className="pointer-events-none absolute rounded-2xl border-2 border-dashed border-white/70"
-                style={{
-                  left: `${asset.printArea.xPct}%`,
-                  top: `${asset.printArea.yPct}%`,
-                  width: `${asset.printArea.widthPct}%`,
-                  height: `${asset.printArea.heightPct}%`,
-                }}
-              />
-
               {elements[activeView].map((el) => (
                 <DesignElementView
                   key={el.id}
