@@ -19,8 +19,10 @@ import {
   type ResolvedProductAssets,
 } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
+import { getPrintArea } from "./printAreas";
 import { analyzeDesignLuminance, LUMINANCE_THRESHOLD } from "./colorAnalysis";
-import DesignElementView from "./DesignElementView";
+import DesignElementView, { type PrintAreaRectPx } from "./DesignElementView";
+import PrintAreaGuide from "./PrintAreaGuide";
 import SelectionToolbar from "./SelectionToolbar";
 import PrintTechniqueCards from "./PrintTechniqueCards";
 import PreviewModal from "./PreviewModal";
@@ -87,12 +89,12 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   const [selectedTechniqueId, setSelectedTechniqueId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [zCounter, setZCounter] = useState(1);
-  const [printAreaPx, setPrintAreaPx] = useState<{ left: number; top: number; right: number; bottom: number } | null>(
-    null
-  );
+  const [printAreaRectPx, setPrintAreaRectPx] = useState<PrintAreaRectPx | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [garmentColor, setGarmentColor] = useState<GarmentColor>("blanco");
+  const [guideState, setGuideState] = useState<{ visible: boolean; inBounds: boolean }>({ visible: false, inBounds: true });
+  const guideHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { addItem, totalItems, justAdded } = useCart();
 
@@ -135,7 +137,8 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   // must only ever show the actual selected product's own photography, per
   // explicit product decision — never a shirt illustration that could be
   // mistaken for a different product. VIEW_ASSETS is still used below for
-  // layout geometry only (aspect ratio, print-area %), never for its `src`.
+  // canvas aspect-ratio only, never for its `src` or its `printArea` (print
+  // area comes from printAreas.ts's per-product/per-view config now).
   function getViewSrc(view: ViewName, color: GarmentColor): string | null {
     return resolvedAssets[view][color];
   }
@@ -188,14 +191,12 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     function recompute() {
       if (!canvasRef.current) return;
       const rect = canvasRef.current.getBoundingClientRect();
-      const pa = VIEW_ASSETS[activeView].printArea;
-      const rightAbs = ((pa.xPct + pa.widthPct) / 100) * rect.width;
-      const bottomAbs = ((pa.yPct + pa.heightPct) / 100) * rect.height;
-      setPrintAreaPx({
+      const pa = getPrintArea(product.name, activeView);
+      setPrintAreaRectPx({
         left: (pa.xPct / 100) * rect.width,
         top: (pa.yPct / 100) * rect.height,
-        right: rect.width - rightAbs,
-        bottom: rect.height - bottomAbs,
+        right: ((pa.xPct + pa.widthPct) / 100) * rect.width,
+        bottom: ((pa.yPct + pa.heightPct) / 100) * rect.height,
       });
     }
     recompute();
@@ -207,6 +208,27 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     const next = { ...elements, [el.view]: [...elements[el.view], el] };
     commit(next);
     setSelectedId(el.id);
+    showPrintAreaGuideBriefly();
+  }
+
+  // Drives the print-area HUD: appears right after adding an element (auto-
+  // hides after a couple seconds if left untouched) and while any element is
+  // actively being dragged/resized/rotated (see DesignElementView's
+  // onInteraction) — never as a permanent overlay, and never just because
+  // something is selected-but-idle.
+  function showPrintAreaGuideBriefly() {
+    if (guideHideTimer.current) clearTimeout(guideHideTimer.current);
+    setGuideState({ visible: true, inBounds: true });
+    guideHideTimer.current = setTimeout(() => setGuideState({ visible: false, inBounds: true }), 1800);
+  }
+
+  function handleElementInteraction(active: boolean, inBounds: boolean) {
+    if (guideHideTimer.current) clearTimeout(guideHideTimer.current);
+    if (active) {
+      setGuideState({ visible: true, inBounds });
+    } else {
+      guideHideTimer.current = setTimeout(() => setGuideState({ visible: false, inBounds: true }), 350);
+    }
   }
 
   function updateElement(id: string, patch: Partial<DesignElement>) {
@@ -254,7 +276,7 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     const src = renderable ? URL.createObjectURL(file) : undefined;
     const z = zCounter + 1;
     setZCounter(z);
-    const pa = VIEW_ASSETS[activeView].printArea;
+    const pa = getPrintArea(product.name, activeView);
     const w = pa.widthPct * 0.6;
     const h = pa.heightPct * 0.6;
     addElement({
@@ -277,7 +299,7 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   function handleAddText() {
     const z = zCounter + 1;
     setZCounter(z);
-    const pa = VIEW_ASSETS[activeView].printArea;
+    const pa = getPrintArea(product.name, activeView);
     const w = pa.widthPct * 0.85;
     const h = pa.heightPct * 0.5;
     addElement({
@@ -482,12 +504,21 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                   key={el.id}
                   element={el}
                   containerRef={canvasRef}
-                  printAreaPx={printAreaPx}
+                  printAreaRectPx={printAreaRectPx}
                   selected={selectedId === el.id}
                   onSelect={setSelectedId}
                   onChange={updateElement}
+                  onInteraction={handleElementInteraction}
                 />
               ))}
+
+              {guideState.visible && printAreaRectPx && (
+                <PrintAreaGuide
+                  rectPx={printAreaRectPx}
+                  config={getPrintArea(product.name, activeView)}
+                  inBounds={guideState.inBounds}
+                />
+              )}
 
               <button
                 type="button"
