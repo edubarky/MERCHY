@@ -131,11 +131,17 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     };
   }, [elements]);
 
-  function getViewSrc(view: ViewName, color: GarmentColor): string {
-    return resolvedAssets[view][color] ?? VIEW_ASSETS[view].src;
+  // No shared generic mockup fallback here on purpose: the Personalizador
+  // must only ever show the actual selected product's own photography, per
+  // explicit product decision — never a shirt illustration that could be
+  // mistaken for a different product. VIEW_ASSETS is still used below for
+  // layout geometry only (aspect ratio, print-area %), never for its `src`.
+  function getViewSrc(view: ViewName, color: GarmentColor): string | null {
+    return resolvedAssets[view][color];
   }
 
   const asset = VIEW_ASSETS[activeView];
+  const hasRealPhoto = getViewSrc(activeView, "blanco") !== null || getViewSrc(activeView, "negro") !== null;
   const selectedElement = elements[activeView].find((e) => e.id === selectedId) ?? null;
 
   const commit = useCallback((next: ViewElements) => {
@@ -448,18 +454,28 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
               style={{ height: "min(75vh, 720px)", aspectRatio: asset.aspect }}
               onMouseDown={() => setSelectedId(null)}
             >
-              {(["blanco", "negro"] as GarmentColor[]).map((c) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={c}
-                  src={getViewSrc(activeView, c)}
-                  alt={`${product.name} — ${VIEW_LABELS[activeView]}`}
-                  className={`pointer-events-none absolute inset-0 h-full w-full select-none object-contain transition-opacity duration-[250ms] ease-out ${
-                    garmentColor === c ? "opacity-100" : "opacity-0"
-                  }`}
-                  draggable={false}
-                />
-              ))}
+              {hasRealPhoto ? (
+                (["blanco", "negro"] as GarmentColor[]).map((c) => {
+                  const src = getViewSrc(activeView, c);
+                  if (!src) return null;
+                  return (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={c}
+                      src={src}
+                      alt={`${product.name} — ${VIEW_LABELS[activeView]}`}
+                      className={`pointer-events-none absolute inset-0 h-full w-full select-none object-contain transition-opacity duration-[250ms] ease-out ${
+                        garmentColor === c ? "opacity-100" : "opacity-0"
+                      }`}
+                      draggable={false}
+                    />
+                  );
+                })
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-gray-50">
+                  <p className="text-sm text-ui-gray">Fotografías no disponibles aún</p>
+                </div>
+              )}
 
               <div
                 aria-hidden

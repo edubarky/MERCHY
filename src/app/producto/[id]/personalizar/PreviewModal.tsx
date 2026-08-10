@@ -56,7 +56,9 @@ function MiniView({
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
   const asset = VIEW_ASSETS[view];
-  const imgSrc = resolvedAssets[view][garmentColor] ?? asset.src;
+  // No generic-mockup fallback here either — same rule as the live canvas:
+  // only ever the selected product's own photography, or nothing.
+  const imgSrc = resolvedAssets[view][garmentColor];
   const viewElements = elements[view];
   const hasLogo = viewElements.some((e) => e.type === "logo");
   const hasText = viewElements.some((e) => e.type === "text");
@@ -160,8 +162,14 @@ function MiniView({
             transition: dragging ? "none" : "transform 150ms ease-out",
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imgSrc} alt={VIEW_LABELS[view]} className="absolute inset-0 h-full w-full select-none object-contain" draggable={false} />
+          {imgSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imgSrc} alt={VIEW_LABELS[view]} className="absolute inset-0 h-full w-full select-none object-contain" draggable={false} />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <p className="text-xs text-ui-gray">Fotografías no disponibles aún</p>
+            </div>
+          )}
           {viewElements.map((el) => (
             <div
               key={el.id}
