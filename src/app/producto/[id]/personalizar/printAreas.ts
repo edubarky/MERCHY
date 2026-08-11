@@ -49,8 +49,15 @@ function normalizeProductKey(value: string): string {
 // "SUDADERA *" product is this same hood+kangaroo-pocket style, verified
 // against their own photos, not assumed. Non-hoodie products (playeras,
 // polos, gorras, etc.) never get this shape.
+//
+// frente re-measured a second pass: the pocket is trapezoidal (its top
+// seam, ~61-62%, is narrower than its bottom seam, ~87-88%), so the
+// rectangle uses the pocket's *narrowest* cross-section (the top seam's
+// width) to guarantee it never pokes outside the visible pocket shape at
+// any height within it — a wider box sized to the bottom would bleed past
+// the diagonal side seams near the top.
 const HOODIE_PRINT_AREAS: ProductPrintAreas = {
-  frente: { xPct: 24, yPct: 58, widthPct: 52, heightPct: 17 },
+  frente: { xPct: 27, yPct: 62, widthPct: 41, heightPct: 24 },
   reverso: { xPct: 25, yPct: 32, widthPct: 50, heightPct: 48 },
   izquierda: { xPct: 20, yPct: 23, widthPct: 58, heightPct: 55 },
   derecha: { xPct: 22, yPct: 23, widthPct: 58, heightPct: 55 },
