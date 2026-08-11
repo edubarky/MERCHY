@@ -420,29 +420,43 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
               })}
             </div>
 
-            <div ref={cartWrapperRef} className="relative">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => {
                   setSelectedId(null);
-                  setCartOpen((v) => !v);
+                  setPreviewOpen(true);
                 }}
-                aria-label="Carrito"
-                aria-expanded={cartOpen}
-                className="relative flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-white text-foreground shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(0,0,0,0.14)]"
+                aria-label="Vista previa del producto personalizado"
+                className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(0,0,0,0.14)]"
               >
-                <CartIcon className="h-6 w-6" />
-                {totalItems > 0 && (
-                  <span
-                    className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white ${
-                      justAdded ? "animate-total-pulse" : ""
-                    }`}
-                  >
-                    {totalItems}
-                  </span>
-                )}
+                <EyeIcon className="h-6 w-6" />
               </button>
-              <CartPopover open={cartOpen} />
+
+              <div ref={cartWrapperRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedId(null);
+                    setCartOpen((v) => !v);
+                  }}
+                  aria-label="Carrito"
+                  aria-expanded={cartOpen}
+                  className="relative flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-white text-foreground shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(0,0,0,0.14)]"
+                >
+                  <CartIcon className="h-6 w-6" />
+                  {totalItems > 0 && (
+                    <span
+                      className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white ${
+                        justAdded ? "animate-total-pulse" : ""
+                      }`}
+                    >
+                      {totalItems}
+                    </span>
+                  )}
+                </button>
+                <CartPopover open={cartOpen} />
+              </div>
             </div>
           </div>
 
@@ -522,19 +536,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                   inBounds={interactionInBounds}
                 />
               )}
-
-              <button
-                type="button"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={() => {
-                  setSelectedId(null);
-                  setPreviewOpen(true);
-                }}
-                aria-label="Vista previa del producto personalizado"
-                className="absolute -bottom-6 -right-6 flex h-14 w-14 items-center justify-center rounded-full bg-white text-primary shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out hover:scale-110"
-              >
-                <EyeIcon className="h-6 w-6" />
-              </button>
             </div>
 
             {layersOpen && (
