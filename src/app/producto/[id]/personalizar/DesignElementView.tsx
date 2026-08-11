@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Moveable from "react-moveable";
 import type { DesignElement } from "./types";
+import { resolveFontFamilyCss } from "./textFonts";
+import { measureTextBoxPx } from "./measureText";
 
 export interface PrintAreaRectPx {
   left: number;
@@ -49,6 +51,39 @@ function computeHandleZoom(boxSizePx: number): number {
   return HANDLE_MIN_ZOOM + t * (HANDLE_MAX_ZOOM - HANDLE_MIN_ZOOM);
 }
 
+// Text sizing model: `fontSizePx` is the real, author-set "Tamaño" (what
+// the toolbar input shows/edits and what a corner-drag scales) — but it is
+// NEVER applied directly as a CSS font-size. Instead every place text is
+// rendered (this file, PreviewModal's MiniView) uses `fontSizeRatio`
+// (font-size as a fraction of the box's OWN rendered width, applied as
+// `${ratio * 100}cqw`) so the same element looks the same *relative* size
+// whether it's drawn in the live canvas or a much smaller PreviewModal
+// card — both containers are just percentages of whatever pixel size they
+// currently render at, and cqw automatically tracks that. `cqw` only
+// resolves against an actual query container, which is why the wrapper
+// below sets `containerType: "inline-size"` — without it cqw silently
+// falls back to the viewport, not this element (confirmed empirically:
+// every text element was rendering at a flat ~40px regardless of its box,
+// because 4vw comfortably exceeds the old clamp's ceiling on any normal
+// screen — this is the root cause the "bounding box too big" complaint
+// was actually describing).
+export const DEFAULT_FONT_SIZE_PX = 32;
+export const FONT_SIZE_MIN_PX = 6;
+export const FONT_SIZE_MAX_PX = 400;
+
+function clampFontSizePx(px: number): number {
+  if (!Number.isFinite(px)) return DEFAULT_FONT_SIZE_PX;
+  return Math.min(FONT_SIZE_MAX_PX, Math.max(FONT_SIZE_MIN_PX, px));
+}
+
+// Fallback only — used for a render before the auto-fit effect below has
+// had a chance to compute the real ratio for this element (or for any
+// legacy element saved without one). A tight text box's width is roughly
+// 2-3x its font-size for a short phrase, so ~0.35 is a reasonable guess,
+// visually close enough that the effect's near-instant correction (before
+// paint) is imperceptible either way.
+export const DEFAULT_FONT_SIZE_RATIO = 0.35;
+
 export default function DesignElementView({
   element,
   containerRef,
@@ -68,6 +103,7 @@ export default function DesignElementView({
 }) {
   const targetRef = useRef<HTMLDivElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
+  const textDisplayRef = useRef<HTMLDivElement>(null);
 
   // react-moveable fires *Start immediately followed by *End with NO
   // intervening onDrag/onResize call when there's zero mouse movement — a
@@ -85,6 +121,14 @@ export default function DesignElementView({
   const draggedRef = useRef(false);
   const resizedRef = useRef(false);
 
+  // Captured at the start of a corner-drag on a TEXT element — resize for
+  // text drives `fontSizePx` (scaled by how much the box grew/shrank),
+  // never widthPct/heightPct directly; the auto-fit effect below then
+  // re-measures at the new font size and sets the box to match exactly.
+  // Logos/images are untouched — they keep the original direct pct-from-
+  // drag behavior.
+  const textResizeStartRef = useRef<{ fontSizePx: number; widthPx: number } | null>(null);
+
   // Text elements can be edited in place — double-click enters edit mode,
   // which swaps the static text display for a real <input> bound to the
   // same element.text the rest of the app already reads/writes (Capas
@@ -94,7 +138,7 @@ export default function DesignElementView({
   const [editingText, setEditingText] = useState(false);
   const [draftText, setDraftText] = useState(element.text ?? "");
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!editingText) return;
     setDraftText(element.text ?? "");
     const input = textInputRef.current;
@@ -114,6 +158,64 @@ export default function DesignElementView({
     setDraftText(element.text ?? "");
     setEditingText(false);
   }
+
+  // Keeps the bounding box an exact fit around the text's real rendered
+  // content — recomputed whenever anything that can change that content's
+  // natural size changes (the text itself, font family, weight, style,
+  // letter-spacing, or the authored font size). Runs as a layout effect
+  // (before paint) so a freshly-created or freshly-edited text element
+  // never flashes at the wrong size first. Recenters around the previous
+  // center point so growing/shrinking content never makes the box jump.
+  useLayoutEffect(() => {
+    if (element.type !== "text") return;
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const fontSizePx = element.fontSizePx ?? DEFAULT_FONT_SIZE_PX;
+    const measured = measureTextBoxPx({
+      text: element.text ?? "",
+      fontFamilyCss: resolveFontFamilyCss(element.fontFamily),
+      fontSizePx,
+      bold: element.bold,
+      italic: element.italic,
+      letterSpacing: element.letterSpacing,
+    });
+
+    const newWidthPct = (measured.widthPx / rect.width) * 100;
+    const newHeightPct = (measured.heightPx / rect.height) * 100;
+    const newFontSizeRatio = fontSizePx / measured.widthPx;
+
+    const widthDiffPct = Math.abs(newWidthPct - element.widthPct);
+    const heightDiffPct = Math.abs(newHeightPct - element.heightPct);
+    const ratioDiff = Math.abs(newFontSizeRatio - (element.fontSizeRatio ?? 0));
+    // Skip a no-op commit once already converged — otherwise this would
+    // re-trigger itself every render (onChange -> new props -> effect
+    // deps unchanged in value but effect still runs against the same
+    // already-correct numbers).
+    if (widthDiffPct < 0.02 && heightDiffPct < 0.02 && ratioDiff < 0.0005) return;
+
+    const centerXPct = element.xPct + element.widthPct / 2;
+    const centerYPct = element.yPct + element.heightPct / 2;
+
+    onChange(element.id, {
+      widthPct: newWidthPct,
+      heightPct: newHeightPct,
+      xPct: centerXPct - newWidthPct / 2,
+      yPct: centerYPct - newHeightPct / 2,
+      fontSizeRatio: newFontSizeRatio,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    element.type,
+    element.text,
+    element.fontFamily,
+    element.fontSizePx,
+    element.bold,
+    element.italic,
+    element.letterSpacing,
+  ]);
 
   function pxToPct(left: number, top: number, width: number, height: number) {
     const container = containerRef.current;
@@ -159,6 +261,9 @@ export default function DesignElementView({
   const elementHeightPx = containerRect ? (element.heightPct / 100) * containerRect.height : 0;
   const handleZoom = computeHandleZoom(Math.min(elementWidthPx, elementHeightPx));
 
+  const textFontSize = `${(element.fontSizeRatio ?? DEFAULT_FONT_SIZE_RATIO) * 100}cqw`;
+  const textFontFamilyCss = resolveFontFamilyCss(element.fontFamily);
+
   return (
     <>
       <div
@@ -187,6 +292,7 @@ export default function DesignElementView({
           height: `${element.heightPct}%`,
           transform: `rotate(${element.rotation}deg)`,
           zIndex: element.zIndex,
+          containerType: "inline-size",
         }}
       >
         {element.type === "logo" ? (
@@ -223,27 +329,28 @@ export default function DesignElementView({
             }}
             className="h-full w-full border-none bg-transparent p-0 outline-none"
             style={{
-              fontFamily: element.fontFamily || "var(--font-dm-sans), sans-serif",
+              fontFamily: textFontFamilyCss,
               color: element.color || "#1a1a1a",
               fontWeight: element.bold ? 700 : 400,
               fontStyle: element.italic ? "italic" : "normal",
               letterSpacing: `${element.letterSpacing ?? 0}px`,
               textAlign: element.align || "left",
-              fontSize: "clamp(10px, 4cqw, 40px)",
+              fontSize: textFontSize,
             }}
           />
         ) : (
           <div
+            ref={textDisplayRef}
             className="flex h-full w-full items-center overflow-hidden whitespace-nowrap pointer-events-none"
             style={{
-              fontFamily: element.fontFamily || "var(--font-dm-sans), sans-serif",
+              fontFamily: textFontFamilyCss,
               color: element.color || "#1a1a1a",
               fontWeight: element.bold ? 700 : 400,
               fontStyle: element.italic ? "italic" : "normal",
               letterSpacing: `${element.letterSpacing ?? 0}px`,
               justifyContent:
                 element.align === "center" ? "center" : element.align === "right" ? "flex-end" : "flex-start",
-              fontSize: "clamp(10px, 4cqw, 40px)",
+              fontSize: textFontSize,
             }}
           >
             {element.text}
@@ -290,6 +397,12 @@ export default function DesignElementView({
           }}
           onResizeStart={({ target }) => {
             resizedRef.current = false;
+            if (element.type === "text") {
+              textResizeStartRef.current = {
+                fontSizePx: element.fontSizePx ?? DEFAULT_FONT_SIZE_PX,
+                widthPx: (target as HTMLElement).offsetWidth,
+              };
+            }
             reportBounds(target as HTMLElement);
           }}
           onResize={({ target, width, height, drag }) => {
@@ -299,14 +412,29 @@ export default function DesignElementView({
             el.style.height = `${height}px`;
             el.style.left = `${drag.left}px`;
             el.style.top = `${drag.top}px`;
+            // Text: live-preview the actual font size growing/shrinking
+            // during the drag (imperative, same pattern as left/top above)
+            // — the real fontSizePx only commits on release, which then
+            // triggers the auto-fit effect to re-measure and snap the box
+            // to the exact content size at that new size.
+            const start = textResizeStartRef.current;
+            if (element.type === "text" && start && start.widthPx > 0 && textDisplayRef.current) {
+              const scale = width / start.widthPx;
+              textDisplayRef.current.style.fontSize = `${clampFontSizePx(start.fontSizePx * scale)}px`;
+            }
             reportBounds(el);
           }}
           onResizeEnd={({ target }) => {
             const el = target as HTMLElement;
-            if (resizedRef.current) {
+            const start = textResizeStartRef.current;
+            if (element.type === "text" && start && resizedRef.current) {
+              const scale = start.widthPx > 0 ? el.offsetWidth / start.widthPx : 1;
+              onChange(element.id, { fontSizePx: clampFontSizePx(start.fontSizePx * scale) });
+            } else if (resizedRef.current) {
               const pct = pxToPct(parseFloat(el.style.left), parseFloat(el.style.top), el.offsetWidth, el.offsetHeight);
               if (pct) onChange(element.id, pct);
             }
+            textResizeStartRef.current = null;
             reportBoundsEnd(el);
           }}
           onRotateStart={({ target }) => reportBounds(target as HTMLElement)}

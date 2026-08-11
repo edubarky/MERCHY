@@ -5,6 +5,8 @@ import { toPng } from "html-to-image";
 import type { PrintTechnique } from "@/types";
 import { VIEW_ORDER, VIEW_LABELS, type ViewElements, type GarmentColor, type ResolvedProductAssets } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
+import { resolveFontFamilyCss } from "./textFonts";
+import { DEFAULT_FONT_SIZE_RATIO } from "./DesignElementView";
 
 function DownloadIcon({ className = "" }: { className?: string }) {
   return (
@@ -181,6 +183,7 @@ function MiniView({
                 height: `${el.heightPct}%`,
                 transform: `rotate(${el.rotation}deg)`,
                 zIndex: el.zIndex,
+                containerType: "inline-size",
               }}
             >
               {el.type === "logo" ? (
@@ -196,13 +199,18 @@ function MiniView({
                 <div
                   className="flex h-full w-full items-center overflow-hidden whitespace-nowrap"
                   style={{
-                    fontFamily: el.fontFamily || "var(--font-dm-sans), sans-serif",
+                    fontFamily: resolveFontFamilyCss(el.fontFamily),
                     color: el.color || "#1a1a1a",
                     fontWeight: el.bold ? 700 : 400,
                     fontStyle: el.italic ? "italic" : "normal",
                     letterSpacing: `${el.letterSpacing ?? 0}px`,
                     justifyContent: el.align === "center" ? "center" : el.align === "right" ? "flex-end" : "flex-start",
-                    fontSize: "clamp(8px, 3.5cqw, 32px)",
+                    // Same cqw-of-own-box-width approach as the live canvas
+                    // (DesignElementView) — this is what keeps text looking
+                    // the same *relative* size here as it does in the
+                    // editor, even though this card is a different pixel
+                    // size than the canvas.
+                    fontSize: `${(el.fontSizeRatio ?? DEFAULT_FONT_SIZE_RATIO) * 100}cqw`,
                   }}
                 >
                   {el.text}

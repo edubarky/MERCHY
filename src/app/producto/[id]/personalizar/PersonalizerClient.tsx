@@ -21,7 +21,7 @@ import {
 import { VIEW_ASSETS } from "./viewAssets";
 import { getPrintArea } from "./printAreas";
 import { analyzeDesignLuminance, LUMINANCE_THRESHOLD } from "./colorAnalysis";
-import DesignElementView, { type PrintAreaRectPx } from "./DesignElementView";
+import DesignElementView, { type PrintAreaRectPx, DEFAULT_FONT_SIZE_PX } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
 import ArtLibraryPanel from "./ArtLibraryPanel";
 import SelectionToolbar from "./SelectionToolbar";
@@ -306,14 +306,20 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     const z = zCounter + 1;
     setZCounter(z);
     const pa = getPrintArea(product.name, activeView);
-    const w = pa.widthPct * 0.85;
-    const h = pa.heightPct * 0.5;
+    // This starting box is only a placeholder to seed a reasonable center
+    // point — DesignElementView's auto-fit effect immediately (before
+    // paint) re-measures the real text content and snaps width/height to
+    // it, recentered on this same center. widthPct/heightPct/fontSizePx
+    // here never stay as authored below.
+    const w = pa.widthPct * 0.4;
+    const h = pa.heightPct * 0.15;
     addElement({
       id: uid(),
       type: "text",
       view: activeView,
       text: "Tu texto aquí",
       fontFamily: "DM Sans",
+      fontSizePx: DEFAULT_FONT_SIZE_PX,
       color: "#1a1a1a",
       bold: false,
       italic: false,

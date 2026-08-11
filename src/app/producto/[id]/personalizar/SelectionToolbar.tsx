@@ -1,8 +1,13 @@
 "use client";
 
 import type { DesignElement } from "./types";
+import { TEXT_FONT_CATEGORIES, DEFAULT_TEXT_FONT_LABEL } from "./textFonts";
+import { DEFAULT_FONT_SIZE_PX, FONT_SIZE_MIN_PX, FONT_SIZE_MAX_PX } from "./DesignElementView";
 
-const FONT_OPTIONS = ["DM Sans", "Arial", "Georgia", "Courier New", "Times New Roman"];
+// Common quick-pick sizes shown as a native suggestion dropdown — the
+// input still accepts any value in between via free typing, this is not
+// an exhaustive/enforced list.
+const FONT_SIZE_PRESETS = [12, 16, 20, 24, 32, 40, 48, 60, 72, 96, 120];
 
 function ToolbarIconButton({
   label,
@@ -48,14 +53,18 @@ export default function SelectionToolbar({
           <span className="hidden text-[10px] text-ui-gray sm:inline">Doble clic en el texto para editarlo</span>
 
           <select
-            value={element.fontFamily || "DM Sans"}
+            value={element.fontFamily || DEFAULT_TEXT_FONT_LABEL}
             onChange={(e) => onChange(element.id, { fontFamily: e.target.value })}
-            className="rounded-full border border-ui-border bg-white px-2.5 py-1 text-xs text-foreground focus:outline-none focus:border-primary"
+            className="max-w-[140px] rounded-full border border-ui-border bg-white px-2.5 py-1 text-xs text-foreground focus:outline-none focus:border-primary"
           >
-            {FONT_OPTIONS.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
+            {TEXT_FONT_CATEGORIES.map((category) => (
+              <optgroup key={category.name} label={category.name}>
+                {category.fonts.map((f) => (
+                  <option key={f.label} value={f.label}>
+                    {f.label}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
 
@@ -66,6 +75,27 @@ export default function SelectionToolbar({
             title="Color"
             className="h-7 w-7 cursor-pointer rounded-full border border-ui-border p-0.5"
           />
+
+          <label className="flex items-center gap-1 text-[10px] text-ui-gray">
+            Tamaño
+            <input
+              type="number"
+              list="text-size-presets"
+              min={FONT_SIZE_MIN_PX}
+              max={FONT_SIZE_MAX_PX}
+              value={Math.round(element.fontSizePx ?? DEFAULT_FONT_SIZE_PX)}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                onChange(element.id, { fontSizePx: Number.isFinite(next) ? next : element.fontSizePx });
+              }}
+              className="w-16 rounded-full border border-ui-border px-2 py-1 text-xs focus:outline-none focus:border-primary"
+            />
+            <datalist id="text-size-presets">
+              {FONT_SIZE_PRESETS.map((size) => (
+                <option key={size} value={size} />
+              ))}
+            </datalist>
+          </label>
 
           <ToolbarIconButton label="Negrita" onClick={() => onChange(element.id, { bold: !element.bold })}>
             <span className={`text-sm ${element.bold ? "font-bold text-primary" : "font-bold text-ui-gray"}`}>B</span>
