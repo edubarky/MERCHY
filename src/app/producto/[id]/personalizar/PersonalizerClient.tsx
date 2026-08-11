@@ -93,8 +93,12 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   const [cartOpen, setCartOpen] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [garmentColor, setGarmentColor] = useState<GarmentColor>("blanco");
-  const [guideState, setGuideState] = useState<{ visible: boolean; inBounds: boolean }>({ visible: false, inBounds: true });
-  const guideHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The print-area guide's visibility is driven directly by selection (see
+  // `selectedElement` below) — it shows for as long as a design in the
+  // active view is selected, and disappears the instant nothing is
+  // selected. This only tracks the *color* (turquoise/coral) live while
+  // the selected element is actively being dragged/resized/rotated.
+  const [interactionInBounds, setInteractionInBounds] = useState(true);
 
   const { addItem, totalItems, justAdded } = useCart();
 
@@ -146,6 +150,12 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   const asset = VIEW_ASSETS[activeView];
   const hasRealPhoto = getViewSrc(activeView, "blanco") !== null || getViewSrc(activeView, "negro") !== null;
   const selectedElement = elements[activeView].find((e) => e.id === selectedId) ?? null;
+
+  // Fresh selection always starts "in bounds" (it was just placed/spawned
+  // validly) — only an active drag/resize/rotate on it can mark it out.
+  useEffect(() => {
+    setInteractionInBounds(true);
+  }, [selectedId]);
 
   const commit = useCallback((next: ViewElements) => {
     setElements(next);
@@ -208,27 +218,15 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     const next = { ...elements, [el.view]: [...elements[el.view], el] };
     commit(next);
     setSelectedId(el.id);
-    showPrintAreaGuideBriefly();
   }
 
-  // Drives the print-area HUD: appears right after adding an element (auto-
-  // hides after a couple seconds if left untouched) and while any element is
-  // actively being dragged/resized/rotated (see DesignElementView's
-  // onInteraction) — never as a permanent overlay, and never just because
-  // something is selected-but-idle.
-  function showPrintAreaGuideBriefly() {
-    if (guideHideTimer.current) clearTimeout(guideHideTimer.current);
-    setGuideState({ visible: true, inBounds: true });
-    guideHideTimer.current = setTimeout(() => setGuideState({ visible: false, inBounds: true }), 1800);
-  }
-
-  function handleElementInteraction(active: boolean, inBounds: boolean) {
-    if (guideHideTimer.current) clearTimeout(guideHideTimer.current);
-    if (active) {
-      setGuideState({ visible: true, inBounds });
-    } else {
-      guideHideTimer.current = setTimeout(() => setGuideState({ visible: false, inBounds: true }), 350);
-    }
+  // Live in-bounds status while dragging/resizing/rotating the selected
+  // element (see DesignElementView's onInteraction) — the guide itself is
+  // always shown while something is selected (see `selectedElement` below);
+  // this only controls whether it reads as "safe" (turquoise) or "fuera
+  // del área" (coral).
+  function handleElementInteraction(_active: boolean, inBounds: boolean) {
+    setInteractionInBounds(inBounds);
   }
 
   function updateElement(id: string, patch: Partial<DesignElement>) {
@@ -512,11 +510,11 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                 />
               ))}
 
-              {guideState.visible && printAreaRectPx && (
+              {selectedElement && printAreaRectPx && (
                 <PrintAreaGuide
                   rectPx={printAreaRectPx}
                   config={getPrintArea(product.name, activeView)}
-                  inBounds={guideState.inBounds}
+                  inBounds={interactionInBounds}
                 />
               )}
 
