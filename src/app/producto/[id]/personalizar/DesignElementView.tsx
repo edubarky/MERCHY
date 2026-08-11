@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Moveable from "react-moveable";
 import type { DesignElement } from "./types";
 
@@ -67,10 +67,58 @@ export default function DesignElementView({
   onInteraction: (active: boolean, inBounds: boolean) => void;
 }) {
   const targetRef = useRef<HTMLDivElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
+
+  // react-moveable fires *Start immediately followed by *End with NO
+  // intervening onDrag/onResize call when there's zero mouse movement — a
+  // plain click on an already-selected element (e.g. the first click of a
+  // double-click) is enough to trigger this. When that happens,
+  // target.style.left/top/width/height are still whatever React's own
+  // render last put there (percentage strings like "50.07%", from the
+  // `left: ${element.xPct}%` style below) — not the pixel values onDrag/
+  // onResize would normally have written. Reading those with parseFloat()
+  // silently returns the *percentage number* as if it were a pixel count,
+  // which pxToPct then re-divides by the container's pixel size — teleporting
+  // the element toward the corner on nothing more than a stray click. These
+  // flags track whether an actual onDrag/onResize happened so *End can skip
+  // the position commit entirely when nothing really moved.
+  const draggedRef = useRef(false);
+  const resizedRef = useRef(false);
+
+  // Text elements can be edited in place — double-click enters edit mode,
+  // which swaps the static text display for a real <input> bound to the
+  // same element.text the rest of the app already reads/writes (Capas
+  // panel, PreviewModal, cart export). Nothing here is a second source of
+  // truth: onChange still goes through the exact same DesignElement patch
+  // path every other transform uses.
+  const [editingText, setEditingText] = useState(false);
+  const [draftText, setDraftText] = useState(element.text ?? "");
+
+  useEffect(() => {
+    if (!editingText) return;
+    setDraftText(element.text ?? "");
+    const input = textInputRef.current;
+    if (input) {
+      input.focus();
+      input.select();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingText]);
+
+  function commitText() {
+    onChange(element.id, { text: draftText });
+    setEditingText(false);
+  }
+
+  function cancelTextEdit() {
+    setDraftText(element.text ?? "");
+    setEditingText(false);
+  }
 
   function pxToPct(left: number, top: number, width: number, height: number) {
     const container = containerRef.current;
     if (!container) return null;
+    if (![left, top, width, height].every(Number.isFinite)) return null;
     const rect = container.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return null;
     return {
@@ -123,7 +171,13 @@ export default function DesignElementView({
           e.stopPropagation();
           onSelect(element.id);
         }}
-        className={`absolute cursor-move select-none transition-shadow duration-150 ${
+        onDoubleClick={(e) => {
+          if (element.type !== "text") return;
+          e.stopPropagation();
+          onSelect(element.id);
+          setEditingText(true);
+        }}
+        className={`absolute select-none transition-shadow duration-150 ${editingText ? "cursor-text" : "cursor-move"} ${
           selected ? "outline outline-2 outline-primary outline-offset-2" : ""
         }`}
         style={{
@@ -150,6 +204,34 @@ export default function DesignElementView({
               <span className="truncate text-[8px] text-ui-gray leading-tight">{element.fileName}</span>
             </div>
           )
+        ) : editingText ? (
+          <input
+            ref={textInputRef}
+            type="text"
+            value={draftText}
+            onChange={(e) => setDraftText(e.target.value)}
+            onMouseDown={(e) => e.stopPropagation()}
+            onBlur={commitText}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitText();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                cancelTextEdit();
+              }
+            }}
+            className="h-full w-full border-none bg-transparent p-0 outline-none"
+            style={{
+              fontFamily: element.fontFamily || "var(--font-dm-sans), sans-serif",
+              color: element.color || "#1a1a1a",
+              fontWeight: element.bold ? 700 : 400,
+              fontStyle: element.italic ? "italic" : "normal",
+              letterSpacing: `${element.letterSpacing ?? 0}px`,
+              textAlign: element.align || "left",
+              fontSize: "clamp(10px, 4cqw, 40px)",
+            }}
+          />
         ) : (
           <div
             className="flex h-full w-full items-center overflow-hidden whitespace-nowrap pointer-events-none"
@@ -169,7 +251,7 @@ export default function DesignElementView({
         )}
       </div>
 
-      {selected && (
+      {selected && !editingText && (
         <Moveable
           target={targetRef}
           draggable
@@ -183,20 +265,30 @@ export default function DesignElementView({
           snapCenter
           className="merchy-moveable"
           zoom={handleZoom}
-          onDragStart={({ target }) => reportBounds(target as HTMLElement)}
+          onDragStart={({ target }) => {
+            draggedRef.current = false;
+            reportBounds(target as HTMLElement);
+          }}
           onDrag={({ target, left, top }) => {
+            draggedRef.current = true;
             (target as HTMLElement).style.left = `${left}px`;
             (target as HTMLElement).style.top = `${top}px`;
             reportBounds(target as HTMLElement);
           }}
           onDragEnd={({ target }) => {
             const el = target as HTMLElement;
-            const pct = pxToPct(parseFloat(el.style.left), parseFloat(el.style.top), el.offsetWidth, el.offsetHeight);
-            if (pct) onChange(element.id, { xPct: pct.xPct, yPct: pct.yPct });
+            if (draggedRef.current) {
+              const pct = pxToPct(parseFloat(el.style.left), parseFloat(el.style.top), el.offsetWidth, el.offsetHeight);
+              if (pct) onChange(element.id, { xPct: pct.xPct, yPct: pct.yPct });
+            }
             reportBoundsEnd(el);
           }}
-          onResizeStart={({ target }) => reportBounds(target as HTMLElement)}
+          onResizeStart={({ target }) => {
+            resizedRef.current = false;
+            reportBounds(target as HTMLElement);
+          }}
           onResize={({ target, width, height, drag }) => {
+            resizedRef.current = true;
             const el = target as HTMLElement;
             el.style.width = `${width}px`;
             el.style.height = `${height}px`;
@@ -206,8 +298,10 @@ export default function DesignElementView({
           }}
           onResizeEnd={({ target }) => {
             const el = target as HTMLElement;
-            const pct = pxToPct(parseFloat(el.style.left), parseFloat(el.style.top), el.offsetWidth, el.offsetHeight);
-            if (pct) onChange(element.id, pct);
+            if (resizedRef.current) {
+              const pct = pxToPct(parseFloat(el.style.left), parseFloat(el.style.top), el.offsetWidth, el.offsetHeight);
+              if (pct) onChange(element.id, pct);
+            }
             reportBoundsEnd(el);
           }}
           onRotateStart={({ target }) => reportBounds(target as HTMLElement)}

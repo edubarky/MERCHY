@@ -45,6 +45,8 @@ export default function SelectionToolbar({
     <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-ui-border bg-white/95 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
       {element.type === "text" && (
         <>
+          <span className="hidden text-[10px] text-ui-gray sm:inline">Doble clic en el texto para editarlo</span>
+
           <select
             value={element.fontFamily || "DM Sans"}
             onChange={(e) => onChange(element.id, { fontFamily: e.target.value })}
