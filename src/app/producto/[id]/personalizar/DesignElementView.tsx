@@ -28,6 +28,27 @@ function isWithinPrintArea(target: HTMLElement, container: HTMLElement, rect: Pr
   return left >= rect.left - 0.5 && top >= rect.top - 0.5 && right <= rect.right + 0.5 && bottom <= rect.bottom + 0.5;
 }
 
+// Handles scale visually with the selected art's own rendered size — a
+// tiny logo gets tiny handles, a large one gets slightly bigger (never
+// huge) ones, clamped at both ends. This ONLY changes react-moveable's
+// `zoom` prop, which scales the control-box overlay via a CSS transform —
+// it never touches the target's real width/height/position (those stay
+// driven purely by element.xPct/yPct/widthPct/heightPct, same as always),
+// so this can't affect the print-area validation above, which reads the
+// target's actual getBoundingClientRect() and has no notion of handles at
+// all. Base handle sizes (zoom = 1) are set in globals.css under
+// `.merchy-moveable .moveable-control`.
+const HANDLE_MIN_ZOOM = 0.6;
+const HANDLE_MAX_ZOOM = 1.6;
+const HANDLE_ZOOM_MIN_REF_PX = 40; // art this small or smaller -> smallest handles
+const HANDLE_ZOOM_MAX_REF_PX = 280; // art this large or larger -> largest handles
+
+function computeHandleZoom(boxSizePx: number): number {
+  if (!Number.isFinite(boxSizePx) || boxSizePx <= 0) return 1;
+  const t = Math.min(1, Math.max(0, (boxSizePx - HANDLE_ZOOM_MIN_REF_PX) / (HANDLE_ZOOM_MAX_REF_PX - HANDLE_ZOOM_MIN_REF_PX)));
+  return HANDLE_MIN_ZOOM + t * (HANDLE_MAX_ZOOM - HANDLE_MIN_ZOOM);
+}
+
 export default function DesignElementView({
   element,
   containerRef,
@@ -65,6 +86,30 @@ export default function DesignElementView({
     if (!container) return;
     onInteraction(true, isWithinPrintArea(target, container, printAreaRectPx));
   }
+
+  // Same check, but reports `active: false` — used on drag/resize/rotate
+  // *End* so the guide's final color reflects where the art actually
+  // landed, instead of always resetting to "safe" the instant the mouse is
+  // released regardless of the real resting position.
+  function reportBoundsEnd(target: HTMLElement) {
+    const container = containerRef.current;
+    if (!container) {
+      onInteraction(false, true);
+      return;
+    }
+    onInteraction(false, isWithinPrintArea(target, container, printAreaRectPx));
+  }
+
+  // Recomputed from the element's own current % size on every render — so
+  // it updates the instant a resize/rotate commits, when a different art
+  // gets selected, or when the view/product (and therefore the canvas'
+  // rendered pixel size) changes. Uses the smaller of width/height so an
+  // elongated design (a wide short banner, a tall narrow tag) still reads
+  // by its narrowest dimension rather than its longest.
+  const containerRect = containerRef.current?.getBoundingClientRect();
+  const elementWidthPx = containerRect ? (element.widthPct / 100) * containerRect.width : 0;
+  const elementHeightPx = containerRect ? (element.heightPct / 100) * containerRect.height : 0;
+  const handleZoom = computeHandleZoom(Math.min(elementWidthPx, elementHeightPx));
 
   return (
     <>
@@ -137,6 +182,7 @@ export default function DesignElementView({
           snappable
           snapCenter
           className="merchy-moveable"
+          zoom={handleZoom}
           onDragStart={({ target }) => reportBounds(target as HTMLElement)}
           onDrag={({ target, left, top }) => {
             (target as HTMLElement).style.left = `${left}px`;
@@ -147,7 +193,7 @@ export default function DesignElementView({
             const el = target as HTMLElement;
             const pct = pxToPct(parseFloat(el.style.left), parseFloat(el.style.top), el.offsetWidth, el.offsetHeight);
             if (pct) onChange(element.id, { xPct: pct.xPct, yPct: pct.yPct });
-            onInteraction(false, true);
+            reportBoundsEnd(el);
           }}
           onResizeStart={({ target }) => reportBounds(target as HTMLElement)}
           onResize={({ target, width, height, drag }) => {
@@ -162,7 +208,7 @@ export default function DesignElementView({
             const el = target as HTMLElement;
             const pct = pxToPct(parseFloat(el.style.left), parseFloat(el.style.top), el.offsetWidth, el.offsetHeight);
             if (pct) onChange(element.id, pct);
-            onInteraction(false, true);
+            reportBoundsEnd(el);
           }}
           onRotateStart={({ target }) => reportBounds(target as HTMLElement)}
           onRotate={({ target, rotate }) => {
@@ -170,9 +216,10 @@ export default function DesignElementView({
             reportBounds(target as HTMLElement);
           }}
           onRotateEnd={({ target }) => {
-            const match = /rotate\(([-\d.]+)deg\)/.exec((target as HTMLElement).style.transform);
+            const el = target as HTMLElement;
+            const match = /rotate\(([-\d.]+)deg\)/.exec(el.style.transform);
             onChange(element.id, { rotation: match ? parseFloat(match[1]) : element.rotation });
-            onInteraction(false, true);
+            reportBoundsEnd(el);
           }}
         />
       )}

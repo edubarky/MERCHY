@@ -26,33 +26,40 @@
   }
 }
 
-/* Personalizador — smaller, lighter react-moveable selection handles.
-   Scoped to `.merchy-moveable` (set via the <Moveable className> prop in
-   DesignElementView.tsx) so this can never affect a Moveable instance
-   used anywhere else in the app. Only appearance changes here — sizes/
-   margins are shrunk but every handle keeps its own drag/resize/rotate
-   behavior untouched, that's all driven by react-moveable itself.
+/* Personalizador — smaller, lighter react-moveable selection handles,
+   scaled by the art's own rendered size via react-moveable's `zoom` prop
+   (see DesignElementView.tsx's computeHandleZoom). Scoped to
+   `.merchy-moveable` (set via the <Moveable className> prop) so this can
+   never affect a Moveable instance used anywhere else in the app. Only
+   appearance changes here — react-moveable itself still drives every
+   drag/resize/rotate.
 
-   !important is required: react-moveable injects its own <style> tag at
-   runtime, scoped with a per-instance generated class (e.g. ".rCS1w3zcxh
-   .moveable-control") that has the exact same specificity (two classes)
-   as a plain ".merchy-moveable .moveable-control" selector — and since
-   it's injected after this stylesheet loads, it wins the cascade tie
-   without !important. */
+   react-moveable exposes the current zoom as the `--zoom` CSS custom
+   property on its own root (confirmed in its source — its *own* base
+   stylesheet doesn't use `--zoom` for control-dot sizing, only for
+   internal padding/guideline math, so referencing it ourselves in a
+   calc() is required to actually get size scaling, not optional).
+
+   !important is required regardless of the above: react-moveable injects
+   its own <style> tag at runtime, scoped with a per-instance generated
+   class (e.g. ".rCS1w3zcxh .moveable-control") that has the exact same
+   specificity (two classes) as a plain ".merchy-moveable .moveable-control"
+   selector — and since it's injected after this stylesheet loads, it
+   wins the cascade tie without !important. */
 .merchy-moveable .moveable-control {
-  width: 5px !important;
-  height: 5px !important;
-  margin-top: -2.5px !important;
-  margin-left: -2.5px !important;
+  width: calc(5px * var(--zoom, 1)) !important;
+  height: calc(5px * var(--zoom, 1)) !important;
+  margin-top: calc(-2.5px * var(--zoom, 1)) !important;
+  margin-left: calc(-2.5px * var(--zoom, 1)) !important;
   border-width: 1px !important;
   box-shadow: none !important;
 }
 
 .merchy-moveable .moveable-control.moveable-origin {
-  width: 4px !important;
-  height: 4px !important;
-  margin-top: -2px !important;
-  margin-left: -2px !important;
+  width: calc(4px * var(--zoom, 1)) !important;
+  height: calc(4px * var(--zoom, 1)) !important;
+  margin-top: calc(-2px * var(--zoom, 1)) !important;
+  margin-left: calc(-2px * var(--zoom, 1)) !important;
   border-width: 1px !important;
   box-shadow: none !important;
 }
