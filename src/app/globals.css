@@ -40,17 +40,19 @@
    it's injected after this stylesheet loads, it wins the cascade tie
    without !important. */
 .merchy-moveable .moveable-control {
-  width: 8px !important;
-  height: 8px !important;
-  margin-top: -4px !important;
-  margin-left: -4px !important;
+  width: 5px !important;
+  height: 5px !important;
+  margin-top: -2.5px !important;
+  margin-left: -2.5px !important;
   border-width: 1px !important;
+  box-shadow: none !important;
 }
 
 .merchy-moveable .moveable-control.moveable-origin {
-  width: 6px !important;
-  height: 6px !important;
-  margin-top: -3px !important;
-  margin-left: -3px !important;
+  width: 4px !important;
+  height: 4px !important;
+  margin-top: -2px !important;
+  margin-left: -2px !important;
   border-width: 1px !important;
+  box-shadow: none !important;
 }
