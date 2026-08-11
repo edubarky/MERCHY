@@ -257,7 +257,12 @@ export default function DesignElementView({
           draggable
           resizable
           rotatable
-          keepRatio={element.type === "logo"}
+          // Corner handles must always scale proportionally (never distort),
+          // for every element type — text included, not just logos. This is
+          // react-moveable's own existing keepRatio mechanism (already used
+          // for logos since the first build), just no longer gated to one
+          // type — reusing it, not building a second scaling system.
+          keepRatio
           throttleDrag={0}
           throttleResize={0}
           throttleRotate={0}
