@@ -248,6 +248,10 @@ export default function PreviewModal({
   onConfirm: () => void;
 }) {
   const [entered, setEntered] = useState(false);
+  // Only show views the user actually put art in — an untouched view (no
+  // logo, no text) never appears here, same "real placed instance" check
+  // MiniView already uses for its own "Sin personalización" tag/isEmpty.
+  const viewsWithArt = VIEW_ORDER.filter((view) => elements[view].length > 0);
 
   useEffect(() => {
     if (!open) {
@@ -298,19 +302,26 @@ export default function PreviewModal({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {VIEW_ORDER.map((view) => (
-            <MiniView
-              key={view}
-              view={view}
-              elements={elements}
-              productName={productName}
-              technique={technique}
-              resolvedAssets={resolvedAssets}
-              garmentColor={garmentColor}
-            />
-          ))}
-        </div>
+        {viewsWithArt.length === 0 ? (
+          <div className="flex flex-col items-center py-10 text-center">
+            <p className="mb-1 font-semibold text-foreground">Aún no has agregado ningún arte</p>
+            <p className="text-sm text-ui-gray">Coloca un logo o texto en alguna vista para verla aquí.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {viewsWithArt.map((view) => (
+              <MiniView
+                key={view}
+                view={view}
+                elements={elements}
+                productName={productName}
+                technique={technique}
+                resolvedAssets={resolvedAssets}
+                garmentColor={garmentColor}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="mt-7 flex gap-4">
           <button
