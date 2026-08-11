@@ -136,6 +136,7 @@ export default function DesignElementView({
           throttleRotate={0}
           snappable
           snapCenter
+          className="merchy-moveable"
           onDragStart={({ target }) => reportBounds(target as HTMLElement)}
           onDrag={({ target, left, top }) => {
             (target as HTMLElement).style.left = `${left}px`;
