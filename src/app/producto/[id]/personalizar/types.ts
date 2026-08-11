@@ -20,6 +20,10 @@ export interface DesignElement {
   fileName?: string;
   fileType?: LogoFileType;
   src?: string; // object URL — absent for "ai" (no in-browser preview possible)
+  assetId?: string; // links back to the "Mis artes" library asset this was
+  // placed from (see ArtLibraryContext) — purely for provenance/future
+  // reuse. Each placement still carries its own fileName/fileType/src, so
+  // removing the asset from the library never breaks an existing placement.
 
   // text-only
   text?: string;

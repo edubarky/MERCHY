@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Outfit } from "next/font/google";
 import { CartProvider } from "@/lib/cart/CartContext";
+import { ArtLibraryProvider } from "@/lib/artLibrary/ArtLibraryContext";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -31,7 +32,9 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} ${outfit.variable} font-sans antialiased bg-background text-foreground`}
       >
-        <CartProvider>{children}</CartProvider>
+        <ArtLibraryProvider>
+          <CartProvider>{children}</CartProvider>
+        </ArtLibraryProvider>
       </body>
     </html>
   );

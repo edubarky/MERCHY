@@ -7,6 +7,7 @@ import type { Product, ProductVariant, PriceTier, PrintTechnique, CartItem, Cust
 import { getProductUnitPrice, getTechniquePrice, formatMXN } from "@/lib/pricing";
 import { useCart } from "@/lib/cart/CartContext";
 import CartPopover from "@/components/cart/CartPopover";
+import { useArtLibrary, type ArtAsset } from "@/lib/artLibrary/ArtLibraryContext";
 import {
   VIEW_ORDER,
   VIEW_LABELS,
@@ -14,7 +15,6 @@ import {
   type ViewName,
   type DesignElement,
   type ViewElements,
-  type LogoFileType,
   type GarmentColor,
   type ResolvedProductAssets,
 } from "./types";
@@ -23,6 +23,7 @@ import { getPrintArea } from "./printAreas";
 import { analyzeDesignLuminance, LUMINANCE_THRESHOLD } from "./colorAnalysis";
 import DesignElementView, { type PrintAreaRectPx } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
+import ArtLibraryPanel from "./ArtLibraryPanel";
 import SelectionToolbar from "./SelectionToolbar";
 import PrintTechniqueCards from "./PrintTechniqueCards";
 import PreviewModal from "./PreviewModal";
@@ -99,8 +100,10 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   // selected. This only tracks the *color* (turquoise/coral) live while
   // the selected element is actively being dragged/resized/rotated.
   const [interactionInBounds, setInteractionInBounds] = useState(true);
+  const [artLibraryOpen, setArtLibraryOpen] = useState(false);
 
   const { addItem, totalItems, justAdded } = useCart();
+  const { assets: artAssets, addAsset, removeAsset } = useArtLibrary();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -265,13 +268,12 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     updateElement(id, { zIndex: minZ - 1 });
   }
 
-  function handleLogoFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    const file = files[0];
-    const ext = (file.name.split(".").pop() || "").toLowerCase();
-    const fileType: LogoFileType = ext === "svg" || ext === "png" || ext === "pdf" || ext === "ai" ? ext : "png";
-    const renderable = fileType === "svg" || fileType === "png";
-    const src = renderable ? URL.createObjectURL(file) : undefined;
+  // Places an already-registered "Mis artes" asset onto the active view as
+  // a brand-new, independent instance (its own position/size/rotation) —
+  // used both right after a fresh upload and when picking an existing
+  // asset from the library. The asset itself (fileName/fileType/src) is
+  // never duplicated, only referenced.
+  function placeAsset(asset: ArtAsset) {
     const z = zCounter + 1;
     setZCounter(z);
     const pa = getPrintArea(product.name, activeView);
@@ -281,9 +283,10 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
       id: uid(),
       type: "logo",
       view: activeView,
-      fileName: file.name,
-      fileType,
-      src,
+      assetId: asset.id,
+      fileName: asset.fileName,
+      fileType: asset.fileType,
+      src: asset.src,
       xPct: pa.xPct + (pa.widthPct - w) / 2,
       yPct: pa.yPct + (pa.heightPct - h) / 2,
       widthPct: w,
@@ -291,6 +294,12 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
       rotation: 0,
       zIndex: z,
     });
+  }
+
+  function handleLogoFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const asset = addAsset(files[0]);
+    placeAsset(asset);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -607,7 +616,16 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
           <div>
             <div className="mb-4 flex items-center justify-between">
               <span className="text-2xl font-bold text-foreground">3. Agrega tu logo</span>
-              <span className="text-sm font-semibold text-ui-gray">Archivos</span>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setArtLibraryOpen(true)}
+                  className="text-sm font-semibold text-primary-dark transition-colors duration-150 ease-out hover:text-primary"
+                >
+                  Mis artes
+                </button>
+                <span className="text-sm font-semibold text-ui-gray">Archivos</span>
+              </div>
             </div>
 
             <div className="flex gap-4">
@@ -783,6 +801,22 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
         onConfirm={() => {
           setPreviewOpen(false);
           handleAddToCart();
+        }}
+      />
+
+      <ArtLibraryPanel
+        open={artLibraryOpen}
+        onClose={() => setArtLibraryOpen(false)}
+        assets={artAssets}
+        onSelect={(asset) => {
+          placeAsset(asset);
+          setArtLibraryOpen(false);
+        }}
+        onRemove={removeAsset}
+        onAddNew={(file) => {
+          const asset = addAsset(file);
+          placeAsset(asset);
+          setArtLibraryOpen(false);
         }}
       />
     </div>
