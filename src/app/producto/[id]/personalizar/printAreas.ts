@@ -41,23 +41,22 @@ function normalizeProductKey(value: string): string {
 
 // Hoodie-with-kangaroo-pocket category default: measured directly from
 // Sudadera Ocean's real photos (public/VISTA DE PRODUCTOS/SUDADERA OCEAN/)
-// against a % grid — frente sits exactly on the kangaroo pocket panel
-// (not the chest), reverso is the open back area below the hood, izquierda/
-// derecha run the visible sleeve from shoulder seam to just above the
-// cuff. Applied automatically to every product whose name contains
-// "sudadera" (see PRODUCT_CATEGORY_MATCHERS) — every current catalog
-// "SUDADERA *" product is this same hood+kangaroo-pocket style, verified
-// against their own photos, not assumed. Non-hoodie products (playeras,
-// polos, gorras, etc.) never get this shape.
+// against a % grid. Reverso is the open back area below the hood,
+// izquierda/derecha run the visible sleeve from shoulder seam to just
+// above the cuff. Applied automatically to every product whose name
+// contains "sudadera" (see PRODUCT_CATEGORY_MATCHERS) — every current
+// catalog "SUDADERA *" product is this same hood+kangaroo-pocket style,
+// verified against their own photos, not assumed. Non-hoodie products
+// (playeras, polos, gorras, etc.) never get this shape.
 //
-// frente re-measured a second pass: the pocket is trapezoidal (its top
-// seam, ~61-62%, is narrower than its bottom seam, ~87-88%), so the
-// rectangle uses the pocket's *narrowest* cross-section (the top seam's
-// width) to guarantee it never pokes outside the visible pocket shape at
-// any height within it — a wider box sized to the bottom would bleed past
-// the diagonal side seams near the top.
+// frente: chest/upper-torso zone (below the hood drawstrings, above the
+// kangaroo pocket) — confirmed as the correct zone directly by the user
+// against a reference crop, after an earlier pass had it on the pocket
+// itself (that was explicitly reversed; if this is ever revisited, get
+// it in writing which of the two this actually means, this exact area
+// has flipped more than once).
 const HOODIE_PRINT_AREAS: ProductPrintAreas = {
-  frente: { xPct: 27, yPct: 62, widthPct: 41, heightPct: 24 },
+  frente: { xPct: 20, yPct: 21, widthPct: 60, heightPct: 37 },
   reverso: { xPct: 25, yPct: 32, widthPct: 50, heightPct: 48 },
   izquierda: { xPct: 20, yPct: 23, widthPct: 58, heightPct: 55 },
   derecha: { xPct: 22, yPct: 23, widthPct: 58, heightPct: 55 },
