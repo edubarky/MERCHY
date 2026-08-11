@@ -462,8 +462,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
           <div className="relative flex justify-center">
             {/* Barra de herramientas flotante */}
             <div className="absolute left-3 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-3">
-              <ToolDockButton label="Seleccionar" active={!selectedId} onClick={() => setSelectedId(null)} />
-
               <ToolDockButton label="Texto" onClick={handleAddText}>
                 <TextToolIcon className="h-5 w-5" />
               </ToolDockButton>
