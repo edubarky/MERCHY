@@ -120,6 +120,18 @@ export function applyFilters(
   });
 }
 
+// Number of distinct filter *types* currently applied (not individual color
+// selections) — shown as a small badge on the "Filtros" trigger button so
+// the user can tell at a glance that something is filtering the catalog.
+export function countActiveFilters(filters: AppliedFilters): number {
+  let count = 0;
+  if (filters.keyword.trim()) count += 1;
+  if (filters.material) count += 1;
+  if (filters.minPrice > DEFAULT_FILTERS.minPrice || filters.maxPrice < DEFAULT_FILTERS.maxPrice) count += 1;
+  if (filters.colors.length > 0) count += 1;
+  return count;
+}
+
 // ── Iconos extraídos de la carpeta de diseño "Filtros" (no rediseñados) ──
 
 function LayersIcon({ className = "" }: { className?: string }) {
@@ -277,10 +289,15 @@ function ColorSwatch({
 
 export default function FiltersPanel({
   products,
+  appliedFilters,
   onApply,
   onOpen,
 }: {
   products: ProductWithVariants[];
+  /** The filters actually driving the grid right now (not this panel's own
+   * in-progress draft state) — used only to show the active-count badge on
+   * the trigger button. */
+  appliedFilters: AppliedFilters;
   onApply: (filters: AppliedFilters) => void;
   /** Called when the modal opens — lets the parent lazily fetch the full,
    * unpaginated catalog so filtering/suggestions here aren't limited to
@@ -340,6 +357,8 @@ export default function FiltersPanel({
     setColors((prev) => (prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]));
   }
 
+  const activeCount = countActiveFilters(appliedFilters);
+
   function openModal() {
     setOpen(true);
     onOpen?.();
@@ -347,6 +366,11 @@ export default function FiltersPanel({
 
   function closeModal() {
     setOpen(false);
+  }
+
+  function toggleModal() {
+    if (open) closeModal();
+    else openModal();
   }
 
   function handleClear() {
@@ -370,8 +394,10 @@ export default function FiltersPanel({
       return;
     }
     const raf = requestAnimationFrame(() => setEntered(true));
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // Deliberately NOT locking body scroll here (unlike the old centered
+    // modal) — the whole point of the drawer is that the catalog stays
+    // visible and interactive (scrollable) while filtering, per explicit
+    // requirement. The drawer itself is `fixed`, so it stays put regardless.
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") closeModal();
@@ -380,115 +406,121 @@ export default function FiltersPanel({
 
     return () => {
       cancelAnimationFrame(raf);
-      document.body.style.overflow = prevOverflow;
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);
 
   return (
     <>
-      {/* Antes era un botón circular flotante sobre las tarjetas — ahora es
-          un botón normal en línea, junto al conteo de productos, sin tapar
-          el grid. Misma función (abre el mismo modal de filtros), solo
-          cambia dónde y cómo se muestra. */}
+      {/* Antes era un botón circular flotante sobre las tarjetas, después un
+          botón en línea junto al conteo de productos — ahora abre/cierra
+          (toggle) el drawer lateral y comunica cuántos filtros están
+          activos con un pequeño badge turquesa. */}
       <button
         type="button"
-        onClick={openModal}
+        onClick={toggleModal}
         aria-label="Abrir filtros"
+        aria-expanded={open}
         className="flex shrink-0 items-center gap-2 rounded-full border border-ui-border bg-white px-4 py-2 text-sm font-medium text-foreground transition-colors duration-200 ease-out hover:border-primary"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/Home/FILTROS/Group 881-1.svg" alt="" className="h-5 w-5" />
         Filtros
+        {activeCount > 0 && (
+          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#00A7AB] px-1.5 text-[11px] font-bold text-white">
+            {activeCount}
+          </span>
+        )}
       </button>
 
       {open && (
         <div
-          className={`fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/45 transition-opacity duration-[250ms] ease-out ${
+          className={`fixed inset-0 z-[100] bg-black/20 transition-opacity duration-[260ms] ease-out ${
             entered ? "opacity-100" : "opacity-0"
           }`}
           onClick={closeModal}
         >
+          {/* Drawer lateral — antes era un modal centrado (fixed inset-0
+              flex items-center justify-center). Ahora es un panel fijo al
+              borde izquierdo, a lo alto completo de la pantalla, que se
+              desliza con translateX en vez de aparecer con scale/opacity.
+              El catálogo detrás nunca queda cubierto ni bloqueado (sin
+              bloqueo de scroll del body, ver el useEffect de arriba). */}
           <div
-            className={`relative w-full max-w-[540px] rounded-[32px] shadow-[0_30px_70px_rgba(0,0,0,0.18)] transition-all duration-[280ms] ease-out ${
-              entered ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filtros"
+            onClick={(e) => e.stopPropagation()}
+            className={`fixed inset-y-0 left-0 z-[101] flex h-full w-[90vw] max-w-[400px] flex-col bg-white shadow-[0_0_40px_rgba(0,0,0,0.18)] transition-transform duration-[260ms] ease-out sm:w-[320px] lg:w-[400px] ${
+              entered ? "translate-x-0" : "-translate-x-full"
             }`}
           >
-            {/* Esquina decorativa (recurso original, sin recrear) — fuera del
-                contenedor con scroll para que su sombra/curva no se recorte. */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -left-5 -top-5 h-32 w-32 overflow-hidden rounded-[20px] z-0"
-              style={{
-                backgroundImage: 'url("/Home/FILTROS/Group 901.svg")',
-                backgroundSize: "1464px 1706px",
-                backgroundPosition: "-174px -164px",
-              }}
-            />
-
-            <div
-              ref={dialogRef}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Filtros"
-              onClick={(e) => e.stopPropagation()}
-              className="relative max-h-[88vh] overflow-y-auto rounded-[32px] bg-white"
-            >
-            <button
-              type="button"
-              onClick={closeModal}
-              aria-label="Cerrar"
-              className="absolute right-5 top-5 z-10 transition-transform duration-200 ease-out hover:scale-110"
-            >
-              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                <path
-                  d="M40 20C40 31.0457 31.0457 40 20 40C8.9543 40 0 31.0457 0 20C0 8.9543 8.9543 0 20 0C31.0457 0 40 8.9543 40 20Z"
-                  fill="#FDFDFD"
-                />
-                <path
-                  d="M38.5 20C38.5 9.78273 30.2173 1.5 20 1.5C9.78273 1.5 1.5 9.78273 1.5 20C1.5 30.2173 9.78273 38.5 20 38.5V40C8.9543 40 0 31.0457 0 20C0 8.9543 8.9543 0 20 0C31.0457 0 40 8.9543 40 20C40 31.0457 31.0457 40 20 40V38.5C30.2173 38.5 38.5 30.2173 38.5 20Z"
-                  fill="#E3EFF1"
-                />
-                <path
-                  d="M26.708 24.8789C27.0985 25.2695 27.0985 25.9027 26.708 26.2931C26.3175 26.6836 25.6843 26.6836 25.2938 26.2931L14.7079 15.7073C14.3174 15.3167 14.3174 14.6836 14.7079 14.293C15.0985 13.9025 15.7316 13.9025 16.1221 14.293L26.708 24.8789Z"
-                  fill="#00C5C9"
-                />
-                <path
-                  d="M16.1377 25.9325C15.7563 26.3318 15.1233 26.3466 14.7239 25.9652C14.3244 25.5839 14.3098 24.9509 14.6911 24.5514L25.0289 13.7231C25.4103 13.3236 26.0432 13.309 26.4427 13.6903C26.8422 14.0717 26.8569 14.7047 26.4755 15.1042L16.1377 25.9325Z"
-                  fill="#00C5C9"
-                />
-              </svg>
-            </button>
-
-            <div className="relative px-6 pt-8 pb-6 sm:px-9 sm:pt-9">
-              {/* Encabezado */}
-              <div className="flex items-center gap-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/Home/FILTROS/Group 881-1.svg" alt="" className="h-12 w-12 shrink-0 opacity-0 absolute" />
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#ECF9F9]">
-                  <svg viewBox="0 0 86 86" className="h-8 w-8" fill="none">
+            {/* Encabezado — altura fija, no se desplaza con el scroll del contenido */}
+            <div className="shrink-0 border-b border-[#7FDED9] px-6 pt-7 pb-5 sm:px-7">
+              <div className="flex items-center justify-between gap-3">
+                {/* La página oculta el botón "Filtros" original detrás de
+                    este drawer mientras está abierto (mismo z-index de
+                    siempre, sin trucos) para no duplicar visualmente el
+                    control — este ícono+título hacen ahora esa misma
+                    función de "click en Filtros de nuevo cierra el panel",
+                    además de la X explícita. */}
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  aria-label="Cerrar filtros"
+                  className="flex items-center gap-3 rounded-xl transition-opacity duration-150 ease-out hover:opacity-70"
+                >
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#ECF9F9]">
+                    <svg viewBox="0 0 86 86" className="h-7 w-7" fill="none">
+                      <path
+                        d="M38.0889 30.2666C37.4421 32.6251 35.5195 34.1094 33.2842 34.1258C31.0488 34.1422 29.0008 32.6825 28.3963 30.2765L20.8397 30.2617C20.1489 30.2617 19.6487 29.8156 19.6177 29.1891C19.5851 28.5215 20.0886 27.9983 20.8429 27.9983H28.367C28.991 25.7153 30.8956 24.1588 33.1522 24.1408C35.4202 24.1227 37.4421 25.5808 38.0759 27.9934H65.14C65.8878 27.9951 66.3196 28.4543 66.3636 29.0431C66.4141 29.7484 65.9448 30.265 65.14 30.265H38.0889V30.2666ZM35.9594 29.1333C35.9594 27.6162 34.7375 26.3861 33.2304 26.3861C31.7233 26.3861 30.5013 27.6162 30.5013 29.1333C30.5013 30.6504 31.7233 31.8805 33.2304 31.8805C34.7375 31.8805 35.9594 30.6504 35.9594 29.1333Z"
+                        fill="#00C5C9"
+                      />
+                      <path
+                        d="M60.2729 43.3711C59.6147 45.6706 57.741 47.2123 55.4616 47.2385C53.1822 47.2648 51.1407 45.6935 50.5395 43.376L20.867 43.3793C20.1208 43.3793 19.6597 42.9266 19.6287 42.305C19.5945 41.6178 20.0621 41.1127 20.8686 41.1127L50.5526 41.1094C51.1668 38.7001 53.1855 37.2305 55.4421 37.2502C57.7263 37.2699 59.6358 38.8198 60.2566 41.1078L65.1754 41.111C65.832 41.111 66.3469 41.5522 66.386 42.1623C66.4218 42.7003 65.9787 43.376 65.3351 43.376L60.2729 43.3711ZM58.1206 42.246C58.1206 40.7289 56.8986 39.5004 55.3932 39.5004C53.8877 39.5004 52.6658 40.7305 52.6658 42.246C52.6658 43.7615 53.8877 44.9916 55.3932 44.9916C56.8986 44.9916 58.1206 43.7615 58.1206 42.246Z"
+                        fill="#00C5C9"
+                      />
+                      <path
+                        d="M45.0639 56.4952C44.4562 58.8307 42.501 60.3117 40.3112 60.3511C38.0449 60.3905 35.9985 58.9258 35.3892 56.505L20.724 56.487C20.0951 56.487 19.6454 55.931 19.616 55.4308C19.5835 54.8764 19.9973 54.2302 20.6979 54.2285L35.3533 54.2203C35.9741 51.9406 37.8885 50.3759 40.1711 50.3595C42.4538 50.3431 44.4464 51.8209 45.0622 54.2187L65.1481 54.222C65.8617 54.222 66.3554 54.6697 66.3831 55.2733C66.4157 55.9589 65.9269 56.4919 65.1465 56.4919H45.0639V56.4952ZM42.9458 55.3586C42.9458 53.8415 41.7255 52.613 40.2184 52.613C38.7113 52.613 37.491 53.8415 37.491 55.3586C37.491 56.8757 38.7113 58.1041 40.2184 58.1041C41.7255 58.1041 42.9458 56.8757 42.9458 55.3586Z"
+                        fill="#00C5C9"
+                      />
+                    </svg>
+                  </span>
+                  <h2 className="font-display text-xl font-bold text-foreground">Filtros</h2>
+                </button>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  aria-label="Cerrar"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-200 ease-out hover:scale-110"
+                >
+                  <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
                     <path
-                      d="M38.0889 30.2666C37.4421 32.6251 35.5195 34.1094 33.2842 34.1258C31.0488 34.1422 29.0008 32.6825 28.3963 30.2765L20.8397 30.2617C20.1489 30.2617 19.6487 29.8156 19.6177 29.1891C19.5851 28.5215 20.0886 27.9983 20.8429 27.9983H28.367C28.991 25.7153 30.8956 24.1588 33.1522 24.1408C35.4202 24.1227 37.4421 25.5808 38.0759 27.9934H65.14C65.8878 27.9951 66.3196 28.4543 66.3636 29.0431C66.4141 29.7484 65.9448 30.265 65.14 30.265H38.0889V30.2666ZM35.9594 29.1333C35.9594 27.6162 34.7375 26.3861 33.2304 26.3861C31.7233 26.3861 30.5013 27.6162 30.5013 29.1333C30.5013 30.6504 31.7233 31.8805 33.2304 31.8805C34.7375 31.8805 35.9594 30.6504 35.9594 29.1333Z"
+                      d="M40 20C40 31.0457 31.0457 40 20 40C8.9543 40 0 31.0457 0 20C0 8.9543 8.9543 0 20 0C31.0457 0 40 8.9543 40 20Z"
+                      fill="#FDFDFD"
+                    />
+                    <path
+                      d="M38.5 20C38.5 9.78273 30.2173 1.5 20 1.5C9.78273 1.5 1.5 9.78273 1.5 20C1.5 30.2173 9.78273 38.5 20 38.5V40C8.9543 40 0 31.0457 0 20C0 8.9543 8.9543 0 20 0C31.0457 0 40 8.9543 40 20C40 31.0457 31.0457 40 20 40V38.5C30.2173 38.5 38.5 30.2173 38.5 20Z"
+                      fill="#E3EFF1"
+                    />
+                    <path
+                      d="M26.708 24.8789C27.0985 25.2695 27.0985 25.9027 26.708 26.2931C26.3175 26.6836 25.6843 26.6836 25.2938 26.2931L14.7079 15.7073C14.3174 15.3167 14.3174 14.6836 14.7079 14.293C15.0985 13.9025 15.7316 13.9025 16.1221 14.293L26.708 24.8789Z"
                       fill="#00C5C9"
                     />
                     <path
-                      d="M60.2729 43.3711C59.6147 45.6706 57.741 47.2123 55.4616 47.2385C53.1822 47.2648 51.1407 45.6935 50.5395 43.376L20.867 43.3793C20.1208 43.3793 19.6597 42.9266 19.6287 42.305C19.5945 41.6178 20.0621 41.1127 20.8686 41.1127L50.5526 41.1094C51.1668 38.7001 53.1855 37.2305 55.4421 37.2502C57.7263 37.2699 59.6358 38.8198 60.2566 41.1078L65.1754 41.111C65.832 41.111 66.3469 41.5522 66.386 42.1623C66.4218 42.7003 65.9787 43.376 65.3351 43.376L60.2729 43.3711ZM58.1206 42.246C58.1206 40.7289 56.8986 39.5004 55.3932 39.5004C53.8877 39.5004 52.6658 40.7305 52.6658 42.246C52.6658 43.7615 53.8877 44.9916 55.3932 44.9916C56.8986 44.9916 58.1206 43.7615 58.1206 42.246Z"
-                      fill="#00C5C9"
-                    />
-                    <path
-                      d="M45.0639 56.4952C44.4562 58.8307 42.501 60.3117 40.3112 60.3511C38.0449 60.3905 35.9985 58.9258 35.3892 56.505L20.724 56.487C20.0951 56.487 19.6454 55.931 19.616 55.4308C19.5835 54.8764 19.9973 54.2302 20.6979 54.2285L35.3533 54.2203C35.9741 51.9406 37.8885 50.3759 40.1711 50.3595C42.4538 50.3431 44.4464 51.8209 45.0622 54.2187L65.1481 54.222C65.8617 54.222 66.3554 54.6697 66.3831 55.2733C66.4157 55.9589 65.9269 56.4919 65.1465 56.4919H45.0639V56.4952ZM42.9458 55.3586C42.9458 53.8415 41.7255 52.613 40.2184 52.613C38.7113 52.613 37.491 53.8415 37.491 55.3586C37.491 56.8757 38.7113 58.1041 40.2184 58.1041C41.7255 58.1041 42.9458 56.8757 42.9458 55.3586Z"
+                      d="M16.1377 25.9325C15.7563 26.3318 15.1233 26.3466 14.7239 25.9652C14.3244 25.5839 14.3098 24.9509 14.6911 24.5514L25.0289 13.7231C25.4103 13.3236 26.0432 13.309 26.4427 13.6903C26.8422 14.0717 26.8569 14.7047 26.4755 15.1042L16.1377 25.9325Z"
                       fill="#00C5C9"
                     />
                   </svg>
-                </span>
-                <div>
-                  <h2 className="font-display text-2xl font-bold text-foreground">Filtros</h2>
-                  <p className="text-sm text-ui-gray">Encuentra justo lo que buscas</p>
-                </div>
+                </button>
               </div>
+              <p className="mt-1 pl-[60px] text-sm text-ui-gray">Encuentra justo lo que buscas</p>
+            </div>
 
-              <div className="mt-6 h-px bg-[#7FDED9]" />
-
+            {/* Contenido con scroll propio — el encabezado y el pie
+                (Limpiar/Aplicar) se quedan fijos fuera de este scroll. */}
+            <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-7">
               {/* Buscar palabra clave */}
               <div className="mt-7" ref={keywordWrapperRef}>
                 <div className="mb-3 flex items-center gap-2">
@@ -635,13 +667,18 @@ export default function FiltersPanel({
                   </label>
                 </div>
               </div>
+            </div>
 
-              {/* Botones inferiores */}
-              <div className="mt-9 flex items-center justify-between gap-4">
+            {/* Pie fijo — Limpiar/Aplicar siempre visibles, no se van con
+                el scroll del contenido de arriba (requisito explícito de
+                mantenerlos accesibles). */}
+            <div className="shrink-0 border-t border-ui-border px-6 py-5 sm:px-7">
+              <div className="flex items-center justify-between gap-4">
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="flex items-center gap-2 text-sm font-semibold text-[#00B3AF] transition-transform duration-200 ease-out hover:scale-[1.03]"
+                  disabled={activeCount === 0}
+                  className="flex items-center gap-2 text-sm font-semibold text-[#00B3AF] transition-transform duration-200 ease-out hover:scale-[1.03] disabled:text-ui-gray disabled:opacity-60 disabled:hover:scale-100"
                 >
                   <RefreshIcon className="h-4 w-4" />
                   Limpiar filtros
@@ -671,7 +708,6 @@ export default function FiltersPanel({
             </div>
           </div>
         </div>
-      </div>
       )}
     </>
   );

@@ -65,12 +65,19 @@ export default function CatalogGridWithFilters({
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between gap-4">
+      {/* Filtros ahora va primero (lado izquierdo) — antes estaba a la
+          derecha, junto al conteo. */}
+      <div className="mb-4 flex items-center gap-4">
+        <FiltersPanel
+          products={effectiveProducts}
+          appliedFilters={filters}
+          onApply={setFilters}
+          onOpen={ensureFullCatalog}
+        />
         <p className="text-sm text-ui-gray">
           {count} producto{count !== 1 ? "s" : ""}
           {categoryLabel ? ` en ${categoryLabel}` : ""}
         </p>
-        <FiltersPanel products={effectiveProducts} onApply={setFilters} onOpen={ensureFullCatalog} />
       </div>
 
       {filtered.length === 0 ? (
