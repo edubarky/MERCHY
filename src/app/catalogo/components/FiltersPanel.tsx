@@ -14,7 +14,7 @@ export interface AppliedFilters {
   colors: string[];
 }
 
-const DEFAULT_FILTERS: AppliedFilters = {
+export const DEFAULT_FILTERS: AppliedFilters = {
   keyword: "",
   material: "",
   minPrice: 0,
@@ -227,6 +227,14 @@ function SearchKeywordIcon({ className = "" }: { className?: string }) {
   );
 }
 
+function ArrowRightIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 10h12M11 5l5 5-5 5" />
+    </svg>
+  );
+}
+
 function ChevronDownIcon({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 12 8" className={className} fill="none">
@@ -290,14 +298,20 @@ function ColorSwatch({
 export default function FiltersPanel({
   products,
   appliedFilters,
+  resultCount,
   onApply,
   onOpen,
 }: {
   products: ProductWithVariants[];
-  /** The filters actually driving the grid right now (not this panel's own
-   * in-progress draft state) — used only to show the active-count badge on
-   * the trigger button. */
+  /** The single source of truth this whole panel now reads from AND writes
+   * to directly — every control below calls onApply immediately on change
+   * (real-time filtering, no separate "Aplicar" commit step), so there is
+   * no separate local draft state to keep in sync/duplicate. */
   appliedFilters: AppliedFilters;
+  /** How many products currently match `appliedFilters` — computed once by
+   * the parent (same applyFilters() call that already builds the grid), not
+   * recomputed here, so there's exactly one place that logic lives. */
+  resultCount: number;
   onApply: (filters: AppliedFilters) => void;
   /** Called when the modal opens — lets the parent lazily fetch the full,
    * unpaginated catalog so filtering/suggestions here aren't limited to
@@ -309,13 +323,13 @@ export default function FiltersPanel({
   const dialogRef = useRef<HTMLDivElement>(null);
   const keywordWrapperRef = useRef<HTMLDivElement>(null);
 
-  const [keyword, setKeyword] = useState(DEFAULT_FILTERS.keyword);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
-  const [material, setMaterial] = useState(DEFAULT_FILTERS.material);
-  const [minPrice, setMinPrice] = useState(DEFAULT_FILTERS.minPrice);
-  const [maxPrice, setMaxPrice] = useState(DEFAULT_FILTERS.maxPrice);
-  const [colors, setColors] = useState<string[]>(DEFAULT_FILTERS.colors);
   const [showMoreColors, setShowMoreColors] = useState(false);
+  const { keyword, material, minPrice, maxPrice, colors } = appliedFilters;
+
+  function updateFilters(patch: Partial<AppliedFilters>) {
+    onApply({ ...appliedFilters, ...patch });
+  }
 
   const materials = useMemo(() => {
     const set = new Set<string>();
@@ -354,10 +368,43 @@ export default function FiltersPanel({
   }, [products]);
 
   function toggleColor(name: string) {
-    setColors((prev) => (prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]));
+    updateFilters({ colors: colors.includes(name) ? colors.filter((c) => c !== name) : [...colors, name] });
   }
 
   const activeCount = countActiveFilters(appliedFilters);
+
+  // Chips shown under "Filtros activos" — one per currently-applied value,
+  // each individually removable. Built fresh from appliedFilters every
+  // render, no separate tracking needed.
+  const activeChips = useMemo(() => {
+    const chips: { key: string; label: string; onRemove: () => void }[] = [];
+    if (keyword.trim()) {
+      chips.push({ key: "keyword", label: keyword, onRemove: () => updateFilters({ keyword: "" }) });
+    }
+    if (material) {
+      chips.push({ key: "material", label: material, onRemove: () => updateFilters({ material: "" }) });
+    }
+    const minChanged = minPrice > DEFAULT_FILTERS.minPrice;
+    const maxChanged = maxPrice < DEFAULT_FILTERS.maxPrice;
+    if (minChanged || maxChanged) {
+      const label =
+        minChanged && maxChanged
+          ? `$${minPrice} - $${maxPrice}`
+          : maxChanged
+          ? `Hasta $${maxPrice}`
+          : `Desde $${minPrice}`;
+      chips.push({
+        key: "price",
+        label,
+        onRemove: () => updateFilters({ minPrice: DEFAULT_FILTERS.minPrice, maxPrice: DEFAULT_FILTERS.maxPrice }),
+      });
+    }
+    colors.forEach((c) => {
+      chips.push({ key: `color-${c}`, label: c, onRemove: () => updateFilters({ colors: colors.filter((x) => x !== c) }) });
+    });
+    return chips;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyword, material, minPrice, maxPrice, colors]);
 
   function openModal() {
     setOpen(true);
@@ -374,18 +421,8 @@ export default function FiltersPanel({
   }
 
   function handleClear() {
-    setKeyword(DEFAULT_FILTERS.keyword);
     setSuggestionsOpen(false);
-    setMaterial(DEFAULT_FILTERS.material);
-    setMinPrice(DEFAULT_FILTERS.minPrice);
-    setMaxPrice(DEFAULT_FILTERS.maxPrice);
-    setColors(DEFAULT_FILTERS.colors);
     onApply({ ...DEFAULT_FILTERS });
-  }
-
-  function handleApply() {
-    onApply({ keyword, material, minPrice, maxPrice, colors });
-    closeModal();
   }
 
   useEffect(() => {
@@ -452,7 +489,7 @@ export default function FiltersPanel({
             aria-modal="true"
             aria-label="Filtros"
             onClick={(e) => e.stopPropagation()}
-            className={`fixed inset-y-0 left-0 z-[101] flex h-full w-[90vw] max-w-[400px] flex-col bg-white shadow-[0_0_40px_rgba(0,0,0,0.18)] transition-transform duration-[260ms] ease-out sm:w-[320px] lg:w-[400px] ${
+            className={`fixed inset-y-0 left-0 z-[101] flex h-full w-[90vw] max-w-[400px] flex-col overflow-hidden rounded-r-[28px] bg-white shadow-[6px_0_28px_rgba(0,0,0,0.08)] transition-transform duration-[260ms] ease-out sm:w-[320px] lg:w-[400px] ${
               entered ? "translate-x-0" : "-translate-x-full"
             }`}
           >
@@ -522,7 +559,7 @@ export default function FiltersPanel({
                 (Limpiar/Aplicar) se quedan fijos fuera de este scroll. */}
             <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-7">
               {/* Buscar palabra clave */}
-              <div className="mt-7" ref={keywordWrapperRef}>
+              <div className="relative mt-7" ref={keywordWrapperRef}>
                 <div className="mb-3 flex items-center gap-2">
                   <SearchKeywordIcon className="h-5 w-5 text-[#00C5C9]" />
                   <span className="text-sm font-bold text-foreground">Buscar palabra clave</span>
@@ -533,7 +570,7 @@ export default function FiltersPanel({
                     type="text"
                     value={keyword}
                     onChange={(e) => {
-                      setKeyword(e.target.value);
+                      updateFilters({ keyword: e.target.value });
                       setSuggestionsOpen(true);
                     }}
                     onFocus={() => setSuggestionsOpen(true)}
@@ -542,8 +579,16 @@ export default function FiltersPanel({
                   />
                 </div>
 
+                {/* absolute (floating), NOT part of normal layout flow — a
+                    real, confirmed bug when this used to take up real
+                    space: closing it (e.g. via the click-outside handler,
+                    which fires on `mousedown`) reflowed everything below
+                    upward *before* the same click's `click` event landed,
+                    so a click aimed at a swatch in "Color" could miss and
+                    hit whatever ended up at that coordinate after the
+                    reflow instead. Floating avoids any reflow entirely. */}
                 {suggestionsOpen && keyword.trim() && (
-                  <div className="relative z-10 mt-2 overflow-hidden rounded-2xl border border-[#00C5C9]/40 bg-white shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
+                  <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-[#00C5C9]/40 bg-white shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
                     {keywordSuggestions.length > 0 ? (
                       <ul className="max-h-52 overflow-y-auto py-1">
                         {keywordSuggestions.map((p) => (
@@ -551,7 +596,7 @@ export default function FiltersPanel({
                             <button
                               type="button"
                               onClick={() => {
-                                setKeyword(p.name);
+                                updateFilters({ keyword: p.name });
                                 setSuggestionsOpen(false);
                               }}
                               className="flex w-full items-center gap-2.5 px-5 py-2.5 text-left text-sm text-foreground transition-colors duration-150 ease-out hover:bg-[#ECF9F9]"
@@ -569,6 +614,26 @@ export default function FiltersPanel({
                 )}
               </div>
 
+              {/* Filtros activos — se oculta por completo si no hay ninguno */}
+              {activeChips.length > 0 && (
+                <div className="mt-6">
+                  <span className="text-sm font-bold text-foreground">Filtros activos</span>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {activeChips.map((chip) => (
+                      <button
+                        key={chip.key}
+                        type="button"
+                        onClick={chip.onRemove}
+                        className="flex items-center gap-1.5 rounded-full border border-[#00C5C9]/50 bg-[#ECF9F9] px-3 py-1.5 text-xs font-semibold text-[#00A7AB] transition-colors duration-150 ease-out hover:bg-[#D9F2F1]"
+                      >
+                        {chip.label}
+                        <span className="text-sm leading-none">×</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Acabado */}
               <div className="mt-7">
                 <div className="mb-3 flex items-center gap-2">
@@ -578,7 +643,7 @@ export default function FiltersPanel({
                 <div className="relative">
                   <select
                     value={material}
-                    onChange={(e) => setMaterial(e.target.value)}
+                    onChange={(e) => updateFilters({ material: e.target.value })}
                     className="w-full appearance-none rounded-full border border-[#00C5C9] bg-[#ECF9F9] py-4 pl-5 pr-11 text-sm text-foreground transition-colors duration-200 ease-out focus:outline-none focus:border-[#00A7AB]"
                   >
                     <option value="">Selecciona un material</option>
@@ -646,7 +711,7 @@ export default function FiltersPanel({
                         type="number"
                         min={0}
                         value={minPrice}
-                        onChange={(e) => setMinPrice(Math.max(0, Number(e.target.value)))}
+                        onChange={(e) => updateFilters({ minPrice: Math.max(0, Number(e.target.value)) })}
                         className="w-full bg-transparent text-sm font-bold text-[#00A7AB] focus:outline-none"
                       />
                     </span>
@@ -660,7 +725,7 @@ export default function FiltersPanel({
                         type="number"
                         min={0}
                         value={maxPrice}
-                        onChange={(e) => setMaxPrice(Math.max(0, Number(e.target.value)))}
+                        onChange={(e) => updateFilters({ maxPrice: Math.max(0, Number(e.target.value)) })}
                         className="w-full bg-transparent text-sm font-bold text-[#00A7AB] focus:outline-none"
                       />
                     </span>
@@ -669,10 +734,15 @@ export default function FiltersPanel({
               </div>
             </div>
 
-            {/* Pie fijo — Limpiar/Aplicar siempre visibles, no se van con
-                el scroll del contenido de arriba (requisito explícito de
-                mantenerlos accesibles). */}
+            {/* Pie fijo — el contador y los botones siempre visibles, no se
+                van con el scroll del contenido de arriba. Ya no hay un
+                paso de "Aplicar" separado (los filtros ya son en tiempo
+                real) — este botón solo cierra el panel mostrando lo que ya
+                está filtrado. */}
             <div className="shrink-0 border-t border-ui-border px-6 py-5 sm:px-7">
+              <p className="mb-3 text-center text-sm text-ui-gray">
+                {resultCount} producto{resultCount !== 1 ? "s" : ""} encontrado{resultCount !== 1 ? "s" : ""}
+              </p>
               <div className="flex items-center justify-between gap-4">
                 <button
                   type="button"
@@ -685,24 +755,11 @@ export default function FiltersPanel({
                 </button>
                 <button
                   type="button"
-                  onClick={handleApply}
+                  onClick={closeModal}
                   className="flex items-center gap-2 rounded-full bg-[#00A7AB] px-6 py-3 text-sm font-semibold text-white shadow-[0_6px_18px_rgba(0,167,171,0.3)] transition-all duration-200 ease-out hover:scale-[1.03] hover:shadow-[0_8px_22px_rgba(0,167,171,0.4)]"
                 >
-                  Aplicar filtros
-                  <svg viewBox="0 0 86 86" className="h-4 w-4" fill="none">
-                    <path
-                      d="M38.0889 30.2666C37.4421 32.6251 35.5195 34.1094 33.2842 34.1258C31.0488 34.1422 29.0008 32.6825 28.3963 30.2765L20.8397 30.2617C20.1489 30.2617 19.6487 29.8156 19.6177 29.1891C19.5851 28.5215 20.0886 27.9983 20.8429 27.9983H28.367C28.991 25.7153 30.8956 24.1588 33.1522 24.1408C35.4202 24.1227 37.4421 25.5808 38.0759 27.9934H65.14C65.8878 27.9951 66.3196 28.4543 66.3636 29.0431C66.4141 29.7484 65.9448 30.265 65.14 30.265H38.0889V30.2666ZM35.9594 29.1333C35.9594 27.6162 34.7375 26.3861 33.2304 26.3861C31.7233 26.3861 30.5013 27.6162 30.5013 29.1333C30.5013 30.6504 31.7233 31.8805 33.2304 31.8805C34.7375 31.8805 35.9594 30.6504 35.9594 29.1333Z"
-                      fill="white"
-                    />
-                    <path
-                      d="M60.2729 43.3711C59.6147 45.6706 57.741 47.2123 55.4616 47.2385C53.1822 47.2648 51.1407 45.6935 50.5395 43.376L20.867 43.3793C20.1208 43.3793 19.6597 42.9266 19.6287 42.305C19.5945 41.6178 20.0621 41.1127 20.8686 41.1127L50.5526 41.1094C51.1668 38.7001 53.1855 37.2305 55.4421 37.2502C57.7263 37.2699 59.6358 38.8198 60.2566 41.1078L65.1754 41.111C65.832 41.111 66.3469 41.5522 66.386 42.1623C66.4218 42.7003 65.9787 43.376 65.3351 43.376L60.2729 43.3711ZM58.1206 42.246C58.1206 40.7289 56.8986 39.5004 55.3932 39.5004C53.8877 39.5004 52.6658 40.7305 52.6658 42.246C52.6658 43.7615 53.8877 44.9916 55.3932 44.9916C56.8986 44.9916 58.1206 43.7615 58.1206 42.246Z"
-                      fill="white"
-                    />
-                    <path
-                      d="M45.0639 56.4952C44.4562 58.8307 42.501 60.3117 40.3112 60.3511C38.0449 60.3905 35.9985 58.9258 35.3892 56.505L20.724 56.487C20.0951 56.487 19.6454 55.931 19.616 55.4308C19.5835 54.8764 19.9973 54.2302 20.6979 54.2285L35.3533 54.2203C35.9741 51.9406 37.8885 50.3759 40.1711 50.3595C42.4538 50.3431 44.4464 51.8209 45.0622 54.2187L65.1481 54.222C65.8617 54.222 66.3554 54.6697 66.3831 55.2733C66.4157 55.9589 65.9269 56.4919 65.1465 56.4919H45.0639V56.4952ZM42.9458 55.3586C42.9458 53.8415 41.7255 52.613 40.2184 52.613C38.7113 52.613 37.491 53.8415 37.491 55.3586C37.491 56.8757 38.7113 58.1041 40.2184 58.1041C41.7255 58.1041 42.9458 56.8757 42.9458 55.3586Z"
-                      fill="white"
-                    />
-                  </svg>
+                  Mostrar {resultCount} producto{resultCount !== 1 ? "s" : ""}
+                  <ArrowRightIcon className="h-4 w-4" />
                 </button>
               </div>
             </div>

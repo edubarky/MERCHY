@@ -4,17 +4,9 @@ import { useState } from "react";
 import type { Product, PriceTier } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import FavoritoProductCard from "@/components/home/FavoritoProductCard";
-import FiltersPanel, { applyFilters, type AppliedFilters } from "./FiltersPanel";
+import FiltersPanel, { applyFilters, DEFAULT_FILTERS, type AppliedFilters } from "./FiltersPanel";
 
 type ProductWithVariants = Product & { variants: NonNullable<Product["variants"]> };
-
-const DEFAULT_FILTERS: AppliedFilters = {
-  keyword: "",
-  material: "",
-  minPrice: 0,
-  maxPrice: 1000,
-  colors: [],
-};
 
 export default function CatalogGridWithFilters({
   products,
@@ -71,6 +63,7 @@ export default function CatalogGridWithFilters({
         <FiltersPanel
           products={effectiveProducts}
           appliedFilters={filters}
+          resultCount={filtered.length}
           onApply={setFilters}
           onOpen={ensureFullCatalog}
         />
@@ -83,8 +76,17 @@ export default function CatalogGridWithFilters({
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <span className="text-5xl mb-4">🔍</span>
-          <h2 className="font-display font-semibold text-lg text-foreground">Sin resultados</h2>
-          <p className="text-ui-gray text-sm mt-1">Intenta con otros filtros</p>
+          <h2 className="font-display font-semibold text-lg text-foreground">
+            No encontramos productos con estos filtros.
+          </h2>
+          <p className="text-ui-gray text-sm mt-1">Prueba eliminando algún filtro.</p>
+          <button
+            type="button"
+            onClick={() => setFilters(DEFAULT_FILTERS)}
+            className="mt-5 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-transform duration-150 ease-out hover:scale-105"
+          >
+            Limpiar filtros
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
