@@ -1078,7 +1078,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
       <InfoModal
         open={quantityDiscountOpen}
         onClose={() => setQuantityDiscountOpen(false)}
-        imgSrc="/Home/PAG 3/DESCUENTO POR CANTIDAD.svg"
+        imgSrc="/Home/PAG 3/RANGO DE PRECIOS.svg"
         alt="Rango de precios"
       />
       <ReviewModal
