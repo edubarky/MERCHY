@@ -2,9 +2,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { useCart } from "@/lib/cart/CartContext";
 
 export default function PublicHeader() {
   const [exploreOpen, setExploreOpen] = useState(false);
+  const { totalItems, justAdded } = useCart();
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-ui-border">
@@ -69,12 +71,27 @@ export default function PublicHeader() {
             </svg>
             <span className="text-[10px] text-ui-gray font-medium">Favoritos</span>
           </button>
-          <button className="relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors">
-            <svg className="w-5 h-5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+
+          <div className="mx-1.5 h-8 w-px bg-ui-border" />
+
+          <Link
+            href="/carrito"
+            aria-label="Carrito"
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-[0_4px_14px_rgba(87,224,217,0.35)] transition-transform duration-200 ease-out hover:scale-105"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
-            <span className="text-[10px] text-ui-gray font-medium">Carrito</span>
-          </button>
+            {totalItems > 0 && (
+              <span
+                className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent-coral text-[11px] font-bold text-white ${
+                  justAdded ? "animate-total-pulse" : ""
+                }`}
+              >
+                {totalItems}
+              </span>
+            )}
+          </Link>
         </div>
       </div>
     </header>

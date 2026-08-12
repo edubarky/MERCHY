@@ -4,6 +4,7 @@ import PublicHeader from "@/components/PublicHeader";
 import type { Product, Category, PriceTier } from "@/types";
 import Pagination from "./components/Pagination";
 import CatalogGridWithFilters from "./components/CatalogGridWithFilters";
+import CategoryBar from "./components/CategoryBar";
 
 const PAGE_SIZE = 12;
 
@@ -73,7 +74,11 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
     const matchingIds = (categories ?? [])
       .filter((c: Category) => slugs.includes(c.slug))
       .map((c: Category) => c.id);
-    if (matchingIds.length > 0) productsQuery = productsQuery.in("category_id", matchingIds);
+    // Always apply the filter, even when nothing matches (an empty `.in()`
+    // array correctly returns zero rows) — an unrecognized/invalid
+    // `categoria` value must show an empty catalog, not silently fall back
+    // to showing everything.
+    productsQuery = productsQuery.in("category_id", matchingIds);
   }
 
   if (query) {
@@ -87,19 +92,14 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
   const safeTiers = (priceTiers ?? []) as PriceTier[];
   const safeCategories = (categories ?? []) as Category[];
 
+  const categoryLabel = categoria
+    ? CATEGORY_GROUP_LABELS[categoria] ?? safeCategories.find((c) => c.slug === categoria)?.name ?? categoria
+    : null;
+
   return (
     <main className="min-h-screen bg-background">
       <PublicHeader />
-      <div className="bg-ui-surface border-b border-ui-border">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          <h1 className="font-display font-bold text-2xl sm:text-3xl text-foreground">
-            Catálogo
-          </h1>
-          <p className="text-ui-gray text-sm mt-1">
-            Personaliza cualquier producto con tu logo o diseño
-          </p>
-        </div>
-      </div>
+      <CategoryBar />
 
       <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         {/* Product grid */}
@@ -116,13 +116,12 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
             </div>
           ) : (
             <>
-              <p className="text-sm text-ui-gray mb-4">
-                {count} producto{count !== 1 ? "s" : ""}
-                {categoria
-                  ? ` en ${CATEGORY_GROUP_LABELS[categoria] ?? safeCategories.find((c) => c.slug === categoria)?.name}`
-                  : ""}
-              </p>
-              <CatalogGridWithFilters products={safeProducts} priceTiers={safeTiers} />
+              <CatalogGridWithFilters
+                products={safeProducts}
+                priceTiers={safeTiers}
+                count={count ?? 0}
+                categoryLabel={categoryLabel}
+              />
               <Suspense>
                 <Pagination
                   currentPage={page}

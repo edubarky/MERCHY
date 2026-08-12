@@ -17,16 +17,26 @@ const DEFAULT_FILTERS: AppliedFilters = {
 export default function CatalogGridWithFilters({
   products,
   priceTiers,
+  count,
+  categoryLabel,
 }: {
   products: ProductWithVariants[];
   priceTiers: PriceTier[];
+  count: number;
+  categoryLabel: string | null;
 }) {
   const [filters, setFilters] = useState<AppliedFilters>(DEFAULT_FILTERS);
   const filtered = applyFilters(products, priceTiers, filters);
 
   return (
     <>
-      <FiltersPanel products={products} onApply={setFilters} />
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <p className="text-sm text-ui-gray">
+          {count} producto{count !== 1 ? "s" : ""}
+          {categoryLabel ? ` en ${categoryLabel}` : ""}
+        </p>
+        <FiltersPanel products={products} onApply={setFilters} />
+      </div>
 
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">

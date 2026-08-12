@@ -302,15 +302,19 @@ export default function FiltersPanel({
 
   return (
     <>
-      {/* Botón flotante */}
+      {/* Antes era un botón circular flotante sobre las tarjetas — ahora es
+          un botón normal en línea, junto al conteo de productos, sin tapar
+          el grid. Misma función (abre el mismo modal de filtros), solo
+          cambia dónde y cómo se muestra. */}
       <button
         type="button"
         onClick={openModal}
         aria-label="Abrir filtros"
-        className="fixed left-4 top-1/2 z-40 -translate-y-1/2 h-16 w-16 shrink-0 transition-transform duration-200 ease-out hover:scale-110 drop-shadow-[0_6px_16px_rgba(0,0,0,0.15)] sm:left-6 lg:left-10"
+        className="flex shrink-0 items-center gap-2 rounded-full border border-ui-border bg-white px-4 py-2 text-sm font-medium text-foreground transition-colors duration-200 ease-out hover:border-primary"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/Home/FILTROS/Group 881-1.svg" alt="Filtros" className="h-full w-full" />
+        <img src="/Home/FILTROS/Group 881-1.svg" alt="" className="h-5 w-5" />
+        Filtros
       </button>
 
       {open && (
