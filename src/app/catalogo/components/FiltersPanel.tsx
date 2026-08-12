@@ -560,43 +560,6 @@ export default function FiltersPanel({
                 </div>
               </div>
 
-              {/* Rango de precio */}
-              <div className="mt-7">
-                <div className="mb-3 flex items-center gap-2">
-                  <TagFilterIcon className="h-5 w-5" />
-                  <span className="text-sm font-bold text-foreground">Rango de precio</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <label className="flex-1 rounded-2xl border border-[#00C5C9] bg-[#ECF9F9] px-4 py-2.5 transition-colors duration-200 ease-out focus-within:border-[#00A7AB]">
-                    <span className="block text-[10px] text-ui-gray">Mínimo</span>
-                    <span className="flex items-center gap-1">
-                      <span className="text-sm font-bold text-[#00A7AB]">$</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={minPrice}
-                        onChange={(e) => setMinPrice(Math.max(0, Number(e.target.value)))}
-                        className="w-full bg-transparent text-sm font-bold text-[#00A7AB] focus:outline-none"
-                      />
-                    </span>
-                  </label>
-                  <span className="text-ui-gray">—</span>
-                  <label className="flex-1 rounded-2xl border border-[#00C5C9] bg-[#ECF9F9] px-4 py-2.5 transition-colors duration-200 ease-out focus-within:border-[#00A7AB]">
-                    <span className="block text-[10px] text-ui-gray">Máximo</span>
-                    <span className="flex items-center gap-1">
-                      <span className="text-sm font-bold text-[#00A7AB]">$</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={maxPrice}
-                        onChange={(e) => setMaxPrice(Math.max(0, Number(e.target.value)))}
-                        className="w-full bg-transparent text-sm font-bold text-[#00A7AB] focus:outline-none"
-                      />
-                    </span>
-                  </label>
-                </div>
-              </div>
-
               {/* Color */}
               <div className="mt-7">
                 <div className="mb-3 flex items-center gap-2">
@@ -633,6 +596,43 @@ export default function FiltersPanel({
                         onToggle={() => toggleColor(c.name)}
                       />
                     ))}
+                </div>
+              </div>
+
+              {/* Rango de precio */}
+              <div className="mt-7">
+                <div className="mb-3 flex items-center gap-2">
+                  <TagFilterIcon className="h-5 w-5" />
+                  <span className="text-sm font-bold text-foreground">Rango de precio</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="flex-1 rounded-2xl border border-[#00C5C9] bg-[#ECF9F9] px-4 py-2.5 transition-colors duration-200 ease-out focus-within:border-[#00A7AB]">
+                    <span className="block text-[10px] text-ui-gray">Mínimo</span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-sm font-bold text-[#00A7AB]">$</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={minPrice}
+                        onChange={(e) => setMinPrice(Math.max(0, Number(e.target.value)))}
+                        className="w-full bg-transparent text-sm font-bold text-[#00A7AB] focus:outline-none"
+                      />
+                    </span>
+                  </label>
+                  <span className="text-ui-gray">—</span>
+                  <label className="flex-1 rounded-2xl border border-[#00C5C9] bg-[#ECF9F9] px-4 py-2.5 transition-colors duration-200 ease-out focus-within:border-[#00A7AB]">
+                    <span className="block text-[10px] text-ui-gray">Máximo</span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-sm font-bold text-[#00A7AB]">$</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={maxPrice}
+                        onChange={(e) => setMaxPrice(Math.max(0, Number(e.target.value)))}
+                        className="w-full bg-transparent text-sm font-bold text-[#00A7AB] focus:outline-none"
+                      />
+                    </span>
+                  </label>
                 </div>
               </div>
 
