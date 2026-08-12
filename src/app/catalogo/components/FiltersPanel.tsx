@@ -7,6 +7,7 @@ import { getProductUnitPrice } from "@/lib/pricing";
 type ProductWithVariants = Product & { variants: NonNullable<Product["variants"]> };
 
 export interface AppliedFilters {
+  keyword: string;
   material: string;
   minPrice: number;
   maxPrice: number;
@@ -14,6 +15,7 @@ export interface AppliedFilters {
 }
 
 const DEFAULT_FILTERS: AppliedFilters = {
+  keyword: "",
   material: "",
   minPrice: 0,
   maxPrice: 1000,
@@ -51,12 +53,48 @@ function extractMaterials(composition: string | null): string[] {
     .filter(Boolean);
 }
 
+// Normaliza para que la búsqueda ignore mayúsculas/acentos ("térmico" debe
+// encontrar "termico" y viceversa) — mismo patrón NFD ya usado en otras
+// partes del proyecto (ver resolveProductAssets.ts).
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+// Todo el texto real del producto que puede relacionarse con una palabra
+// clave: nombre, descripción, categoría, composición, tallas y colores
+// disponibles — nada inventado, solo datos que ya existen en el catálogo.
+function productSearchableText(p: ProductWithVariants): string {
+  return [
+    p.name,
+    p.description,
+    p.category?.name,
+    p.composition,
+    ...(p.sizes_available ?? []),
+    ...(p.variants ?? []).map((v) => v.color_name),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+// Coincidencia parcial (substring), no exacta — "player" encuentra "Playera".
+export function matchesKeyword(p: ProductWithVariants, keyword: string): boolean {
+  const k = normalizeText(keyword);
+  if (!k) return true;
+  return normalizeText(productSearchableText(p)).includes(k);
+}
+
 export function applyFilters(
   products: ProductWithVariants[],
   priceTiers: PriceTier[],
   filters: AppliedFilters
 ): ProductWithVariants[] {
   return products.filter((p) => {
+    if (!matchesKeyword(p, filters.keyword)) return false;
+
     if (filters.material) {
       const materials = extractMaterials(p.composition).map((m) => m.toLowerCase());
       if (!materials.some((m) => m.includes(filters.material.toLowerCase()))) return false;
@@ -160,6 +198,23 @@ function RefreshIcon({ className = "" }: { className?: string }) {
   );
 }
 
+function SearchKeywordIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.35-4.35" />
+    </svg>
+  );
+}
+
 function ChevronDownIcon({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 12 8" className={className} fill="none">
@@ -223,14 +278,22 @@ function ColorSwatch({
 export default function FiltersPanel({
   products,
   onApply,
+  onOpen,
 }: {
   products: ProductWithVariants[];
   onApply: (filters: AppliedFilters) => void;
+  /** Called when the modal opens — lets the parent lazily fetch the full,
+   * unpaginated catalog so filtering/suggestions here aren't limited to
+   * whichever page happened to already be loaded. */
+  onOpen?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [entered, setEntered] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const keywordWrapperRef = useRef<HTMLDivElement>(null);
 
+  const [keyword, setKeyword] = useState(DEFAULT_FILTERS.keyword);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [material, setMaterial] = useState(DEFAULT_FILTERS.material);
   const [minPrice, setMinPrice] = useState(DEFAULT_FILTERS.minPrice);
   const [maxPrice, setMaxPrice] = useState(DEFAULT_FILTERS.maxPrice);
@@ -242,6 +305,25 @@ export default function FiltersPanel({
     products.forEach((p) => extractMaterials(p.composition).forEach((m) => set.add(m)));
     return Array.from(set).sort();
   }, [products]);
+
+  // Sugerencias en vivo mientras el usuario escribe — mismo matchesKeyword
+  // que ya usa applyFilters, una sola lógica de coincidencia reutilizada
+  // tanto para filtrar el catálogo como para sugerir aquí.
+  const keywordSuggestions = useMemo(() => {
+    if (!keyword.trim()) return [];
+    return products.filter((p) => matchesKeyword(p, keyword)).slice(0, 8);
+  }, [products, keyword]);
+
+  useEffect(() => {
+    if (!suggestionsOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (keywordWrapperRef.current && !keywordWrapperRef.current.contains(e.target as Node)) {
+        setSuggestionsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [suggestionsOpen]);
 
   const extraColors = useMemo(() => {
     const known = new Set(EXAMPLE_COLORS.map((c) => c.name.toLowerCase()));
@@ -260,6 +342,7 @@ export default function FiltersPanel({
 
   function openModal() {
     setOpen(true);
+    onOpen?.();
   }
 
   function closeModal() {
@@ -267,6 +350,8 @@ export default function FiltersPanel({
   }
 
   function handleClear() {
+    setKeyword(DEFAULT_FILTERS.keyword);
+    setSuggestionsOpen(false);
     setMaterial(DEFAULT_FILTERS.material);
     setMinPrice(DEFAULT_FILTERS.minPrice);
     setMaxPrice(DEFAULT_FILTERS.maxPrice);
@@ -275,7 +360,7 @@ export default function FiltersPanel({
   }
 
   function handleApply() {
-    onApply({ material, minPrice, maxPrice, colors });
+    onApply({ keyword, material, minPrice, maxPrice, colors });
     closeModal();
   }
 
@@ -403,6 +488,54 @@ export default function FiltersPanel({
               </div>
 
               <div className="mt-6 h-px bg-[#7FDED9]" />
+
+              {/* Buscar palabra clave */}
+              <div className="mt-7" ref={keywordWrapperRef}>
+                <div className="mb-3 flex items-center gap-2">
+                  <SearchKeywordIcon className="h-5 w-5 text-[#00C5C9]" />
+                  <span className="text-sm font-bold text-foreground">Buscar palabra clave</span>
+                </div>
+                <div className="relative">
+                  <SearchKeywordIcon className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#00A7AB]" />
+                  <input
+                    type="text"
+                    value={keyword}
+                    onChange={(e) => {
+                      setKeyword(e.target.value);
+                      setSuggestionsOpen(true);
+                    }}
+                    onFocus={() => setSuggestionsOpen(true)}
+                    placeholder="Ej. playera, negro, deportivo, mochila..."
+                    className="w-full rounded-full border border-[#00C5C9] bg-[#ECF9F9] py-4 pl-12 pr-5 text-sm text-foreground placeholder:text-ui-gray/70 transition-colors duration-200 ease-out focus:outline-none focus:border-[#00A7AB]"
+                  />
+                </div>
+
+                {suggestionsOpen && keyword.trim() && (
+                  <div className="relative z-10 mt-2 overflow-hidden rounded-2xl border border-[#00C5C9]/40 bg-white shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
+                    {keywordSuggestions.length > 0 ? (
+                      <ul className="max-h-52 overflow-y-auto py-1">
+                        {keywordSuggestions.map((p) => (
+                          <li key={p.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setKeyword(p.name);
+                                setSuggestionsOpen(false);
+                              }}
+                              className="flex w-full items-center gap-2.5 px-5 py-2.5 text-left text-sm text-foreground transition-colors duration-150 ease-out hover:bg-[#ECF9F9]"
+                            >
+                              <SearchKeywordIcon className="h-3.5 w-3.5 shrink-0 text-[#00C5C9]" />
+                              {p.name}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="px-5 py-4 text-sm text-ui-gray">No encontramos productos relacionados.</p>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Acabado */}
               <div className="mt-7">
