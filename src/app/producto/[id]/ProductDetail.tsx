@@ -791,7 +791,16 @@ export default function ProductDetail({ product, priceTiers }: Props) {
         {/* ── Info ── */}
         <div className="space-y-[29px]">
           <div>
-            <p className="text-sm text-ui-gray mb-2">{product.category?.name}</p>
+            {product.category?.slug ? (
+              <Link
+                href={`/catalogo?categoria=${product.category.slug}`}
+                className="inline-block text-sm text-ui-gray mb-2 cursor-pointer transition-colors duration-200 hover:text-primary active:text-primary"
+              >
+                {product.category.name}
+              </Link>
+            ) : (
+              <p className="text-sm text-ui-gray mb-2">{product.category?.name}</p>
+            )}
             <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-foreground uppercase tracking-tight">{product.name}</h1>
             <p className="text-xs text-ui-gray mt-2">{product.sku}</p>
           </div>
