@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Product, PriceTier } from "@/types";
+import type { Product, PriceTier, ProductVariant } from "@/types";
 import { getProductUnitPrice } from "@/lib/pricing";
 
 type ProductWithVariants = Product & { variants: NonNullable<Product["variants"]> };
@@ -42,6 +42,34 @@ function colorDistance(a: string, b: string) {
   const pa = hexToRgb(a);
   const pb = hexToRgb(b);
   return Math.sqrt((pa.r - pb.r) ** 2 + (pa.g - pb.g) ** 2 + (pa.b - pb.b) ** 2);
+}
+
+// The one place "does this product have color X" is decided — used both to
+// filter the catalog AND (via resolvePreferredVariant below) to pick which
+// real variant/image a product card should display for that color, so a
+// card can never show a color that disagrees with why it passed the filter.
+function findMatchingVariant(variants: ProductVariant[], colorName: string): ProductVariant | null {
+  const active = variants.filter((v) => v.active);
+  const byName = active.find((v) => v.color_name.toLowerCase().includes(colorName.toLowerCase()));
+  if (byName) return byName;
+  const example = EXAMPLE_COLORS.find((c) => c.name === colorName);
+  if (example) {
+    const byDistance = active.find((v) => colorDistance(v.color_hex, example.hex) < 60);
+    if (byDistance) return byDistance;
+  }
+  return active.find((v) => v.color_name.toLowerCase() === colorName.toLowerCase()) ?? null;
+}
+
+// Which real variant a product card should display when one or more color
+// filters are active — the first *selected* color (in the order the user
+// picked them) this product actually has, per explicit spec ("la tarjeta
+// debe mostrar preferentemente el primer color seleccionado disponible").
+export function resolvePreferredVariant(variants: ProductVariant[], colorFilters: string[]): ProductVariant | null {
+  for (const colorName of colorFilters) {
+    const match = findMatchingVariant(variants, colorName);
+    if (match) return match;
+  }
+  return null;
 }
 
 // Extrae nombres de material desde el texto de composición ("50% Algodón Peinado 50% Poliéster").
@@ -103,17 +131,8 @@ export function applyFilters(
     const price = getProductUnitPrice(p.costo, 1, priceTiers);
     if (price < filters.minPrice || price > filters.maxPrice) return false;
 
-    if (filters.colors.length > 0) {
-      const variants = (p.variants ?? []).filter((v) => v.active);
-      const matches = filters.colors.some((colorName) => {
-        const example = EXAMPLE_COLORS.find((c) => c.name === colorName);
-        return variants.some((v) => {
-          if (v.color_name.toLowerCase().includes(colorName.toLowerCase())) return true;
-          if (example) return colorDistance(v.color_hex, example.hex) < 60;
-          return v.color_name.toLowerCase() === colorName.toLowerCase();
-        });
-      });
-      if (!matches) return false;
+    if (filters.colors.length > 0 && !resolvePreferredVariant(p.variants ?? [], filters.colors)) {
+      return false;
     }
 
     return true;

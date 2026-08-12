@@ -5,12 +5,20 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Product, PriceTier } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
+import { resolvePreferredVariant } from "@/app/catalogo/components/FiltersPanel";
 
 interface Props {
   product: Product & { variants: NonNullable<Product["variants"]> };
   priceTiers: PriceTier[];
   index?: number;
   boxClassName?: string;
+  /** Active color filter(s) from the catalog's Filtros panel, in the order
+   * the user selected them — when set, this card shows the real variant
+   * image matching the first one it actually has, instead of its default
+   * first variant. Omitted entirely on the Home page's own use of this
+   * card (no color filtering there), which keeps the original
+   * always-shows-its-first-variant behavior unchanged. */
+  activeColors?: string[];
 }
 
 function toTitleCase(str: string): string {
@@ -90,19 +98,35 @@ const HandCursorIcon = forwardRef<HTMLSpanElement, { className?: string }>(funct
   );
 });
 
-export default function FavoritoProductCard({ product, priceTiers, index = 0, boxClassName = "" }: Props) {
+export default function FavoritoProductCard({ product, priceTiers, index = 0, boxClassName = "", activeColors = [] }: Props) {
   const [liked, setLiked] = useState(false);
   const [popKey, setPopKey] = useState(0);
   const [mounted, setMounted] = useState(false);
   const activeVariants = product.variants.filter((v) => v.active);
-  const [selectedVariantId, setSelectedVariantId] = useState(activeVariants[0]?.id ?? null);
+
+  // When a color filter is active, this product only ever rendered here
+  // because resolvePreferredVariant found a real matching variant for it
+  // (see applyFilters in FiltersPanel.tsx) — reusing that exact same
+  // function means "why this card matched the filter" and "which color it
+  // displays" can never disagree.
+  const preferredVariant = activeColors.length > 0 ? resolvePreferredVariant(activeVariants, activeColors) : null;
+
+  const [selectedVariantId, setSelectedVariantId] = useState(preferredVariant?.id ?? activeVariants[0]?.id ?? null);
   const firstImage = activeVariants.flatMap((v) => v.images)[0] ?? null;
   const selectedVariant = activeVariants.find((v) => v.id === selectedVariantId) ?? activeVariants[0];
-  const [displayedImage, setDisplayedImage] = useState(selectedVariant?.images?.[0] ?? firstImage);
+  const [displayedImage, setDisplayedImage] = useState(
+    (preferredVariant ?? selectedVariant)?.images?.[0] ?? firstImage
+  );
   const [imageVisible, setImageVisible] = useState(true);
   const precioDesde = getProductUnitPrice(product.costo, 1, priceTiers);
-  const visibleVariants = activeVariants.slice(0, 3);
-  const extraVariants = activeVariants.length - visibleVariants.length;
+  // El swatch activo (por filtro o por selección manual) siempre debe
+  // quedar entre los visibles, aunque no esté entre los primeros 3 del
+  // producto — si no, el círculo "seleccionado" nunca se vería.
+  const orderedVariants = selectedVariant
+    ? [selectedVariant, ...activeVariants.filter((v) => v.id !== selectedVariant.id)]
+    : activeVariants;
+  const visibleVariants = orderedVariants.slice(0, 3);
+  const extraVariants = orderedVariants.length - visibleVariants.length;
 
   const spotlightRef = useRef<HTMLSpanElement>(null);
   const handIconRef = useRef<HTMLSpanElement>(null);
@@ -129,8 +153,7 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
     return () => clearTimeout(t);
   }, [index]);
 
-  function handleSelectVariant(v: NonNullable<Product["variants"]>[number]) {
-    if (v.id === selectedVariantId) return;
+  function applyVariant(v: NonNullable<Product["variants"]>[number]) {
     setSelectedVariantId(v.id);
     const nextImage = v.images?.[0];
     if (!nextImage) return; // sin foto propia: se conserva la imagen actual, solo cambia la selección
@@ -140,6 +163,27 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
       setImageVisible(true);
     }, 100);
   }
+
+  function handleSelectVariant(v: NonNullable<Product["variants"]>[number]) {
+    if (v.id === selectedVariantId) return;
+    applyVariant(v);
+  }
+
+  // Mantiene la tarjeta sincronizada cuando el filtro de color cambia
+  // (NEGRO -> BLANCO) o se limpia — anula cualquier selección manual previa
+  // en la tarjeta, ya que un cambio de filtro es una intención más amplia
+  // del usuario. Sin filtro activo, vuelve al color predeterminado
+  // (primer variante), igual que el comportamiento original.
+  const activeColorsKey = activeColors.join(" ");
+  useEffect(() => {
+    if (preferredVariant) {
+      if (preferredVariant.id !== selectedVariantId) applyVariant(preferredVariant);
+    } else if (activeColors.length === 0) {
+      const fallback = activeVariants[0];
+      if (fallback && fallback.id !== selectedVariantId) applyVariant(fallback);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferredVariant?.id, activeColorsKey]);
 
   return (
     <div
