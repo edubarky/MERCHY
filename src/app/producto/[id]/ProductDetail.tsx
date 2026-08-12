@@ -225,19 +225,28 @@ function InfoLink({
   icon,
   label,
   accent = false,
+  active = false,
   onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   accent?: boolean;
+  /** Sección "Rango de precios": true mientras su modal está abierto —
+   * queda en turquesa (igual que :hover) hasta que se cierra, sin
+   * necesidad de que el cursor siga encima. */
+  active?: boolean;
   onClick?: () => void;
 }) {
+  // Icono y texto comparten un solo color (currentColor en el ícono, ver
+  // TagIcon) para que nunca puedan desincronizarse: coral en reposo,
+  // turquesa Merchy en hover o mientras el panel asociado está activo.
+  const accentColorClass = active ? "text-primary" : "text-accent-coral hover:text-primary";
   return (
     <button
       type="button"
       onClick={onClick}
       className={`group flex items-center gap-1.5 font-semibold transition-colors duration-200 text-left cursor-pointer ${
-        accent ? "text-foreground hover:text-[#FF5843]" : "text-foreground hover:text-primary"
+        accent ? accentColorClass : "text-foreground hover:text-primary"
       }`}
     >
       <span className={accent ? "inline-flex transition-transform duration-200 group-hover:translate-x-0.5" : "inline-flex"}>
@@ -249,8 +258,8 @@ function InfoLink({
 }
 
 // Modal centrado (overlay negro 45% + fade/scale ~220ms) para mostrar los
-// editables existentes de "Guía de Tallas" y "Descuento por cantidad" tal
-// cual, sin rediseñarlos. Cierra con click afuera, Esc o el botón X.
+// editables existentes de "Guía de Tallas" y "Rango de precios" tal cual,
+// sin rediseñarlos. Cierra con click afuera, Esc o el botón X.
 function InfoModal({
   open,
   onClose,
@@ -816,10 +825,11 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               <InfoLink icon={<DocIcon />} label="Ficha técnica" />
               <InfoLink icon={<RulerIcon />} label="Guía de Tallas" onClick={() => setSizeGuideOpen(true)} />
               <InfoLink
-                icon={<TagIcon className="text-[#F27A6E] transition-colors duration-200 group-hover:text-[#FF5843]" />}
-                label="Descuento por cantidad"
+                icon={<TagIcon />}
+                label="Rango de precios"
                 onClick={() => setQuantityDiscountOpen(true)}
                 accent
+                active={quantityDiscountOpen}
               />
             </div>
           </div>
@@ -1069,7 +1079,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
         open={quantityDiscountOpen}
         onClose={() => setQuantityDiscountOpen(false)}
         imgSrc="/Home/PAG 3/DESCUENTO POR CANTIDAD.svg"
-        alt="Descuento por cantidad"
+        alt="Rango de precios"
       />
       <ReviewModal
         open={reviewModalOpen}
