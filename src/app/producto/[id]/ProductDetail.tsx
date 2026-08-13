@@ -36,7 +36,15 @@ function getInitials(name: string) {
 }
 
 function formatReviewDate(date: Date) {
-  return date.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
+  // timeZone: "UTC" es obligatorio aquí — sin esto, "2026-06-10" (parseado
+  // como medianoche UTC) se formatea distinto en el servidor (UTC) que en
+  // el navegador del usuario (ej. America/Mexico_City, UTC-6 -> "9 jun").
+  // Ese texto distinto entre el HTML del servidor y el del cliente es un
+  // error de hidratación real: React descarta y vuelve a montar TODO el
+  // árbol de la ficha de golpe apenas detecta el mismatch, lo que a veces
+  // se "come" el primer click del usuario justo después de cargar la
+  // página (por eso "Selecciona Cantidad" podía no reaccionar al primer +).
+  return date.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 function DocIcon({ className = "" }: { className?: string }) {
