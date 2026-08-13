@@ -716,19 +716,20 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const sizeDiff = quantity - sizeSum;
   // Personalizar solo cuando lo repartido coincide exactamente con el objetivo.
   const canPersonalize = sizeDiff === 0 && sizeSum > 0;
-  // Título y leyenda de la sección de tallas: se adaptan a la cantidad
-  // elegida y a qué tan repartida está esa cantidad entre las tallas.
-  const sizeSectionTitle = quantity > 1 ? "Distribuye tus piezas por talla" : "Selecciona la talla";
+  // El título de la sección de tallas es fijo — "Selecciona la talla" no
+  // cambia con la cantidad. Lo que sí cambia, en tiempo real y sin
+  // depender de que ya se haya tocado una talla, es la leyenda debajo:
+  const sizeSectionTitle = "Selecciona la talla";
   const sizeSectionHint =
     sizeSum === 0
       ? quantity > 1
-        ? "Selecciona cómo distribuir tus piezas por talla"
+        ? `Distribuye tus ${quantity} piezas entre las tallas disponibles`
         : "Selecciona la talla para continuar"
       : sizeDiff > 0
       ? `Te falta${sizeDiff === 1 ? "" : "n"} ${sizeDiff} pieza${sizeDiff === 1 ? "" : "s"} por asignar`
       : sizeDiff < 0
-      ? `Has asignado ${-sizeDiff} pieza${-sizeDiff === 1 ? "" : "s"} de más`
-      : null; // repartido exacto — sin leyenda
+      ? "No puedes asignar más piezas de las seleccionadas"
+      : `${quantity} pieza${quantity === 1 ? "" : "s"} asignada${quantity === 1 ? "" : "s"} ✓`;
 
   // El promedio y la distribución consideran tanto las reseñas escritas
   // como las calificaciones "solo estrellas" (sin tarjeta de comentario).
