@@ -620,6 +620,13 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const [colorPulse, setColorPulse] = useState(0);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [quantityDiscountOpen, setQuantityDiscountOpen] = useState(false);
+  // Piezas agregadas con el stepper de "Selecciona Cantidad" antes de
+  // asignarlas a una talla — puente para poder pasar de 0 a 1+ piezas sin
+  // tocar los módulos de talla (que arrancan ocultos). En cuanto el usuario
+  // asigna al menos una pieza a una talla real, deja de usarse (ver efecto
+  // más abajo): la cantidad total vuelve a ser 100% la suma de tallas, como
+  // funcionaba antes de este cambio.
+  const [pendingQty, setPendingQty] = useState(0);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
@@ -697,11 +704,31 @@ export default function ProductDetail({ product, priceTiers }: Props) {
 
   // "Selecciona Cantidad" ya no es un contador independiente: es la suma en
   // vivo de las tallas seleccionadas en las secciones de color visibles.
-  const totalQuantity = sections
+  const sizeSum = sections
     .filter((s) => !s.leaving)
     .reduce((sum, s) => sum + sizes.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
+  // En cuanto el usuario asigna la primera pieza a una talla real, esa suma
+  // manda y pendingQty deja de contar (se descarta permanentemente, incluso
+  // si luego las tallas vuelven a 0 — así el total sí regresa a 0 real).
+  useEffect(() => {
+    if (sizeSum > 0 && pendingQty !== 0) setPendingQty(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sizeSum]);
+  const totalQuantity = sizeSum > 0 ? sizeSum : pendingQty;
   const unitPrice = getProductUnitPrice(product.costo, totalQuantity, priceTiers);
   const totalPrice = unitPrice * totalQuantity;
+  // Estado de 0 piezas: en vez de "$0", mostrar el precio unitario de
+  // referencia del tramo 1–3 (mismo sistema de precios de mayoreo, solo
+  // evaluado en cantidad=1). No sustituye ni modifica el cálculo real.
+  const displayUnitPrice = totalQuantity === 0 ? getProductUnitPrice(product.costo, 1, priceTiers) : unitPrice;
+  const displayTotalPrice = totalQuantity === 0 ? displayUnitPrice : totalPrice;
+  // Tallas: solo aparecen una vez que hay piezas (pendientes o asignadas).
+  // Personalizar solo se habilita cuando al menos una pieza ya está
+  // asignada a una talla concreta (no basta con tener piezas "pendientes").
+  const showSizes = sizes.length > 0 && totalQuantity > 0;
+  const canPersonalize = sizeSum > 0;
+  const needsSizeAssignment = totalQuantity > 0 && sizeSum === 0;
+  const canAdjustPending = sizeSum === 0;
 
   // El promedio y la distribución consideran tanto las reseñas escritas
   // como las calificaciones "solo estrellas" (sin tarjeta de comentario).
@@ -885,10 +912,16 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               <div className="flex items-center gap-4 bg-gray-50 border border-ui-border rounded-full px-2 py-1.5 w-fit">
                 <button
                   type="button"
-                  disabled
-                  aria-hidden="true"
-                  tabIndex={-1}
-                  className="w-7 h-7 flex items-center justify-center text-lg text-ui-gray/40 cursor-default"
+                  disabled={!canAdjustPending || pendingQty === 0}
+                  aria-hidden={!canAdjustPending}
+                  tabIndex={canAdjustPending ? 0 : -1}
+                  onClick={() => setPendingQty((p) => Math.max(0, p - 1))}
+                  aria-label="Restar"
+                  className={`w-7 h-7 flex items-center justify-center text-lg transition-transform duration-150 ${
+                    canAdjustPending && pendingQty > 0
+                      ? "text-primary hover:scale-105 active:scale-90"
+                      : "text-ui-gray/40 cursor-default"
+                  }`}
                 >
                   −
                 </button>
@@ -897,10 +930,16 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                 </span>
                 <button
                   type="button"
-                  disabled
-                  aria-hidden="true"
-                  tabIndex={-1}
-                  className="w-7 h-7 flex items-center justify-center text-lg text-ui-gray/40 cursor-default"
+                  disabled={!canAdjustPending}
+                  aria-hidden={!canAdjustPending}
+                  tabIndex={canAdjustPending ? 0 : -1}
+                  onClick={() => canAdjustPending && setPendingQty((p) => p + 1)}
+                  aria-label="Sumar"
+                  className={`w-7 h-7 flex items-center justify-center text-lg transition-transform duration-150 ${
+                    canAdjustPending
+                      ? "text-primary hover:scale-105 active:scale-90"
+                      : "text-ui-gray/40 cursor-default"
+                  }`}
                 >
                   +
                 </button>
@@ -908,40 +947,46 @@ export default function ProductDetail({ product, priceTiers }: Props) {
             </div>
             <div className="text-right">
               <p className="text-3xl font-extrabold text-foreground tracking-tight">
-                {formatMXN(totalPrice)} <span className="text-sm font-normal text-ui-gray">MXN</span>
+                {formatMXN(displayTotalPrice)} <span className="text-sm font-normal text-ui-gray">MXN</span>
               </p>
               <p className="text-xs text-ui-gray mt-2">IVA incluido c/u</p>
-              <p className="text-xs text-ui-gray">{formatMXN(unitPrice)}</p>
+              <p className="text-xs text-ui-gray">{formatMXN(displayUnitPrice)}</p>
             </div>
           </div>
 
-          {/* Tallas por color */}
-          {sizes.length > 0 && (
-            <div className="space-y-3">
-              {sections.map((s) => (
-                <AnimatedSizeSection
-                  key={s.id}
-                  leaving={s.leaving}
-                  onExited={() => handleSectionExited(s.id)}
-                >
-                  <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
-                  <div className="flex items-center gap-3 flex-nowrap">
-                    {sizes.map((size) => (
-                      <div
-                        key={size}
-                        className="flex flex-col items-center justify-center w-[58px] h-[58px] shrink-0 rounded-[16px] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05),0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 ease-out hover:shadow-[0_14px_34px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:-translate-y-[3px]"
-                      >
-                        <span className="font-display font-bold text-[15px] text-primary text-center">{size}</span>
-                        <SizeCounter
-                          qty={getSizeQty(s.variant, size)}
-                          onChange={(next) => setSizeQty(s.variant, size, next)}
-                        />
-                      </div>
-                    ))}
-                    <TotalPzasCard total={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)} />
-                  </div>
-                </AnimatedSizeSection>
-              ))}
+          {/* Tallas por color — solo aparecen en cuanto hay al menos 1 pieza */}
+          {showSizes && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">Selecciona la talla</p>
+              {needsSizeAssignment && (
+                <p className="text-xs text-ui-gray">Selecciona la talla para continuar</p>
+              )}
+              <div className="space-y-3">
+                {sections.map((s) => (
+                  <AnimatedSizeSection
+                    key={s.id}
+                    leaving={s.leaving}
+                    onExited={() => handleSectionExited(s.id)}
+                  >
+                    <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
+                    <div className="flex items-center gap-3 flex-nowrap">
+                      {sizes.map((size) => (
+                        <div
+                          key={size}
+                          className="flex flex-col items-center justify-center w-[58px] h-[58px] shrink-0 rounded-[16px] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05),0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 ease-out hover:shadow-[0_14px_34px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:-translate-y-[3px]"
+                        >
+                          <span className="font-display font-bold text-[15px] text-primary text-center">{size}</span>
+                          <SizeCounter
+                            qty={getSizeQty(s.variant, size)}
+                            onChange={(next) => setSizeQty(s.variant, size, next)}
+                          />
+                        </div>
+                      ))}
+                      <TotalPzasCard total={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)} />
+                    </div>
+                  </AnimatedSizeSection>
+                ))}
+              </div>
             </div>
           )}
 
@@ -949,7 +994,16 @@ export default function ProductDetail({ product, priceTiers }: Props) {
           <div className="flex gap-3">
             <Link
               href={`/producto/${product.id}/personalizar`}
-              className="flex-1 flex items-center justify-center py-3.5 rounded-full bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] hover:shadow-[0_8px_24px_rgba(40,43,52,0.22)] hover:opacity-90 hover:-translate-y-[1px] transition-all duration-300 ease-in-out"
+              aria-disabled={!canPersonalize}
+              tabIndex={canPersonalize ? undefined : -1}
+              onClick={(e) => {
+                if (!canPersonalize) e.preventDefault();
+              }}
+              className={`flex-1 flex items-center justify-center py-3.5 rounded-full bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] transition-all duration-300 ease-in-out ${
+                canPersonalize
+                  ? "hover:shadow-[0_8px_24px_rgba(40,43,52,0.22)] hover:opacity-90 hover:-translate-y-[1px]"
+                  : "opacity-40 cursor-not-allowed pointer-events-none"
+              }`}
             >
               Personalizar producto
             </Link>
