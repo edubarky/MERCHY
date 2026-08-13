@@ -9,7 +9,10 @@ export function getProductUnitPrice(
     (t) => totalQty >= t.qty_min && (t.qty_max === null || totalQty <= t.qty_max)
   );
   if (!tier) return 0;
-  return Math.round(costo / (1 - tier.margin_pct));
+  // Redondeo siempre hacia arriba (nunca al más cercano): así lo define la
+  // tabla de referencia del cliente — garantiza que el margen mínimo del
+  // tramo nunca se erosione por redondear hacia abajo.
+  return Math.ceil(costo / (1 - tier.margin_pct));
 }
 
 export function getTechniquePrice(
