@@ -621,12 +621,13 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [quantityDiscountOpen, setQuantityDiscountOpen] = useState(false);
   // Piezas agregadas con el stepper de "Selecciona Cantidad" antes de
-  // asignarlas a una talla — puente para poder pasar de 0 a 1+ piezas sin
-  // tocar los módulos de talla (que arrancan ocultos). En cuanto el usuario
-  // asigna al menos una pieza a una talla real, deja de usarse (ver efecto
-  // más abajo): la cantidad total vuelve a ser 100% la suma de tallas, como
-  // funcionaba antes de este cambio.
-  const [pendingQty, setPendingQty] = useState(0);
+  // asignarlas a una talla. La ficha debe arrancar en un estado válido
+  // (cantidad=1, precio real visible, nunca $0) — por eso inicia en 1, no
+  // en 0, y su piso es 1 mientras no se haya asignado ninguna talla. En
+  // cuanto el usuario asigna al menos una pieza a una talla real, deja de
+  // sumarse (ver efecto más abajo): la cantidad total vuelve a ser 100% la
+  // suma de tallas, como funcionaba antes de este cambio.
+  const [pendingQty, setPendingQty] = useState(1);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
@@ -708,23 +709,20 @@ export default function ProductDetail({ product, priceTiers }: Props) {
     .filter((s) => !s.leaving)
     .reduce((sum, s) => sum + sizes.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
   // En cuanto el usuario asigna la primera pieza a una talla real, esa suma
-  // manda y pendingQty deja de contar (se descarta permanentemente, incluso
-  // si luego las tallas vuelven a 0 — así el total sí regresa a 0 real).
+  // manda y pendingQty deja de contar — pero se repone a 1 (no a 0), para
+  // que si luego las tallas vuelven a 0 el total caiga de nuevo en 1, nunca
+  // en 0 (la ficha no debe mostrar $0 en ningún momento tras cargar).
   useEffect(() => {
-    if (sizeSum > 0 && pendingQty !== 0) setPendingQty(0);
+    if (sizeSum > 0 && pendingQty !== 1) setPendingQty(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sizeSum]);
   const totalQuantity = sizeSum > 0 ? sizeSum : pendingQty;
   const unitPrice = getProductUnitPrice(product.costo, totalQuantity, priceTiers);
   const totalPrice = unitPrice * totalQuantity;
-  // Estado de 0 piezas: en vez de "$0", mostrar el precio unitario de
-  // referencia del tramo 1–3 (mismo sistema de precios de mayoreo, solo
-  // evaluado en cantidad=1). No sustituye ni modifica el cálculo real.
-  const displayUnitPrice = totalQuantity === 0 ? getProductUnitPrice(product.costo, 1, priceTiers) : unitPrice;
-  const displayTotalPrice = totalQuantity === 0 ? displayUnitPrice : totalPrice;
-  // Tallas: solo aparecen una vez que hay piezas (pendientes o asignadas).
-  // Personalizar solo se habilita cuando al menos una pieza ya está
-  // asignada a una talla concreta (no basta con tener piezas "pendientes").
+  // Tallas: siempre visibles (la cantidad nunca es 0, así que esta condición
+  // es efectivamente permanente, se deja explícita por claridad). Personalizar
+  // solo se habilita cuando al menos una pieza ya está asignada a una talla
+  // concreta (no basta con tener piezas "pendientes").
   const showSizes = sizes.length > 0 && totalQuantity > 0;
   const canPersonalize = sizeSum > 0;
   const needsSizeAssignment = totalQuantity > 0 && sizeSum === 0;
@@ -912,13 +910,13 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               <div className="flex items-center gap-4 bg-gray-50 border border-ui-border rounded-full px-2 py-1.5 w-fit">
                 <button
                   type="button"
-                  disabled={!canAdjustPending || pendingQty === 0}
+                  disabled={!canAdjustPending || pendingQty <= 1}
                   aria-hidden={!canAdjustPending}
                   tabIndex={canAdjustPending ? 0 : -1}
-                  onClick={() => setPendingQty((p) => Math.max(0, p - 1))}
+                  onClick={() => setPendingQty((p) => Math.max(1, p - 1))}
                   aria-label="Restar"
                   className={`w-7 h-7 flex items-center justify-center text-lg transition-transform duration-150 ${
-                    canAdjustPending && pendingQty > 0
+                    canAdjustPending && pendingQty > 1
                       ? "text-primary hover:scale-105 active:scale-90"
                       : "text-ui-gray/40 cursor-default"
                   }`}
@@ -947,10 +945,10 @@ export default function ProductDetail({ product, priceTiers }: Props) {
             </div>
             <div className="text-right">
               <p className="text-3xl font-extrabold text-foreground tracking-tight">
-                {formatMXN(displayTotalPrice)} <span className="text-sm font-normal text-ui-gray">MXN</span>
+                {formatMXN(totalPrice)} <span className="text-sm font-normal text-ui-gray">MXN</span>
               </p>
               <p className="text-xs text-ui-gray mt-2">IVA incluido c/u</p>
-              <p className="text-xs text-ui-gray">{formatMXN(displayUnitPrice)}</p>
+              <p className="text-xs text-ui-gray">{formatMXN(unitPrice)}</p>
             </div>
           </div>
 
