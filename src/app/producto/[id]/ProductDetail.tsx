@@ -620,14 +620,12 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const [colorPulse, setColorPulse] = useState(0);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [quantityDiscountOpen, setQuantityDiscountOpen] = useState(false);
-  // Piezas agregadas con el stepper de "Selecciona Cantidad" antes de
-  // asignarlas a una talla. La ficha debe arrancar en un estado válido
-  // (cantidad=1, precio real visible, nunca $0) — por eso inicia en 1, no
-  // en 0, y su piso es 1 mientras no se haya asignado ninguna talla. En
-  // cuanto el usuario asigna al menos una pieza a una talla real, deja de
-  // sumarse (ver efecto más abajo): la cantidad total vuelve a ser 100% la
-  // suma de tallas, como funcionaba antes de este cambio.
-  const [pendingQty, setPendingQty] = useState(1);
+  // Cantidad objetivo elegida en "Selecciona Cantidad" — siempre editable
+  // con +/- (piso de 1, la ficha nunca debe mostrar $0). El precio se
+  // calcula sobre este número; la suma de las tallas es solo cómo el
+  // usuario reparte esas piezas, y se valida por separado (ver
+  // sizeSum/quantity más abajo) sin alterar la cantidad objetivo.
+  const [quantity, setQuantity] = useState(1);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
@@ -703,30 +701,34 @@ export default function ProductDetail({ product, priceTiers }: Props) {
     setSections((prev) => prev.filter((s) => s.id !== id));
   }
 
-  // "Selecciona Cantidad" ya no es un contador independiente: es la suma en
-  // vivo de las tallas seleccionadas en las secciones de color visibles.
+  // Suma real de piezas ya repartidas por talla, en las secciones de color
+  // visibles — independiente de "quantity" (la cantidad objetivo). No se
+  // auto-ajusta ni redistribuye: es pura información para comparar contra
+  // el objetivo y guiar al usuario.
   const sizeSum = sections
     .filter((s) => !s.leaving)
     .reduce((sum, s) => sum + sizes.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
-  // En cuanto el usuario asigna la primera pieza a una talla real, esa suma
-  // manda y pendingQty deja de contar — pero se repone a 1 (no a 0), para
-  // que si luego las tallas vuelven a 0 el total caiga de nuevo en 1, nunca
-  // en 0 (la ficha no debe mostrar $0 en ningún momento tras cargar).
-  useEffect(() => {
-    if (sizeSum > 0 && pendingQty !== 1) setPendingQty(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sizeSum]);
-  const totalQuantity = sizeSum > 0 ? sizeSum : pendingQty;
-  const unitPrice = getProductUnitPrice(product.costo, totalQuantity, priceTiers);
-  const totalPrice = unitPrice * totalQuantity;
-  // Tallas: siempre visibles (la cantidad nunca es 0, así que esta condición
-  // es efectivamente permanente, se deja explícita por claridad). Personalizar
-  // solo se habilita cuando al menos una pieza ya está asignada a una talla
-  // concreta (no basta con tener piezas "pendientes").
-  const showSizes = sizes.length > 0 && totalQuantity > 0;
-  const canPersonalize = sizeSum > 0;
-  const needsSizeAssignment = totalQuantity > 0 && sizeSum === 0;
-  const canAdjustPending = sizeSum === 0;
+  const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers);
+  const totalPrice = unitPrice * quantity;
+  // Tallas: siempre visibles (la cantidad nunca es 0).
+  const showSizes = sizes.length > 0;
+  // Piezas por asignar (positivo) o de más (negativo) respecto al objetivo.
+  const sizeDiff = quantity - sizeSum;
+  // Personalizar solo cuando lo repartido coincide exactamente con el objetivo.
+  const canPersonalize = sizeDiff === 0 && sizeSum > 0;
+  // Título y leyenda de la sección de tallas: se adaptan a la cantidad
+  // elegida y a qué tan repartida está esa cantidad entre las tallas.
+  const sizeSectionTitle = quantity > 1 ? "Distribuye tus piezas por talla" : "Selecciona la talla";
+  const sizeSectionHint =
+    sizeSum === 0
+      ? quantity > 1
+        ? "Selecciona cómo distribuir tus piezas por talla"
+        : "Selecciona la talla para continuar"
+      : sizeDiff > 0
+      ? `Te falta${sizeDiff === 1 ? "" : "n"} ${sizeDiff} pieza${sizeDiff === 1 ? "" : "s"} por asignar`
+      : sizeDiff < 0
+      ? `Has asignado ${-sizeDiff} pieza${-sizeDiff === 1 ? "" : "s"} de más`
+      : null; // repartido exacto — sin leyenda
 
   // El promedio y la distribución consideran tanto las reseñas escritas
   // como las calificaciones "solo estrellas" (sin tarjeta de comentario).
@@ -910,34 +912,23 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               <div className="flex items-center gap-4 bg-gray-50 border border-ui-border rounded-full px-2 py-1.5 w-fit">
                 <button
                   type="button"
-                  disabled={!canAdjustPending || pendingQty <= 1}
-                  aria-hidden={!canAdjustPending}
-                  tabIndex={canAdjustPending ? 0 : -1}
-                  onClick={() => setPendingQty((p) => Math.max(1, p - 1))}
+                  disabled={quantity <= 1}
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   aria-label="Restar"
                   className={`w-7 h-7 flex items-center justify-center text-lg transition-transform duration-150 ${
-                    canAdjustPending && pendingQty > 1
-                      ? "text-primary hover:scale-105 active:scale-90"
-                      : "text-ui-gray/40 cursor-default"
+                    quantity > 1 ? "text-primary hover:scale-105 active:scale-90" : "text-ui-gray/40 cursor-default"
                   }`}
                 >
                   −
                 </button>
-                <span key={totalQuantity} className="text-sm font-semibold text-foreground w-8 text-center animate-badge-in">
-                  {totalQuantity}
+                <span key={quantity} className="text-sm font-medium text-foreground w-8 text-center animate-badge-in">
+                  {quantity}
                 </span>
                 <button
                   type="button"
-                  disabled={!canAdjustPending}
-                  aria-hidden={!canAdjustPending}
-                  tabIndex={canAdjustPending ? 0 : -1}
-                  onClick={() => canAdjustPending && setPendingQty((p) => p + 1)}
+                  onClick={() => setQuantity((q) => q + 1)}
                   aria-label="Sumar"
-                  className={`w-7 h-7 flex items-center justify-center text-lg transition-transform duration-150 ${
-                    canAdjustPending
-                      ? "text-primary hover:scale-105 active:scale-90"
-                      : "text-ui-gray/40 cursor-default"
-                  }`}
+                  className="w-7 h-7 flex items-center justify-center text-lg text-primary hover:scale-105 active:scale-90 transition-transform duration-150"
                 >
                   +
                 </button>
@@ -952,12 +943,12 @@ export default function ProductDetail({ product, priceTiers }: Props) {
             </div>
           </div>
 
-          {/* Tallas por color — solo aparecen en cuanto hay al menos 1 pieza */}
+          {/* Tallas por color */}
           {showSizes && (
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-foreground">Selecciona la talla</p>
-              {needsSizeAssignment && (
-                <p className="text-xs text-ui-gray">Selecciona la talla para continuar</p>
+              <p className="text-sm font-semibold text-foreground">{sizeSectionTitle}</p>
+              {sizeSectionHint && (
+                <p className="text-xs text-ui-gray">{sizeSectionHint}</p>
               )}
               <div className="space-y-3">
                 {sections.map((s) => (
