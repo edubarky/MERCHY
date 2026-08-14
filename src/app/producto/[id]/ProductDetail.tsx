@@ -634,13 +634,6 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   // usuario reparte esas piezas, y se valida por separado (ver
   // sizeSum/quantity más abajo) sin alterar la cantidad objetivo.
   const [quantity, setQuantity] = useState(1);
-  // Se activa con el primer toque a "-" o "+" del stepper de cantidad
-  // (incluyendo "-" en cantidad=1, que ya no se deshabilita). Antes de
-  // esto, 1 pieza es solo el valor por defecto sin decisión del usuario
-  // todavía; en cuanto lo toca, 1 pieza pasa a ser una cantidad confirmada
-  // y válida — dispara el flujo de tallas y habilita Personalizar, sin
-  // esperar a que suba a 2. Nunca vuelve a false.
-  const [quantityConfirmed, setQuantityConfirmed] = useState(false);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
@@ -725,19 +718,16 @@ export default function ProductDetail({ product, priceTiers }: Props) {
     .reduce((sum, s) => sum + sizes.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
   const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers);
   const totalPrice = unitPrice * quantity;
-  // La sección de tallas depende EXCLUSIVAMENTE de que la cantidad ya haya
-  // sido confirmada (primer toque a "-" o "+", incluso si el resultado
-  // sigue siendo 1) — nunca de si ya se asignó una talla, y nunca exige
-  // llegar a 2. sizes.length > 0 sigue siendo la condición estructural (si
-  // el producto no maneja tallas, la sección ni existe).
-  const showSizes = quantityConfirmed;
+  // 1 pieza ya es una cantidad válida y completa por sí sola: la sección
+  // de tallas se muestra siempre que el producto maneje tallas (sin
+  // ningún paso de confirmación previo) y Personalizar está disponible
+  // desde el primer render, sin exigir quantity > 1 ni distribución
+  // completa por talla.
+  const showSizes = sizes.length > 0;
   // Piezas por asignar (positivo) o de más (negativo) respecto al objetivo
-  // — puramente informativo, ya no bloquea Personalizar (ver canPersonalize).
+  // — puramente informativo, no bloquea Personalizar.
   const sizeDiff = quantity - sizeSum;
-  // Personalizar se habilita con solo confirmar la cantidad (desde 1 pieza
-  // en adelante) — NO exige que la distribución por talla ya esté
-  // completa. La regla de "quantity > 1" quedó descartada explícitamente.
-  const canPersonalize = quantityConfirmed;
+  const canPersonalize = true;
   // El título de la sección de tallas es fijo — "Selecciona la talla" no
   // cambia con la cantidad. La leyenda debajo sí, en tiempo real, sin
   // depender de que ya se haya tocado una talla — incluye el caso singular
@@ -936,10 +926,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               <div className="flex items-center gap-4 bg-gray-50 border border-ui-border rounded-full px-2 py-1.5 w-fit">
                 <button
                   type="button"
-                  onClick={() => {
-                    setQuantity((q) => Math.max(1, q - 1));
-                    setQuantityConfirmed(true);
-                  }}
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   aria-label="Restar"
                   className="w-7 h-7 flex items-center justify-center text-lg text-primary hover:scale-105 active:scale-90 transition-transform duration-150"
                 >
@@ -950,10 +937,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setQuantity((q) => q + 1);
-                    setQuantityConfirmed(true);
-                  }}
+                  onClick={() => setQuantity((q) => q + 1)}
                   aria-label="Sumar"
                   className="w-7 h-7 flex items-center justify-center text-lg text-primary hover:scale-105 active:scale-90 transition-transform duration-150"
                 >
@@ -970,53 +954,40 @@ export default function ProductDetail({ product, priceTiers }: Props) {
             </div>
           </div>
 
-          {/* Tallas por color — solo existe si el producto maneja tallas.
-              Dentro de eso, se despliega/colapsa con quantity > 1 mediante
-              una transición real de grid-template-rows + opacity (nunca un
-              mount/unmount abrupto), para que la aparición se sienta suave. */}
-          {sizes.length > 0 && (
-            <div
-              className="grid transition-[grid-template-rows] duration-300 ease-out"
-              style={{ gridTemplateRows: showSizes ? "1fr" : "0fr" }}
-            >
-              <div className="overflow-hidden">
-                <div
-                  aria-hidden={!showSizes}
-                  className={`space-y-2 pt-2 transition-opacity duration-300 ease-out ${
-                    showSizes ? "opacity-100" : "opacity-0 pointer-events-none"
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-foreground">{sizeSectionTitle}</p>
-                  {sizeSectionHint && (
-                    <p className="text-xs text-ui-gray">{sizeSectionHint}</p>
-                  )}
-                  <div className="space-y-3">
-                    {sections.map((s) => (
-                      <AnimatedSizeSection
-                        key={s.id}
-                        leaving={s.leaving}
-                        onExited={() => handleSectionExited(s.id)}
-                      >
-                        <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
-                        <div className="flex items-center gap-3 flex-nowrap">
-                          {sizes.map((size) => (
-                            <div
-                              key={size}
-                              className="flex flex-col items-center justify-center w-[58px] h-[58px] shrink-0 rounded-[16px] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05),0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 ease-out hover:shadow-[0_14px_34px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:-translate-y-[3px]"
-                            >
-                              <span className="font-display font-bold text-[15px] text-primary text-center">{size}</span>
-                              <SizeCounter
-                                qty={getSizeQty(s.variant, size)}
-                                onChange={(next) => setSizeQty(s.variant, size, next)}
-                              />
-                            </div>
-                          ))}
-                          <TotalPzasCard total={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)} />
+          {/* Tallas por color — visibles siempre que el producto maneje
+              tallas. 1 pieza ya es una cantidad válida y completa: no hay
+              ningún paso de confirmación ni un quantity > 1 de por medio. */}
+          {showSizes && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">{sizeSectionTitle}</p>
+              {sizeSectionHint && (
+                <p className="text-xs text-ui-gray">{sizeSectionHint}</p>
+              )}
+              <div className="space-y-3">
+                {sections.map((s) => (
+                  <AnimatedSizeSection
+                    key={s.id}
+                    leaving={s.leaving}
+                    onExited={() => handleSectionExited(s.id)}
+                  >
+                    <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
+                    <div className="flex items-center gap-3 flex-nowrap">
+                      {sizes.map((size) => (
+                        <div
+                          key={size}
+                          className="flex flex-col items-center justify-center w-[58px] h-[58px] shrink-0 rounded-[16px] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05),0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 ease-out hover:shadow-[0_14px_34px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:-translate-y-[3px]"
+                        >
+                          <span className="font-display font-bold text-[15px] text-primary text-center">{size}</span>
+                          <SizeCounter
+                            qty={getSizeQty(s.variant, size)}
+                            onChange={(next) => setSizeQty(s.variant, size, next)}
+                          />
                         </div>
-                      </AnimatedSizeSection>
-                    ))}
-                  </div>
-                </div>
+                      ))}
+                      <TotalPzasCard total={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)} />
+                    </div>
+                  </AnimatedSizeSection>
+                ))}
               </div>
             </div>
           )}
