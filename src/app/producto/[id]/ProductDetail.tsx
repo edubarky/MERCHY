@@ -634,6 +634,13 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   // usuario reparte esas piezas, y se valida por separado (ver
   // sizeSum/quantity más abajo) sin alterar la cantidad objetivo.
   const [quantity, setQuantity] = useState(1);
+  // Se activa con el primer toque a "-" o "+" del stepper de cantidad
+  // (incluyendo "-" en cantidad=1, que ya no se deshabilita). Antes de
+  // esto, 1 pieza es solo el valor por defecto sin decisión del usuario
+  // todavía; en cuanto lo toca, 1 pieza pasa a ser una cantidad confirmada
+  // y válida — dispara el flujo de tallas y habilita Personalizar, sin
+  // esperar a que suba a 2. Nunca vuelve a false.
+  const [quantityConfirmed, setQuantityConfirmed] = useState(false);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
@@ -718,24 +725,29 @@ export default function ProductDetail({ product, priceTiers }: Props) {
     .reduce((sum, s) => sum + sizes.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
   const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers);
   const totalPrice = unitPrice * quantity;
-  // La sección de tallas depende EXCLUSIVAMENTE de la cantidad, nunca de
-  // si ya se asignó una talla: con 1 pieza (el default) todavía no hace
-  // falta elegir tallas, así que queda oculta; en cuanto quantity > 1 se
-  // despliega. sizes.length > 0 sigue siendo la condición estructural (si
+  // La sección de tallas depende EXCLUSIVAMENTE de que la cantidad ya haya
+  // sido confirmada (primer toque a "-" o "+", incluso si el resultado
+  // sigue siendo 1) — nunca de si ya se asignó una talla, y nunca exige
+  // llegar a 2. sizes.length > 0 sigue siendo la condición estructural (si
   // el producto no maneja tallas, la sección ni existe).
-  const showSizes = quantity > 1;
-  // Piezas por asignar (positivo) o de más (negativo) respecto al objetivo.
+  const showSizes = quantityConfirmed;
+  // Piezas por asignar (positivo) o de más (negativo) respecto al objetivo
+  // — puramente informativo, ya no bloquea Personalizar (ver canPersonalize).
   const sizeDiff = quantity - sizeSum;
-  // Personalizar solo cuando lo repartido coincide exactamente con el objetivo.
-  const canPersonalize = sizeDiff === 0 && sizeSum > 0;
+  // Personalizar se habilita con solo confirmar la cantidad (desde 1 pieza
+  // en adelante) — NO exige que la distribución por talla ya esté
+  // completa. La regla de "quantity > 1" quedó descartada explícitamente.
+  const canPersonalize = quantityConfirmed;
   // El título de la sección de tallas es fijo — "Selecciona la talla" no
   // cambia con la cantidad. La leyenda debajo sí, en tiempo real, sin
-  // depender de que ya se haya tocado una talla. (No hace falta un caso
-  // para quantity === 1: la sección entera está oculta en ese estado.)
+  // depender de que ya se haya tocado una talla — incluye el caso singular
+  // de 1 pieza ("tu 1 pieza"), que ahora sí puede mostrarse.
   const sizeSectionTitle = "Selecciona la talla";
   const sizeSectionHint =
     sizeSum === 0
-      ? `Distribuye tus ${quantity} piezas entre las tallas disponibles`
+      ? quantity === 1
+        ? "Distribuye tu 1 pieza entre las tallas disponibles"
+        : `Distribuye tus ${quantity} piezas entre las tallas disponibles`
       : sizeDiff > 0
       ? `Te falta${sizeDiff === 1 ? "" : "n"} ${sizeDiff} pieza${sizeDiff === 1 ? "" : "s"} por asignar`
       : sizeDiff < 0
@@ -924,12 +936,12 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               <div className="flex items-center gap-4 bg-gray-50 border border-ui-border rounded-full px-2 py-1.5 w-fit">
                 <button
                   type="button"
-                  disabled={quantity <= 1}
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  onClick={() => {
+                    setQuantity((q) => Math.max(1, q - 1));
+                    setQuantityConfirmed(true);
+                  }}
                   aria-label="Restar"
-                  className={`w-7 h-7 flex items-center justify-center text-lg transition-transform duration-150 ${
-                    quantity > 1 ? "text-primary hover:scale-105 active:scale-90" : "text-ui-gray/40 cursor-default"
-                  }`}
+                  className="w-7 h-7 flex items-center justify-center text-lg text-primary hover:scale-105 active:scale-90 transition-transform duration-150"
                 >
                   −
                 </button>
@@ -938,7 +950,10 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => q + 1)}
+                  onClick={() => {
+                    setQuantity((q) => q + 1);
+                    setQuantityConfirmed(true);
+                  }}
                   aria-label="Sumar"
                   className="w-7 h-7 flex items-center justify-center text-lg text-primary hover:scale-105 active:scale-90 transition-transform duration-150"
                 >
