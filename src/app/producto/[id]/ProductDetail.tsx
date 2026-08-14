@@ -718,21 +718,24 @@ export default function ProductDetail({ product, priceTiers }: Props) {
     .reduce((sum, s) => sum + sizes.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
   const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers);
   const totalPrice = unitPrice * quantity;
-  // Tallas: siempre visibles (la cantidad nunca es 0).
-  const showSizes = sizes.length > 0;
+  // La sección de tallas depende EXCLUSIVAMENTE de la cantidad, nunca de
+  // si ya se asignó una talla: con 1 pieza (el default) todavía no hace
+  // falta elegir tallas, así que queda oculta; en cuanto quantity > 1 se
+  // despliega. sizes.length > 0 sigue siendo la condición estructural (si
+  // el producto no maneja tallas, la sección ni existe).
+  const showSizes = quantity > 1;
   // Piezas por asignar (positivo) o de más (negativo) respecto al objetivo.
   const sizeDiff = quantity - sizeSum;
   // Personalizar solo cuando lo repartido coincide exactamente con el objetivo.
   const canPersonalize = sizeDiff === 0 && sizeSum > 0;
   // El título de la sección de tallas es fijo — "Selecciona la talla" no
-  // cambia con la cantidad. Lo que sí cambia, en tiempo real y sin
-  // depender de que ya se haya tocado una talla, es la leyenda debajo:
+  // cambia con la cantidad. La leyenda debajo sí, en tiempo real, sin
+  // depender de que ya se haya tocado una talla. (No hace falta un caso
+  // para quantity === 1: la sección entera está oculta en ese estado.)
   const sizeSectionTitle = "Selecciona la talla";
   const sizeSectionHint =
     sizeSum === 0
-      ? quantity > 1
-        ? `Distribuye tus ${quantity} piezas entre las tallas disponibles`
-        : "Selecciona la talla para continuar"
+      ? `Distribuye tus ${quantity} piezas entre las tallas disponibles`
       : sizeDiff > 0
       ? `Te falta${sizeDiff === 1 ? "" : "n"} ${sizeDiff} pieza${sizeDiff === 1 ? "" : "s"} por asignar`
       : sizeDiff < 0
@@ -952,38 +955,53 @@ export default function ProductDetail({ product, priceTiers }: Props) {
             </div>
           </div>
 
-          {/* Tallas por color */}
-          {showSizes && (
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-foreground">{sizeSectionTitle}</p>
-              {sizeSectionHint && (
-                <p className="text-xs text-ui-gray">{sizeSectionHint}</p>
-              )}
-              <div className="space-y-3">
-                {sections.map((s) => (
-                  <AnimatedSizeSection
-                    key={s.id}
-                    leaving={s.leaving}
-                    onExited={() => handleSectionExited(s.id)}
-                  >
-                    <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
-                    <div className="flex items-center gap-3 flex-nowrap">
-                      {sizes.map((size) => (
-                        <div
-                          key={size}
-                          className="flex flex-col items-center justify-center w-[58px] h-[58px] shrink-0 rounded-[16px] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05),0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 ease-out hover:shadow-[0_14px_34px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:-translate-y-[3px]"
-                        >
-                          <span className="font-display font-bold text-[15px] text-primary text-center">{size}</span>
-                          <SizeCounter
-                            qty={getSizeQty(s.variant, size)}
-                            onChange={(next) => setSizeQty(s.variant, size, next)}
-                          />
+          {/* Tallas por color — solo existe si el producto maneja tallas.
+              Dentro de eso, se despliega/colapsa con quantity > 1 mediante
+              una transición real de grid-template-rows + opacity (nunca un
+              mount/unmount abrupto), para que la aparición se sienta suave. */}
+          {sizes.length > 0 && (
+            <div
+              className="grid transition-[grid-template-rows] duration-300 ease-out"
+              style={{ gridTemplateRows: showSizes ? "1fr" : "0fr" }}
+            >
+              <div className="overflow-hidden">
+                <div
+                  aria-hidden={!showSizes}
+                  className={`space-y-2 pt-2 transition-opacity duration-300 ease-out ${
+                    showSizes ? "opacity-100" : "opacity-0 pointer-events-none"
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-foreground">{sizeSectionTitle}</p>
+                  {sizeSectionHint && (
+                    <p className="text-xs text-ui-gray">{sizeSectionHint}</p>
+                  )}
+                  <div className="space-y-3">
+                    {sections.map((s) => (
+                      <AnimatedSizeSection
+                        key={s.id}
+                        leaving={s.leaving}
+                        onExited={() => handleSectionExited(s.id)}
+                      >
+                        <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
+                        <div className="flex items-center gap-3 flex-nowrap">
+                          {sizes.map((size) => (
+                            <div
+                              key={size}
+                              className="flex flex-col items-center justify-center w-[58px] h-[58px] shrink-0 rounded-[16px] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05),0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 ease-out hover:shadow-[0_14px_34px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:-translate-y-[3px]"
+                            >
+                              <span className="font-display font-bold text-[15px] text-primary text-center">{size}</span>
+                              <SizeCounter
+                                qty={getSizeQty(s.variant, size)}
+                                onChange={(next) => setSizeQty(s.variant, size, next)}
+                              />
+                            </div>
+                          ))}
+                          <TotalPzasCard total={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)} />
                         </div>
-                      ))}
-                      <TotalPzasCard total={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)} />
-                    </div>
-                  </AnimatedSizeSection>
-                ))}
+                      </AnimatedSizeSection>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}
