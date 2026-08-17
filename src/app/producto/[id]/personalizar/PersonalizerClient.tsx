@@ -600,7 +600,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
           <div>
             <h1 className="font-display text-[40px] font-bold uppercase leading-[1.05] text-foreground">{product.name}</h1>
             <p className="mt-2 text-base text-ui-gray">{product.sku}</p>
-            {product.description && <p className="mt-4 text-base leading-relaxed text-gray-700">{product.description}</p>}
             <div className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm text-ui-gray">
               {product.composition && (
                 <span>
