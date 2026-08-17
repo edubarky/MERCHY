@@ -37,6 +37,9 @@ import {
   GarmentTabIcon,
   EyeIcon,
   CartIcon,
+  FolderIcon,
+  ChevronRightIcon,
+  SparkleIcon,
 } from "./Icons";
 
 interface Props {
@@ -601,39 +604,60 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
           </div>
 
           <div>
-            <div className="mb-1 flex items-center justify-between gap-4">
-              <span className="text-2xl font-bold text-foreground">3. Personaliza tu producto</span>
-              <div className="flex shrink-0 items-center gap-1 rounded-full border border-ui-border bg-gray-50 p-1">
-                <button
-                  type="button"
-                  onClick={() => setArtLibraryOpen(true)}
-                  className="rounded-full px-3 py-1.5 text-sm font-semibold text-primary-dark transition-colors duration-150 ease-out hover:text-primary"
-                >
-                  Mis artes
-                </button>
-                <span className="rounded-full px-3 py-1.5 text-sm font-semibold text-ui-gray">Archivos</span>
-              </div>
-            </div>
+            <span className="mb-1 block text-2xl font-bold text-foreground">3. Personaliza tu producto</span>
             <p className="mb-4 text-sm text-ui-gray">Agrega un logo o crea un texto personalizado</p>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Tus diseños — biblioteca/atajo a lo ya subido, tarjeta horizontal de ancho completo */}
+            <button
+              type="button"
+              onClick={() => setArtLibraryOpen(true)}
+              className="group flex w-full items-center gap-3 rounded-2xl bg-primary/[0.06] px-4 py-3.5 text-left transition-all duration-200 ease-out hover:bg-primary/[0.1]"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary-dark">
+                <FolderIcon className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold text-foreground">Tus diseños</span>
+                <span className="block text-xs text-ui-gray">Archivos que has subido</span>
+              </span>
+              <ChevronRightIcon className="h-5 w-5 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+            </button>
+
+            {/* Agregar logo / Agregar texto — acciones para crear elementos nuevos */}
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="group flex flex-col items-center gap-2 rounded-2xl border border-ui-border bg-gray-50/60 px-4 py-6 text-center transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5 hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:border-primary active:bg-primary/10"
+                className="group flex items-center gap-3 rounded-2xl border border-ui-border bg-white px-4 py-4 text-left transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:bg-primary/5"
               >
-                <ImageToolIcon className="h-6 w-6 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
-                <span className="text-sm font-bold text-foreground">+ Logo</span>
-                <span className="text-xs text-ui-gray">Agrega tu logotipo</span>
+                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-50">
+                  <ImageToolIcon className="h-5 w-5 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                  <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold leading-none text-white">
+                    +
+                  </span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold text-foreground">Agregar logo</span>
+                  <span className="block text-xs text-ui-gray">Sube tu logotipo o imagen</span>
+                </span>
+                <ChevronRightIcon className="h-5 w-5 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
               </button>
               <button
                 type="button"
                 onClick={handleAddText}
-                className="group flex flex-col items-center gap-2 rounded-2xl border border-ui-border bg-gray-50/60 px-4 py-6 text-center transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5 hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:border-primary active:bg-primary/10"
+                className="group flex items-center gap-3 rounded-2xl border border-ui-border bg-white px-4 py-4 text-left transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:bg-primary/5"
               >
-                <TextToolIcon className="h-6 w-6 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
-                <span className="text-sm font-bold text-foreground">+ Texto</span>
-                <span className="text-xs text-ui-gray">Crea un texto personalizado</span>
+                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-50">
+                  <TextToolIcon className="h-5 w-5 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                  <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold leading-none text-white">
+                    +
+                  </span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold text-foreground">Agregar texto</span>
+                  <span className="block text-xs text-ui-gray">Crea un texto personalizado</span>
+                </span>
+                <ChevronRightIcon className="h-5 w-5 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
               </button>
             </div>
             <input
@@ -644,8 +668,7 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
               onChange={(e) => handleLogoFiles(e.target.files)}
             />
 
-            <div className="mt-5 rounded-2xl border border-ui-border p-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-ui-gray">Tus elementos</p>
+            <div className="mt-5">
               <div className="mb-3 flex gap-6 text-sm">
                 {VIEW_ORDER.map((v) => (
                   <button
@@ -660,11 +683,17 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                   </button>
                 ))}
               </div>
-              <div className="max-h-28 space-y-1 overflow-y-auto">
-                {elements[filesTabView].length === 0 ? (
-                  <p className="text-sm text-ui-gray">Sin elementos en esta vista.</p>
-                ) : (
-                  elements[filesTabView].map((el) => (
+              {elements[filesTabView].length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-ui-border px-6 py-8 text-center">
+                  <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <SparkleIcon className="h-5 w-5" />
+                  </span>
+                  <p className="text-sm font-bold text-foreground">Sin elementos en esta vista.</p>
+                  <p className="mt-1 text-xs text-ui-gray">Agrega un logo o texto para comenzar a diseñar.</p>
+                </div>
+              ) : (
+                <div className="max-h-28 space-y-1 overflow-y-auto rounded-2xl border border-ui-border p-2">
+                  {elements[filesTabView].map((el) => (
                     <div
                       key={el.id}
                       onClick={() => {
@@ -686,9 +715,9 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                         ✕
                       </button>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

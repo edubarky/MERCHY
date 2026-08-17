@@ -84,6 +84,31 @@ export function CartIcon({ className = "" }: { className?: string }) {
   );
 }
 
+export function FolderIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h3.6l2 2.1H19a1.5 1.5 0 0 1 1.5 1.5v8.9a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5V6.5Z" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+export function SparkleIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 3.2c.45 2.75 1.1 4.3 2.15 5.35S15.85 10.05 18.6 10.5c-2.75.45-4.3 1.1-5.35 2.15S11.9 15.7 11.45 18.5c-.45-2.75-1.1-4.3-2.15-5.35S6.75 11.4 4 10.95c2.75-.45 4.3-1.1 5.3-2.1S11 5.95 11 3.2Z" />
+      <path d="M18.3 15.2c.22 1.02.5 1.63.9 2.03s1.02.68 2.05.9c-1.03.22-1.65.5-2.05.9s-.68 1.01-.9 2.04c-.22-1.03-.5-1.64-.9-2.04s-1.02-.68-2.05-.9c1.03-.22 1.65-.5 2.05-.9s.68-1.01.9-2.03Z" />
+    </svg>
+  );
+}
+
 export function EyeIcon({ className = "", open = true }: { className?: string; open?: boolean }) {
   if (!open) {
     return (
