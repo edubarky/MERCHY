@@ -628,12 +628,6 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const [colorPulse, setColorPulse] = useState(0);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [quantityDiscountOpen, setQuantityDiscountOpen] = useState(false);
-  // Cantidad objetivo elegida en "Selecciona Cantidad" — siempre editable
-  // con +/- (piso de 1, la ficha nunca debe mostrar $0). El precio se
-  // calcula sobre este número; la suma de las tallas es solo cómo el
-  // usuario reparte esas piezas, y se valida por separado (ver
-  // sizeSum/quantity más abajo) sin alterar la cantidad objetivo.
-  const [quantity, setQuantity] = useState(1);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
@@ -709,40 +703,56 @@ export default function ProductDetail({ product, priceTiers }: Props) {
     setSections((prev) => prev.filter((s) => s.id !== id));
   }
 
-  // Suma real de piezas ya repartidas por talla, en las secciones de color
-  // visibles — independiente de "quantity" (la cantidad objetivo). No se
-  // auto-ajusta ni redistribuye: es pura información para comparar contra
-  // el objetivo y guiar al usuario.
+  // Fuente de verdad ÚNICA para la cantidad total: la suma real de piezas
+  // repartidas por talla, en las secciones de color visibles. Ya no existe
+  // un "quantity" independiente — el selector superior es un espejo/atajo
+  // de esta suma, nunca un segundo estado que se pueda desincronizar.
   const sizeSum = sections
     .filter((s) => !s.leaving)
     .reduce((sum, s) => sum + sizes.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
+  // Con 0 piezas asignadas todavía, se muestra 1 como cantidad/precio de
+  // referencia (nunca $0) — apenas el usuario asigna algo (por cualquier
+  // vía: tallas o el selector superior), la cantidad real manda.
+  const quantity = sizeSum > 0 ? sizeSum : 1;
   const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers);
   const totalPrice = unitPrice * quantity;
   // 1 pieza ya es una cantidad válida y completa por sí sola: la sección
-  // de tallas se muestra siempre que el producto maneje tallas (sin
-  // ningún paso de confirmación previo) y Personalizar está disponible
-  // desde el primer render, sin exigir quantity > 1 ni distribución
-  // completa por talla.
+  // de tallas se muestra siempre que el producto maneje tallas y
+  // Personalizar está disponible desde el primer render.
   const showSizes = sizes.length > 0;
-  // Piezas por asignar (positivo) o de más (negativo) respecto al objetivo
-  // — puramente informativo, no bloquea Personalizar.
-  const sizeDiff = quantity - sizeSum;
   const canPersonalize = true;
+  // Talla que absorbe los +/- del selector superior de cantidad: la
+  // primera talla de la primera sección visible. Al bajar, se descuenta
+  // de la primera talla que tenga piezas asignadas (recorriendo secciones
+  // y tallas en orden), para no dejar nunca un número negativo ni tocar
+  // una talla vacía.
+  const activeSections = sections.filter((s) => !s.leaving);
+  function incrementMainQuantity() {
+    const target = activeSections[0];
+    if (!target || sizes.length === 0) return;
+    setSizeQty(target.variant, sizes[0], getSizeQty(target.variant, sizes[0]) + 1);
+  }
+  function decrementMainQuantity() {
+    for (const s of activeSections) {
+      for (const size of sizes) {
+        const qty = getSizeQty(s.variant, size);
+        if (qty > 0) {
+          setSizeQty(s.variant, size, qty - 1);
+          return;
+        }
+      }
+    }
+  }
   // El título de la sección de tallas es fijo — "Selecciona la talla" no
-  // cambia con la cantidad. La leyenda debajo sí, en tiempo real, sin
-  // depender de que ya se haya tocado una talla — incluye el caso singular
-  // de 1 pieza ("tu 1 pieza"), que ahora sí puede mostrarse.
+  // cambia con la cantidad. La leyenda debajo sí, en tiempo real: como la
+  // cantidad total ahora ES la suma de tallas, solo hay dos estados
+  // posibles — nada asignado todavía, o ya asignado (siempre exacto, por
+  // definición no puede haber piezas "de más" ni "por asignar").
   const sizeSectionTitle = "Selecciona la talla";
   const sizeSectionHint =
     sizeSum === 0
-      ? quantity === 1
-        ? "Distribuye tu 1 pieza entre las tallas disponibles"
-        : `Distribuye tus ${quantity} piezas entre las tallas disponibles`
-      : sizeDiff > 0
-      ? `Te falta${sizeDiff === 1 ? "" : "n"} ${sizeDiff} pieza${sizeDiff === 1 ? "" : "s"} por asignar`
-      : sizeDiff < 0
-      ? "No puedes asignar más piezas de las seleccionadas"
-      : `${quantity} pieza${quantity === 1 ? "" : "s"} asignada${quantity === 1 ? "" : "s"} ✓`;
+      ? "Distribuye tu 1 pieza entre las tallas disponibles"
+      : `${sizeSum} pieza${sizeSum === 1 ? "" : "s"} asignada${sizeSum === 1 ? "" : "s"} ✓`;
 
   // El promedio y la distribución consideran tanto las reseñas escritas
   // como las calificaciones "solo estrellas" (sin tarjeta de comentario).
@@ -926,7 +936,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
               <div className="flex items-center gap-4 bg-gray-50 border border-ui-border rounded-full px-2 py-1.5 w-fit">
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  onClick={decrementMainQuantity}
                   aria-label="Restar"
                   className="w-7 h-7 flex items-center justify-center text-lg text-primary hover:scale-105 active:scale-90 transition-transform duration-150"
                 >
@@ -937,7 +947,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => q + 1)}
+                  onClick={incrementMainQuantity}
                   aria-label="Sumar"
                   className="w-7 h-7 flex items-center justify-center text-lg text-primary hover:scale-105 active:scale-90 transition-transform duration-150"
                 >
