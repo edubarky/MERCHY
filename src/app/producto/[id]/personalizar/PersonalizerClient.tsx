@@ -601,38 +601,39 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
           </div>
 
           <div>
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-2xl font-bold text-foreground">3. Agrega tu logo</span>
-              <div className="flex items-center gap-4">
+            <div className="mb-1 flex items-center justify-between gap-4">
+              <span className="text-2xl font-bold text-foreground">3. Personaliza tu producto</span>
+              <div className="flex shrink-0 items-center gap-1 rounded-full border border-ui-border bg-gray-50 p-1">
                 <button
                   type="button"
                   onClick={() => setArtLibraryOpen(true)}
-                  className="text-sm font-semibold text-primary-dark transition-colors duration-150 ease-out hover:text-primary"
+                  className="rounded-full px-3 py-1.5 text-sm font-semibold text-primary-dark transition-colors duration-150 ease-out hover:text-primary"
                 >
                   Mis artes
                 </button>
-                <span className="text-sm font-semibold text-ui-gray">Archivos</span>
+                <span className="rounded-full px-3 py-1.5 text-sm font-semibold text-ui-gray">Archivos</span>
               </div>
             </div>
+            <p className="mb-4 text-sm text-ui-gray">Agrega un logo o crea un texto personalizado</p>
 
-            <div className="flex gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="group relative h-14 flex-1 transition-transform duration-180 ease-out hover:-translate-y-0.5"
+                className="group flex flex-col items-center gap-2 rounded-2xl border border-ui-border bg-gray-50/60 px-4 py-6 text-center transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5 hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:border-primary active:bg-primary/10"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/Home/PERSONALIZADOR/BOTÓN LOGO.svg" alt="+ Logo" className="h-full w-full" />
-                <span className="pointer-events-none absolute inset-0 rounded-full opacity-0 shadow-[0_0_0_4px_rgba(87,224,217,0.3)] transition-opacity duration-200 ease-out group-hover:opacity-100" />
+                <ImageToolIcon className="h-6 w-6 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                <span className="text-sm font-bold text-foreground">+ Logo</span>
+                <span className="text-xs text-ui-gray">Agrega tu logotipo</span>
               </button>
               <button
                 type="button"
                 onClick={handleAddText}
-                className="group relative h-14 flex-1 transition-transform duration-180 ease-out hover:-translate-y-0.5"
+                className="group flex flex-col items-center gap-2 rounded-2xl border border-ui-border bg-gray-50/60 px-4 py-6 text-center transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5 hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:border-primary active:bg-primary/10"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/Home/PERSONALIZADOR/BOTÓN TEXTO.svg" alt="+ Texto" className="h-full w-full" />
-                <span className="pointer-events-none absolute inset-0 rounded-full opacity-0 shadow-[0_0_0_4px_rgba(87,224,217,0.3)] transition-opacity duration-200 ease-out group-hover:opacity-100" />
+                <TextToolIcon className="h-6 w-6 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                <span className="text-sm font-bold text-foreground">+ Texto</span>
+                <span className="text-xs text-ui-gray">Crea un texto personalizado</span>
               </button>
             </div>
             <input
@@ -644,6 +645,7 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
             />
 
             <div className="mt-5 rounded-2xl border border-ui-border p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-ui-gray">Tus elementos</p>
               <div className="mb-3 flex gap-6 text-sm">
                 {VIEW_ORDER.map((v) => (
                   <button
