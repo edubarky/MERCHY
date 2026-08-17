@@ -346,8 +346,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     VIEW_ORDER.flatMap((v) => elements[v].filter((e) => e.type === "text").map((e) => e.color || "#1a1a1a"))
   ).size;
 
-  const sizes = product.sizes_available;
-
   async function handleAddToCart() {
     if (addingToCart) return;
     setAddingToCart(true);
@@ -600,19 +598,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
           <div>
             <h1 className="font-display text-[40px] font-bold uppercase leading-[1.05] text-foreground">{product.name}</h1>
             <p className="mt-2 text-base text-ui-gray">{product.sku}</p>
-            <div className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm text-ui-gray">
-              {product.composition && (
-                <span>
-                  <span className="font-semibold text-foreground">Composición:</span> {product.composition}
-                </span>
-              )}
-              {sizes.length > 0 && (
-                <span>
-                  <span className="font-semibold text-foreground">Tallas:</span>{" "}
-                  {sizes.length > 1 ? `${sizes[0]} – ${sizes[sizes.length - 1]}` : sizes[0]}
-                </span>
-              )}
-            </div>
           </div>
 
           <div>
