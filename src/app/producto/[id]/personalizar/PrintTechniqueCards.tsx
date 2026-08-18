@@ -15,7 +15,7 @@ import type { PrintTechnique } from "@/types";
 // exista todavía en la base (ej. antes de darla de alta) simplemente no se
 // dibuja, en vez de desalinear a las demás.
 const CARDS = [
-  { name: "DTF Textil", src: "/Home/PERSONALIZADOR/TECNICAS/DTF TEXTIL.svg", dot: { x: 19.34, y: 16.51 } },
+  { name: "Textil DTF", src: "/Home/PERSONALIZADOR/TECNICAS/DTF TEXTIL.svg", dot: { x: 19.34, y: 16.51 } },
   { name: "DTF UV", src: "/Home/PERSONALIZADOR/TECNICAS/DTF UV.svg", dot: { x: 21.03, y: 16.2 } },
   { name: "Serigrafía", src: "/Home/PERSONALIZADOR/TECNICAS/SERIGRAFÍA.svg", dot: { x: 22.9, y: 16.2 } },
   { name: "Bordado", src: "/Home/PERSONALIZADOR/TECNICAS/BORDADO.svg", dot: { x: 21.03, y: 16.2 } },
