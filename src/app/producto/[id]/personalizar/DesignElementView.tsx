@@ -6,28 +6,21 @@ import type { DesignElement } from "./types";
 import { resolveFontFamilyCss } from "./textFonts";
 import { measureTextBoxPx } from "./measureText";
 
-export interface PrintAreaRectPx {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-
-// Movement is intentionally NOT hard-clamped to the print area anymore —
-// the user can drag/resize/rotate freely across the whole canvas. Instead
-// this checks the element's actual on-screen bounding box (which already
-// accounts for any rotation) against the print-area rect on every
-// drag/resize/rotate frame, and reports that up via onInteraction so the
-// parent can drive the HUD guide + "fuera del área de impresión" warning.
-function isWithinPrintArea(target: HTMLElement, container: HTMLElement, rect: PrintAreaRectPx | null): boolean {
-  if (!rect) return true;
+// Movement/resize/rotation are NOT clamped anywhere — the user has full
+// freedom to place the design anywhere on the product. This only checks
+// the element's actual on-screen bounding box (which already accounts for
+// rotation) against the CANVAS itself (the full product photo, not a
+// printable sub-zone) on every drag/resize/rotate frame, and reports that
+// up via onInteraction so the parent can show a discreet "fuera de la
+// superficie del producto" notice — informational only, never corrective.
+function isWithinCanvas(target: HTMLElement, container: HTMLElement): boolean {
   const t = target.getBoundingClientRect();
   const c = container.getBoundingClientRect();
   const left = t.left - c.left;
   const top = t.top - c.top;
   const right = t.right - c.left;
   const bottom = t.bottom - c.top;
-  return left >= rect.left - 0.5 && top >= rect.top - 0.5 && right <= rect.right + 0.5 && bottom <= rect.bottom + 0.5;
+  return left >= -0.5 && top >= -0.5 && right <= c.width + 0.5 && bottom <= c.height + 0.5;
 }
 
 // Handles scale visually with the selected art's own rendered size — a
@@ -87,7 +80,6 @@ export const DEFAULT_FONT_SIZE_RATIO = 0.35;
 export default function DesignElementView({
   element,
   containerRef,
-  printAreaRectPx,
   selected,
   onSelect,
   onChange,
@@ -95,7 +87,6 @@ export default function DesignElementView({
 }: {
   element: DesignElement;
   containerRef: React.RefObject<HTMLDivElement>;
-  printAreaRectPx: PrintAreaRectPx | null;
   selected: boolean;
   onSelect: (id: string) => void;
   onChange: (id: string, patch: Partial<DesignElement>) => void;
@@ -234,11 +225,11 @@ export default function DesignElementView({
   function reportBounds(target: HTMLElement) {
     const container = containerRef.current;
     if (!container) return;
-    onInteraction(true, isWithinPrintArea(target, container, printAreaRectPx));
+    onInteraction(true, isWithinCanvas(target, container));
   }
 
   // Same check, but reports `active: false` — used on drag/resize/rotate
-  // *End* so the guide's final color reflects where the art actually
+  // *End* so the notice's final state reflects where the art actually
   // landed, instead of always resetting to "safe" the instant the mouse is
   // released regardless of the real resting position.
   function reportBoundsEnd(target: HTMLElement) {
@@ -247,7 +238,7 @@ export default function DesignElementView({
       onInteraction(false, true);
       return;
     }
-    onInteraction(false, isWithinPrintArea(target, container, printAreaRectPx));
+    onInteraction(false, isWithinCanvas(target, container));
   }
 
   // Recomputed from the element's own current % size on every render — so

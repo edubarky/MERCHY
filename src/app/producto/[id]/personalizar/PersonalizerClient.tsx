@@ -21,8 +21,9 @@ import {
 import { VIEW_ASSETS } from "./viewAssets";
 import { getPrintArea } from "./printAreas";
 import { analyzeDesignLuminance, LUMINANCE_THRESHOLD } from "./colorAnalysis";
-import DesignElementView, { type PrintAreaRectPx, DEFAULT_FONT_SIZE_PX } from "./DesignElementView";
+import DesignElementView, { DEFAULT_FONT_SIZE_PX } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
+
 import ArtLibraryPanel from "./ArtLibraryPanel";
 import SelectionToolbar from "./SelectionToolbar";
 import PrintTechniqueCards from "./PrintTechniqueCards";
@@ -92,15 +93,15 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   const [selectedTechniqueId, setSelectedTechniqueId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [zCounter, setZCounter] = useState(1);
-  const [printAreaRectPx, setPrintAreaRectPx] = useState<PrintAreaRectPx | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [garmentColor, setGarmentColor] = useState<GarmentColor>("blanco");
-  // The print-area guide's visibility is driven directly by selection (see
-  // `selectedElement` below) — it shows for as long as a design in the
-  // active view is selected, and disappears the instant nothing is
-  // selected. This only tracks the *color* (turquoise/coral) live while
-  // the selected element is actively being dragged/resized/rotated.
+  // Drives the discreet "fuera de la superficie del producto" notice — no
+  // print-area rectangle involved anymore, this just tracks whether the
+  // selected element's own bounding box currently sits fully inside the
+  // canvas (the full product photo). See DesignElementView's
+  // isWithinCanvas(); the notice shows only while true is false and
+  // something is selected.
   const [interactionInBounds, setInteractionInBounds] = useState(true);
   const [artLibraryOpen, setArtLibraryOpen] = useState(false);
 
@@ -201,23 +202,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [undo, redo]);
-
-  useEffect(() => {
-    function recompute() {
-      if (!canvasRef.current) return;
-      const rect = canvasRef.current.getBoundingClientRect();
-      const pa = getPrintArea(product.name, activeView);
-      setPrintAreaRectPx({
-        left: (pa.xPct / 100) * rect.width,
-        top: (pa.yPct / 100) * rect.height,
-        right: ((pa.xPct + pa.widthPct) / 100) * rect.width,
-        bottom: ((pa.yPct + pa.heightPct) / 100) * rect.height,
-      });
-    }
-    recompute();
-    window.addEventListener("resize", recompute);
-    return () => window.removeEventListener("resize", recompute);
-  }, [activeView]);
 
   function addElement(el: DesignElement) {
     const next = { ...elements, [el.view]: [...elements[el.view], el] };
@@ -528,7 +512,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                   key={el.id}
                   element={el}
                   containerRef={canvasRef}
-                  printAreaRectPx={printAreaRectPx}
                   selected={selectedId === el.id}
                   onSelect={setSelectedId}
                   onChange={updateElement}
@@ -536,13 +519,7 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                 />
               ))}
 
-              {selectedElement && printAreaRectPx && (
-                <PrintAreaGuide
-                  rectPx={printAreaRectPx}
-                  config={getPrintArea(product.name, activeView)}
-                  inBounds={interactionInBounds}
-                />
-              )}
+              <PrintAreaGuide visible={Boolean(selectedElement) && !interactionInBounds} />
             </div>
 
             {layersOpen && (
