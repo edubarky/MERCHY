@@ -32,13 +32,15 @@ export default function PrintTechniqueCards({
   onSelect: (id: string) => void;
 }) {
   return (
-    // 4 columnas en desktop (misma proporción/tamaño de tarjeta que ya
-    // existía) pero solo 3 técnicas se dejan fluir en la fila 1 — las
-    // últimas 2 se ubican explícitamente en la fila 2, columnas 1-2, para
-    // que la distribución quede 3 arriba + 2 abajo sin agrandar ni deformar
-    // ninguna tarjeta. En móvil (sin el prefijo sm:) es una grilla de 2
-    // columnas normal, sin esa colocación forzada.
-    <div className="grid grid-cols-2 gap-0.5 sm:grid-cols-4">
+    // En desktop, el grupo de 5 (3 arriba + 2 abajo) vive en un contenedor
+    // más angosto que el panel y centrado (mx-auto + sm:w-[92%]) — antes
+    // usaba una 4ª columna fantasma para mantener el tamaño de tarjeta, lo
+    // que dejaba toda la fila pegada a la izquierda con un hueco a la
+    // derecha. Ahora son 3 columnas reales (sin columna vacía) dentro de
+    // ese contenedor más angosto, así las tarjetas quedan un poco más
+    // grandes Y el grupo entero queda centrado. En móvil (sin el prefijo
+    // sm:) sigue siendo una grilla simple de 2 columnas a ancho completo.
+    <div className="mx-auto grid grid-cols-2 gap-0.5 sm:w-[92%] sm:grid-cols-3">
       {CARDS.map((card, i) => {
         const technique = techniques.find((t) => t.name === card.name);
         if (!technique) return null;
