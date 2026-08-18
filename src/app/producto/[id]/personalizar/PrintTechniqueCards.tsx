@@ -8,11 +8,18 @@ import type { PrintTechnique } from "@/types";
 // centro (en % del ancho/alto del propio SVG) de ese círculo — leído
 // directamente de las coordenadas del editable de cada técnica — para poder
 // dibujar ahí encima el indicador de "seleccionado" sin tocar el archivo.
+//
+// Se empareja por `name` (no por posición) contra lo que entrega la base de
+// datos: así el orden visual de esta fila queda fijo aquí sin depender de
+// que sort_order en la tabla coincida exactamente, y una técnica que no
+// exista todavía en la base (ej. antes de darla de alta) simplemente no se
+// dibuja, en vez de desalinear a las demás.
 const CARDS = [
-  { src: "/Home/PERSONALIZADOR/TECNICAS/DTF TEXTIL.svg", dot: { x: 19.34, y: 16.51 } },
-  { src: "/Home/PERSONALIZADOR/TECNICAS/DTG.svg", dot: { x: 21.96, y: 16.2 } },
-  { src: "/Home/PERSONALIZADOR/TECNICAS/SERIGRAFÍA.svg", dot: { x: 22.9, y: 16.2 } },
-  { src: "/Home/PERSONALIZADOR/TECNICAS/BORDADO.svg", dot: { x: 21.03, y: 16.2 } },
+  { name: "DTF Textil", src: "/Home/PERSONALIZADOR/TECNICAS/DTF TEXTIL.svg", dot: { x: 19.34, y: 16.51 } },
+  { name: "DTF UV", src: "/Home/PERSONALIZADOR/TECNICAS/DTF UV.svg", dot: { x: 21.03, y: 16.2 } },
+  { name: "Serigrafía", src: "/Home/PERSONALIZADOR/TECNICAS/SERIGRAFÍA.svg", dot: { x: 22.9, y: 16.2 } },
+  { name: "Bordado", src: "/Home/PERSONALIZADOR/TECNICAS/BORDADO.svg", dot: { x: 21.03, y: 16.2 } },
+  { name: "DTG", src: "/Home/PERSONALIZADOR/TECNICAS/DTG.svg", dot: { x: 21.96, y: 16.2 } },
 ];
 
 export default function PrintTechniqueCards({
@@ -25,9 +32,15 @@ export default function PrintTechniqueCards({
   onSelect: (id: string) => void;
 }) {
   return (
+    // 4 columnas en desktop (misma proporción/tamaño de tarjeta que ya
+    // existía) pero solo 3 técnicas se dejan fluir en la fila 1 — las
+    // últimas 2 se ubican explícitamente en la fila 2, columnas 1-2, para
+    // que la distribución quede 3 arriba + 2 abajo sin agrandar ni deformar
+    // ninguna tarjeta. En móvil (sin el prefijo sm:) es una grilla de 2
+    // columnas normal, sin esa colocación forzada.
     <div className="grid grid-cols-2 gap-0.5 sm:grid-cols-4">
       {CARDS.map((card, i) => {
-        const technique = techniques[i];
+        const technique = techniques.find((t) => t.name === card.name);
         if (!technique) return null;
         const isSelected = selectedId === technique.id;
         return (
@@ -42,6 +55,8 @@ export default function PrintTechniqueCards({
             // rectangular aparte) — así nunca aparece un "segundo cuadro".
             // Sin scale ni translate: la tarjeta no cambia de tamaño ni se mueve.
             className={`relative block w-full transition-[filter] duration-150 ease-out ${
+              i === 3 ? "sm:[grid-row:2] sm:[grid-column:1]" : i === 4 ? "sm:[grid-row:2] sm:[grid-column:2]" : ""
+            } ${
               isSelected
                 ? "[filter:drop-shadow(0_0_2px_rgba(87,224,217,0.9))_drop-shadow(0_6px_16px_rgba(87,224,217,0.3))]"
                 : "hover:[filter:drop-shadow(0_0_2px_rgba(87,224,217,0.85))_drop-shadow(0_6px_14px_rgba(87,224,217,0.18))]"
