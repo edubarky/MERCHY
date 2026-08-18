@@ -25,7 +25,7 @@ export default function PrintTechniqueCards({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-0.5 sm:grid-cols-4">
       {CARDS.map((card, i) => {
         const technique = techniques[i];
         if (!technique) return null;
