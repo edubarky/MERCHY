@@ -25,7 +25,7 @@ export default function PrintTechniqueCards({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {CARD_IMAGES.map((src, i) => {
         const technique = techniques[i];
         if (!technique) return null;
@@ -36,14 +36,14 @@ export default function PrintTechniqueCards({
             type="button"
             onClick={() => onSelect(technique.id)}
             aria-pressed={isSelected}
-            className={`w-full rounded-[18px] p-0.5 transition-all duration-200 ease-out hover:-translate-y-0.5 ${
+            className={`w-full rounded-[18px] transition-all duration-200 ease-out hover:-translate-y-0.5 ${
               isSelected
-                ? "scale-[1.03] bg-primary/15 shadow-[0_8px_20px_rgba(87,224,217,0.25)]"
+                ? "scale-[1.03] shadow-[0_8px_20px_rgba(87,224,217,0.25)] ring-2 ring-primary"
                 : "hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)]"
             }`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={`${technique.name} — ${technique.description}`} className="block h-auto w-full rounded-[14px]" />
+            <img src={src} alt={`${technique.name} — ${technique.description}`} className="block h-auto w-full rounded-[18px]" />
           </button>
         );
       })}
