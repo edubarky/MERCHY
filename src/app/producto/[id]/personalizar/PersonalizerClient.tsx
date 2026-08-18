@@ -723,7 +723,13 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
 
           <div>
             <span className="mb-4 block text-2xl font-bold text-foreground">4. Selecciona el Tipo de impresión</span>
-            <PrintTechniqueCards techniques={techniques} selectedId={selectedTechniqueId} onSelect={setSelectedTechniqueId} />
+            {/* Solo esta fila "sangra" fuera del padding del panel (-mx-8) para
+                ganar el máximo ancho posible sin tocar el padding compartido
+                por el resto de secciones — el título arriba se queda alineado
+                como siempre. */}
+            <div className="-mx-8">
+              <PrintTechniqueCards techniques={techniques} selectedId={selectedTechniqueId} onSelect={setSelectedTechniqueId} />
+            </div>
           </div>
 
           {/* Resumen del pedido */}
