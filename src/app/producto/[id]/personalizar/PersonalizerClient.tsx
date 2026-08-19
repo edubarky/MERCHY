@@ -54,6 +54,22 @@ function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// Reads an image's real natural pixel dimensions — the source of truth for
+// sizing a newly-placed logo's box to its own actual aspect ratio (see
+// placeAsset). Object URLs (what every renderable asset's `src` is) decode
+// from memory, so this resolves essentially instantly — no visible delay.
+// Resolves null on failure so the caller can fall back.
+function loadImageNaturalSizePx(src: string): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve(img.naturalWidth > 0 && img.naturalHeight > 0 ? { width: img.naturalWidth, height: img.naturalHeight } : null);
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
 function ToolDockButton({
   label,
   active,
@@ -191,17 +207,47 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
+  const deleteElement = useCallback(
+    (id: string) => {
+      const next = { ...elements, [activeView]: elements[activeView].filter((e) => e.id !== id) };
+      commit(next);
+      setSelectedId(null);
+    },
+    [elements, activeView, commit]
+  );
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       const ctrlOrCmd = e.ctrlKey || e.metaKey;
-      if (!ctrlOrCmd || e.key.toLowerCase() !== "z") return;
-      e.preventDefault();
-      if (e.shiftKey) redo();
-      else undo();
+      if (ctrlOrCmd && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+
+      // Suprimir/Delete/Backspace deletes the currently selected element —
+      // but never while the user is typing somewhere (text edit mode's own
+      // <input> in DesignElementView, the quantity/size/color/etc. fields
+      // in this toolbar) — there Backspace must keep deleting characters,
+      // not the element. Checking the focused element covers every such
+      // field generically, with no need to know about them individually.
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const target = e.target as HTMLElement | null;
+        const isEditableField =
+          !!target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT" ||
+            target.isContentEditable);
+        if (isEditableField || !selectedId) return;
+        e.preventDefault();
+        deleteElement(selectedId);
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [undo, redo]);
+  }, [undo, redo, deleteElement, selectedId]);
 
   function addElement(el: DesignElement) {
     const next = { ...elements, [el.view]: [...elements[el.view], el] };
@@ -221,12 +267,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   function updateElement(id: string, patch: Partial<DesignElement>) {
     const next = { ...elements, [activeView]: elements[activeView].map((e) => (e.id === id ? { ...e, ...patch } : e)) };
     commit(next);
-  }
-
-  function deleteElement(id: string) {
-    const next = { ...elements, [activeView]: elements[activeView].filter((e) => e.id !== id) };
-    commit(next);
-    setSelectedId(null);
   }
 
   function duplicateElement(id: string) {
@@ -259,12 +299,39 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   // used both right after a fresh upload and when picking an existing
   // asset from the library. The asset itself (fileName/fileType/src) is
   // never duplicated, only referenced.
-  function placeAsset(asset: ArtAsset) {
+  //
+  // The initial box is sized to the art's own real aspect ratio (see
+  // loadImageNaturalSizePx below), fit inside the same max footprint the
+  // print-area-based box used to occupy outright — same math as CSS
+  // `object-fit: contain`, just applied to the element's own width/height
+  // instead of only to how the <img> renders inside it. Without this, a
+  // logo whose aspect ratio doesn't match the print area's own shape would
+  // render letterboxed (via the `object-contain` on the <img> itself),
+  // leaving empty space inside the box that Moveable's handles/hit-area
+  // still cover — i.e. a bounding box bigger than the actual art, which is
+  // exactly the "false print area" feel this fixes.
+  async function placeAsset(asset: ArtAsset) {
     const z = zCounter + 1;
     setZCounter(z);
     const pa = getPrintArea(product.name, activeView);
-    const w = pa.widthPct * 0.6;
-    const h = pa.heightPct * 0.6;
+    // Fallback (and the max footprint art is fit inside): used outright
+    // whenever the real natural size can't be read (no src — e.g. .ai/.pdf
+    // — or the image fails to decode).
+    let w = pa.widthPct * 0.6;
+    let h = pa.heightPct * 0.6;
+
+    if (asset.src) {
+      const natural = await loadImageNaturalSizePx(asset.src);
+      const containerRect = canvasRef.current?.getBoundingClientRect();
+      if (natural && containerRect && containerRect.width > 0 && containerRect.height > 0) {
+        const maxWidthPx = (w / 100) * containerRect.width;
+        const maxHeightPx = (h / 100) * containerRect.height;
+        const scale = Math.min(maxWidthPx / natural.width, maxHeightPx / natural.height);
+        w = ((natural.width * scale) / containerRect.width) * 100;
+        h = ((natural.height * scale) / containerRect.height) * 100;
+      }
+    }
+
     addElement({
       id: uid(),
       type: "logo",

@@ -125,17 +125,6 @@ export default function SelectionToolbar({
               </svg>
             </ToolbarIconButton>
           ))}
-
-          <label className="flex items-center gap-1 text-[10px] text-ui-gray">
-            Espaciado
-            <input
-              type="number"
-              step={0.5}
-              value={element.letterSpacing ?? 0}
-              onChange={(e) => onChange(element.id, { letterSpacing: Number(e.target.value) })}
-              className="w-12 rounded-full border border-ui-border px-2 py-1 text-xs focus:outline-none focus:border-primary"
-            />
-          </label>
         </>
       )}
 
