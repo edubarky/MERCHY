@@ -20,7 +20,6 @@ import {
 } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
 import { getPrintArea } from "./printAreas";
-import { analyzeDesignLuminance, LUMINANCE_THRESHOLD } from "./colorAnalysis";
 import DesignElementView, { DEFAULT_FONT_SIZE_PX } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
 
@@ -141,23 +140,15 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [cartOpen]);
 
-  // Auto blanco/negro switch: re-analyzes every logo/text across all four
-  // views on every change and flips the whole garment to whichever color
-  // gives the design the most contrast. No elements → back to blanco.
-  useEffect(() => {
-    let cancelled = false;
-    analyzeDesignLuminance(elements).then((avg) => {
-      if (cancelled) return;
-      if (avg === null) {
-        setGarmentColor("blanco");
-        return;
-      }
-      setGarmentColor(avg > LUMINANCE_THRESHOLD ? "negro" : "blanco");
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [elements]);
+  // Auto blanco/negro switch TEMPORALMENTE DESACTIVADO — por ahora TODAS las
+  // prendas deben mostrarse siempre en blanco, sin importar el color del
+  // arte/logo/texto colocado. `garmentColor` ya nace en "blanco" (ver
+  // useState arriba) y, con este efecto fuera, nada más lo modifica —
+  // ningún selector manual de color existe en la UI actual, así que queda
+  // fijo. La lógica de análisis de brillo (colorAnalysis.ts,
+  // analyzeDesignLuminance/LUMINANCE_THRESHOLD) NO se borra, solo se deja de
+  // invocar aquí — reconectar este mismo efecto es lo único necesario para
+  // reactivarla cuando existan más colores de prenda con sus ejes propios.
 
   // No shared generic mockup fallback here on purpose: the Personalizador
   // must only ever show the actual selected product's own photography, per
