@@ -3,6 +3,38 @@ import path from "path";
 import type { Product } from "@/types";
 import { VIEW_ORDER, type ViewName, type GarmentColor, type ResolvedProductAssets, emptyResolvedAssets } from "./types";
 
+// Sudadera Ocean-only: real per-color photo subfolders, copied verbatim
+// (see public/VISTA DE PRODUCTOS/SUDADERA OCEAN/{ROYAL,MARINO,ROJO,GRIS}/)
+// from the design source's own per-color folders. Each subfolder holds
+// exactly one file per view (frente/reverso/izquierda/derecha), with no
+// color suffix in the filename — the folder itself IS the color, unlike
+// blanco/negro which live flat in the product root and need detectColor().
+// This is intentionally NOT a generic mechanism: it only ever runs for the
+// one product matched by SUDADERA_OCEAN_NAME below, so every other
+// product's resolution keeps going through the exact same flat/blanco-negro
+// scan it always has. Extending this to more products/colors later means
+// generalizing this block, not touching the generic scan above it.
+const SUDADERA_OCEAN_NAME = "sudadera ocean";
+const SUDADERA_OCEAN_EXTRA_COLOR_DIRS: Partial<Record<GarmentColor, string>> = {
+  royal: "ROYAL",
+  marino: "MARINO",
+  rojo: "ROJO",
+  gris: "GRIS",
+};
+
+// Royal/Marino/Rojo/Gris's own IZQUIERDO*/DERECHO* files were shot with
+// their hood-opening/profile direction on the OPPOSITE side compared to
+// Blanco/Negro's existing convention — verified visually (hood-opening
+// direction) against Blanco's real DERECHO B.png/IZQUIERDO B.png photos
+// and confirmed explicitly by the user. This ONLY remaps which view SLOT
+// each already-resolved file lands in for these 4 colors — the on-disk
+// filenames are never touched (still literally named IZQUIERDO*/DERECHO*),
+// and blanco/negro (and every other product) are completely unaffected.
+const SUDADERA_OCEAN_EXTRA_COLOR_VIEW_SWAP: Partial<Record<ViewName, ViewName>> = {
+  izquierda: "derecha",
+  derecha: "izquierda",
+};
+
 // Server-only: resolves a product's real per-view photography from the local
 // filesystem. Nothing here runs in the browser — only called from the
 // personalizar page.tsx Server Component.
@@ -170,6 +202,32 @@ export function resolveProductViewAssets(product: Pick<Product, "id" | "name">):
 
     log(`  Imagen cargada — ${view} (blanco):`, blanco ? blanco.file : "no encontrada");
     log(`  Imagen cargada — ${view} (negro):`, negro ? negro.file : "no encontrada");
+  }
+
+  if (normalizeName(product.name) === SUDADERA_OCEAN_NAME) {
+    log("Producto es Sudadera Ocean — resolviendo colores extra (Royal/Marino/Rojo/Gris)");
+    for (const [color, dirName] of Object.entries(SUDADERA_OCEAN_EXTRA_COLOR_DIRS) as [GarmentColor, string][]) {
+      const colorDir = findMatchingDir(productDir, dirName);
+      if (!colorDir) {
+        log(`  Subcarpeta de color "${dirName}" no encontrada — se omite`, color);
+        continue;
+      }
+      const colorFiles = listFiles(colorDir);
+      log(`  ${dirName}/ archivos:`, colorFiles);
+      for (const view of VIEW_ORDER) {
+        result[view][color] = null;
+      }
+      for (const file of colorFiles) {
+        const ext = path.extname(file).slice(1).toLowerCase();
+        if (!EXTENSIONS.includes(ext)) continue;
+        const baseNoExt = stripAccents(file.slice(0, file.length - ext.length - 1)).toUpperCase();
+        const fileView = detectView(baseNoExt);
+        if (!fileView) continue;
+        const targetView = SUDADERA_OCEAN_EXTRA_COLOR_VIEW_SWAP[fileView] ?? fileView;
+        result[targetView][color] = toPublicUrl(path.join(colorDir, file), publicRoot);
+        log(`    Imagen cargada — ${targetView} (${color}):`, file, fileView !== targetView ? `(archivo nombrado "${fileView}", invertido)` : "");
+      }
+    }
   }
 
   return result;

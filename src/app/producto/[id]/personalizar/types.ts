@@ -65,22 +65,34 @@ export function emptyViewElements(): ViewElements {
   return { frente: [], reverso: [], izquierda: [], derecha: [] };
 }
 
-// ---- Per-product real photography (blanco/negro auto-switch) ----
+// ---- Per-product real photography (blanco/negro + per-product extra colors) ----
 
-export type GarmentColor = "blanco" | "negro";
+// "blanco"/"negro" are resolved generically for EVERY product (see
+// resolveProductAssets.ts's flat-file scan). The 4 extra colors are
+// currently only ever resolved for Sudadera Ocean specifically (see that
+// same file's Sudadera-Ocean-only subfolder scan) — for every other
+// product they simply stay null, same as blanco/negro would if that
+// product had no matching photos. Widening this type does not change
+// behavior for any other product: GarmentColor is only ever a real,
+// selectable option in the UI when `ResolvedProductAssets` actually
+// resolves a non-null src for it (see PersonalizerClient's swatch list).
+export type GarmentColor = "blanco" | "negro" | "royal" | "marino" | "rojo" | "gris";
 
-export interface ResolvedViewAsset {
-  blanco: string | null;
-  negro: string | null;
-}
+export const GARMENT_COLORS: GarmentColor[] = ["blanco", "negro", "royal", "marino", "rojo", "gris"];
+
+export type ResolvedViewAsset = Record<GarmentColor, string | null>;
 
 export type ResolvedProductAssets = Record<ViewName, ResolvedViewAsset>;
 
+function emptyResolvedViewAsset(): ResolvedViewAsset {
+  return { blanco: null, negro: null, royal: null, marino: null, rojo: null, gris: null };
+}
+
 export function emptyResolvedAssets(): ResolvedProductAssets {
   return {
-    frente: { blanco: null, negro: null },
-    reverso: { blanco: null, negro: null },
-    izquierda: { blanco: null, negro: null },
-    derecha: { blanco: null, negro: null },
+    frente: emptyResolvedViewAsset(),
+    reverso: emptyResolvedViewAsset(),
+    izquierda: emptyResolvedViewAsset(),
+    derecha: emptyResolvedViewAsset(),
   };
 }
