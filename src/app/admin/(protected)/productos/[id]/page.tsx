@@ -22,7 +22,12 @@ export default function EditProductoPage() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"detalles" | "variantes">("detalles");
+  const [tab, setTab] = useState<"detalles" | "variantes" | "técnicas">("detalles");
+  const [techniques, setTechniques] = useState<any[]>([]);
+  const [selectedTechniqueIds, setSelectedTechniqueIds] = useState<string[]>([]);
+  const [savingTechniques, setSavingTechniques] = useState(false);
+  const [techniquesSaved, setTechniquesSaved] = useState(false);
+  const [techniquesError, setTechniquesError] = useState<string | null>(null);
   const [newVariant, setNewVariant] = useState({ color_name: "", color_hex: "#000000", stock_infinite: true, stock: 0 });
   const [addingVariant, setAddingVariant] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,16 +37,20 @@ export default function EditProductoPage() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: p }, { data: cats }, { data: sups }, { data: vars }] = await Promise.all([
+      const [{ data: p }, { data: cats }, { data: sups }, { data: vars }, { data: techs }, { data: productTechs }] = await Promise.all([
         supabase.from("products").select("*, category:categories(id,name), supplier:suppliers(id,name)").eq("id", id).single(),
         supabase.from("categories").select("id, name").eq("active", true).order("sort_order"),
         supabase.from("suppliers").select("id, name").eq("active", true).order("name"),
         supabase.from("product_variants").select("*").eq("product_id", id).order("created_at"),
+        supabase.from("print_techniques").select("*").order("sort_order"),
+        supabase.from("product_print_techniques").select("technique_id").eq("product_id", id),
       ]);
       setProduct(p);
       setCategories(cats ?? []);
       setSuppliers(sups ?? []);
       setVariants(vars ?? []);
+      setTechniques(techs ?? []);
+      setSelectedTechniqueIds((productTechs ?? []).map((r: any) => r.technique_id));
     }
     load();
   }, [id]);
@@ -106,6 +115,34 @@ export default function EditProductoPage() {
     setSavingEdit(false);
   }
 
+  function toggleTechnique(techniqueId: string) {
+    setTechniquesSaved(false);
+    setSelectedTechniqueIds((prev) =>
+      prev.includes(techniqueId) ? prev.filter((t) => t !== techniqueId) : [...prev, techniqueId]
+    );
+  }
+
+  // Solo disponibilidad (producto <-> técnica) — el precio de cada técnica
+  // vive aparte, en print_techniques.price_table, y no se toca aquí.
+  // Guarda por reemplazo completo (borra todas las filas de este producto y
+  // vuelve a insertar las que quedaron marcadas) — mismo nivel de
+  // simplicidad que el resto de este archivo, y correcto para el tamaño de
+  // esta lista (nunca son más de ~7 técnicas).
+  async function saveTechniques() {
+    setSavingTechniques(true);
+    setTechniquesError(null);
+    const { error: delErr } = await supabase.from("product_print_techniques").delete().eq("product_id", id);
+    if (delErr) { setTechniquesError(delErr.message); setSavingTechniques(false); return; }
+    if (selectedTechniqueIds.length > 0) {
+      const { error: insErr } = await supabase.from("product_print_techniques").insert(
+        selectedTechniqueIds.map((technique_id) => ({ product_id: id, technique_id }))
+      );
+      if (insErr) { setTechniquesError(insErr.message); setSavingTechniques(false); return; }
+    }
+    setSavingTechniques(false);
+    setTechniquesSaved(true);
+  }
+
   if (!product) return <div className="p-6 text-ui-gray">Cargando...</div>;
 
   return (
@@ -118,13 +155,14 @@ export default function EditProductoPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-ui-border">
-        {(["detalles", "variantes"] as const).map((t) => (
+        {(["detalles", "variantes", "técnicas"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium capitalize transition-colors ${tab === t ? "border-b-2 border-primary text-primary" : "text-ui-gray hover:text-foreground"}`}
           >
             {t} {t === "variantes" && `(${variants.length})`}
+            {t === "técnicas" && `(${selectedTechniqueIds.length})`}
           </button>
         ))}
       </div>
@@ -297,6 +335,43 @@ export default function EditProductoPage() {
             </Btn>
           </AdminCard>
         </div>
+      )}
+
+      {tab === "técnicas" && (
+        <AdminCard className="p-6">
+          <p className="text-sm font-semibold text-foreground mb-1">Técnicas de impresión</p>
+          <p className="text-xs text-ui-gray mb-4">
+            Selecciona qué técnicas de impresión están disponibles para este producto. Esta selección es
+            independiente para cada producto y todavía no afecta al personalizador.
+          </p>
+          {techniques.length === 0 ? (
+            <p className="text-sm text-ui-gray">No hay técnicas de impresión configuradas todavía.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2 mb-5">
+              {techniques.map((t) => (
+                <label key={t.id} className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedTechniqueIds.includes(t.id)}
+                    onChange={() => toggleTechnique(t.id)}
+                    className="accent-primary w-4 h-4"
+                  />
+                  <span className="text-sm">{t.name}</span>
+                  {(!t.price_table || t.price_table.length === 0) && (
+                    <span className="text-[10px] text-ui-gray bg-gray-100 px-1.5 py-0.5 rounded">sin precio configurado</span>
+                  )}
+                </label>
+              ))}
+            </div>
+          )}
+          {techniquesError && <p className="text-xs text-red-500 mb-3">Error al guardar: {techniquesError}</p>}
+          <div className="pt-4 border-t border-ui-border flex items-center gap-3">
+            <Btn onClick={saveTechniques} disabled={savingTechniques}>
+              {savingTechniques ? "Guardando..." : "Guardar técnicas"}
+            </Btn>
+            {techniquesSaved && <span className="text-xs text-green-600">Guardado ✓</span>}
+          </div>
+        </AdminCard>
       )}
     </div>
   );
