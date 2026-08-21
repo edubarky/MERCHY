@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 export default async function PersonalizarPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
 
-  const [{ data: product }, { data: priceTiers }, { data: techniques }] = await Promise.all([
+  const [{ data: product }, { data: priceTiers }, { data: productTechniqueLinks }] = await Promise.all([
     supabase
       .from("products")
       .select(`
@@ -26,13 +26,24 @@ export default async function PersonalizarPage({ params }: { params: { id: strin
       .eq("active", true)
       .single(),
     supabase.from("price_tiers").select("*").order("qty_min"),
-    supabase.from("print_techniques").select("*").eq("active", true).order("sort_order"),
+    // Qué técnicas están asignadas a ESTE producto (Productos → Editar →
+    // Técnicas, en el admin) — nunca por categoría ni ninguna otra regla
+    // automática. Un producto sin ninguna fila aquí no muestra ninguna
+    // técnica (ver el estado vacío en PersonalizerClient), no un fallback
+    // genérico.
+    supabase.from("product_print_techniques").select("technique_id").eq("product_id", params.id),
   ]);
 
   if (!product) notFound();
 
   const safeProduct = product as unknown as Product & { variants: ProductVariant[] };
   const resolvedAssets = resolveProductViewAssets(safeProduct);
+
+  const assignedTechniqueIds = (productTechniqueLinks ?? []).map((r) => r.technique_id);
+  const { data: techniques } =
+    assignedTechniqueIds.length > 0
+      ? await supabase.from("print_techniques").select("*").in("id", assignedTechniqueIds).eq("active", true).order("sort_order")
+      : { data: [] as PrintTechnique[] };
 
   return (
     <div className="min-h-screen bg-white">

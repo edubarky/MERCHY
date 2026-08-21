@@ -829,9 +829,13 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                 ganar el máximo ancho posible sin tocar el padding compartido
                 por el resto de secciones — el título arriba se queda alineado
                 como siempre. */}
-            <div className="-mx-8">
-              <PrintTechniqueCards techniques={techniques} selectedId={selectedTechniqueId} onSelect={setSelectedTechniqueId} />
-            </div>
+            {techniques.length === 0 ? (
+              <p className="text-sm text-ui-gray">No hay técnicas de impresión disponibles para este producto.</p>
+            ) : (
+              <div className="-mx-8">
+                <PrintTechniqueCards techniques={techniques} selectedId={selectedTechniqueId} onSelect={setSelectedTechniqueId} />
+              </div>
+            )}
           </div>
 
           {/* Resumen del pedido */}
