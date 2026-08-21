@@ -22,22 +22,19 @@ const SUDADERA_OCEAN_EXTRA_COLOR_DIRS: Partial<Record<GarmentColor, string>> = {
   gris: "GRIS",
 };
 
-// Correction, scoped ONLY to Sudadera Ocean (never touches the generic
-// scan above, which every other product still goes through unmodified):
-// Blanco/Negro's own DERECHO*/IZQUIERDO* files turn out to be labeled
-// backwards relative to the TRUE side of the person wearing the garment
-// — verified by the direction the hood opening/profile faces in each
-// photo (same convention as a profile portrait: face pointing right in
-// frame = showing the subject's real right side), and confirmed
-// explicitly by the user after comparing Blanco's own two side photos.
-// Royal/Marino/Rojo/Gris's own file names were already correct by that
-// same test — they need NO remapping (an earlier pass swapped them to
-// *match* Blanco/Negro's convention, which was backwards itself; that
-// swap is reverted below by simply no longer applying one). This only
-// ever swaps which already-resolved izquierda/derecha SLOT a file lands
-// in for this one product — no file is renamed on disk, and blanco/negro
-// for every other product are completely unaffected.
-const SUDADERA_OCEAN_BLANCO_NEGRO_SIDES_SWAPPED = true;
+// NOTE on izquierda/derecha: every real file for Sudadera Ocean (blanco,
+// negro, and the 4 extra colors below) is named for the side it actually
+// shows — verified visually via the garment's own FRONT markers (the
+// drawstring + kangaroo pocket, both only ever on the front of the body):
+// in every "DERECHO*"/"IZQUIERDO*" file, those front markers sit on the
+// matching side of the frame (DERECHO* -> markers on the right,
+// IZQUIERDO* -> markers on the left), which is what actually determines
+// which real side of the wearer a profile photo shows — NOT which way the
+// hood's own peak/tip happens to lean (that's the back of the hood, and
+// leans opposite the face-opening; using it as the signal is what caused
+// two earlier, incorrect "fixes" in this exact spot — confirmed wrong by
+// the user both times). So: no remapping needed anywhere here, for any of
+// the 6 colors — every file is used exactly as its own name says.
 
 // Server-only: resolves a product's real per-view photography from the local
 // filesystem. Nothing here runs in the browser — only called from the
@@ -227,22 +224,11 @@ export function resolveProductViewAssets(product: Pick<Product, "id" | "name">):
         const baseNoExt = stripAccents(file.slice(0, file.length - ext.length - 1)).toUpperCase();
         const fileView = detectView(baseNoExt);
         if (!fileView) continue;
-        // No remap here — these 4 colors' own IZQUIERDO*/DERECHO* names
-        // already match the real side of the wearer (see the comment on
-        // SUDADERA_OCEAN_BLANCO_NEGRO_SIDES_SWAPPED above).
+        // No remap — this color's own IZQUIERDO*/DERECHO* name already
+        // matches the real side of the wearer (see the note above).
         result[fileView][color] = toPublicUrl(path.join(colorDir, file), publicRoot);
         log(`    Imagen cargada — ${fileView} (${color}):`, file);
       }
-    }
-
-    if (SUDADERA_OCEAN_BLANCO_NEGRO_SIDES_SWAPPED) {
-      log("  Corrigiendo blanco/negro: izquierda <-> derecha (nombres de archivo invertidos respecto al lado real)");
-      const izqBlanco = result.izquierda.blanco;
-      const izqNegro = result.izquierda.negro;
-      result.izquierda.blanco = result.derecha.blanco;
-      result.izquierda.negro = result.derecha.negro;
-      result.derecha.blanco = izqBlanco;
-      result.derecha.negro = izqNegro;
     }
   }
 
