@@ -21,6 +21,7 @@ import {
   VIEW_LABELS,
   emptyViewElements,
   normalizeGarmentColorName,
+  GARMENT_COLORS,
   type ViewName,
   type DesignElement,
   type ViewElements,
@@ -58,11 +59,20 @@ interface Props {
   resolvedAssets: ResolvedProductAssets;
   // El color de la prenda ya se eligió en la página del producto (ver
   // ProductDetail.tsx) -- este es el id de esa variante, pasado por
-  // page.tsx vía ?variant=. El Personalizador NUNCA vuelve a preguntar el
-  // color: solo carga los ejes de este color específico. null cuando no
-  // llegó ninguno (ej. un link viejo sin el query param) -- en ese caso
-  // cae al mismo comportamiento de siempre (primera variante activa).
+  // page.tsx vía ?variant=. El Personalizador NUNCA vuelve a mostrar el
+  // selector completo de los 6 colores: solo carga los ejes de este color
+  // específico (o de la lista acotada de multicolorVariantIds, ver abajo).
+  // null cuando no llegó ninguno (ej. un link viejo sin el query param) --
+  // en ese caso cae al mismo comportamiento de siempre (primera variante
+  // activa).
   initialVariantId: string | null;
+  // Solo presente cuando el usuario activó "Multicolor" en la página del
+  // producto Y seleccionó MÁS de un color (ver ProductDetail.tsx / page.tsx
+  // ?colors=). Cuando llega con 2+ ids reales de este producto, el
+  // Personalizador muestra una barra para alternar ÚNICAMENTE entre esos
+  // colores -- nunca los 6. null (Multicolor apagado, o solo un color
+  // elegido) significa "sin barra", igual que el comportamiento de antes.
+  multicolorVariantIds: string[] | null;
 }
 
 function uid() {
@@ -112,7 +122,14 @@ function ToolDockButton({
   );
 }
 
-export default function PersonalizerClient({ product, priceTiers, techniques, resolvedAssets, initialVariantId }: Props) {
+export default function PersonalizerClient({
+  product,
+  priceTiers,
+  techniques,
+  resolvedAssets,
+  initialVariantId,
+  multicolorVariantIds,
+}: Props) {
   const [activeView, setActiveView] = useState<ViewName>("frente");
   const [filesTabView, setFilesTabView] = useState<ViewName>("frente");
   const [elements, setElements] = useState<ViewElements>(emptyViewElements());
@@ -162,25 +179,39 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [cartOpen]);
 
-  // El color de la prenda YA se eligió en la página del producto (ver
-  // ProductDetail.tsx's "1. Selecciona Color") — el Personalizador solo
-  // recibe ese color y lo usa, sin volver a preguntarlo. `selectedVariant`
-  // es la variante real (Supabase) que corresponde a ese color; si no
-  // llegó ningún `initialVariantId` válido (ej. un link viejo sin el query
-  // param), cae a la primera variante activa, mismo fallback que existía
-  // antes de este cambio. `garmentColor` es completamente fijo durante
-  // toda la sesión del Personalizador -- no hay ningún setter en este
-  // componente, a propósito: cambiar de color implica volver a la página
-  // del producto y elegir otra vez. La lógica de auto-switch por brillo
-  // del arte (colorAnalysis.ts, analyzeDesignLuminance/LUMINANCE_THRESHOLD)
-  // sigue sin conectarse aquí por la misma razón que antes: el color de la
-  // prenda nunca debe cambiar por el color del arte/logo/texto.
-  const selectedVariant =
-    product.variants.find((v) => v.id === initialVariantId) ??
-    product.variants.find((v) => v.active) ??
-    product.variants[0] ??
-    null;
-  const garmentColor: GarmentColor = (selectedVariant && normalizeGarmentColorName(selectedVariant.color_name)) ?? "blanco";
+  // El/los color(es) de la prenda YA se eligieron en la página del producto
+  // (ver ProductDetail.tsx's "1. Selecciona Color" + el switch Multicolor)
+  // — el Personalizador nunca vuelve a mostrar el selector completo de los
+  // 6 colores. Dos casos, controlados por si `multicolorVariantIds` llegó
+  // (ver Props):
+  //  - Un solo color (Multicolor apagado, o encendido pero con solo un
+  //    color tocado): la prenda queda completamente fija durante toda la
+  //    sesión, igual que antes -- ninguna barra se dibuja.
+  //  - Varios colores + Multicolor activo: SÍ aparece una barra, pero
+  //    ÚNICAMENTE con esos colores ya elegidos (nunca los 6) -- sirve para
+  //    alternar entre ellos, no para elegir uno nuevo. `activeVariantId`
+  //    es lo único que cambia al tocar la barra; `elements` (los diseños
+  //    colocados) nunca se tocan, así el arte se conserva igual en
+  //    cualquiera de los colores.
+  // `initialVariantId` (siempre presente, ver Props) decide cuál de los
+  // colores se muestra primero en ambos casos.
+  const barVariants = (multicolorVariantIds ?? [])
+    .map((id) => product.variants.find((v) => v.id === id))
+    .filter((v): v is ProductVariant => !!v)
+    // Orden canónico fijo (blanco, negro, royal, marino, rojo, gris) --
+    // no el orden en que el usuario los fue tocando en la página del
+    // producto, para que la barra siempre se lea igual.
+    .sort((a, b) => {
+      const ia = GARMENT_COLORS.indexOf(normalizeGarmentColorName(a.color_name) ?? "blanco");
+      const ib = GARMENT_COLORS.indexOf(normalizeGarmentColorName(b.color_name) ?? "blanco");
+      return ia - ib;
+    });
+  const showColorBar = barVariants.length > 1;
+
+  const fallbackVariant = product.variants.find((v) => v.active) ?? product.variants[0] ?? null;
+  const [activeVariantId, setActiveVariantId] = useState<string | null>(initialVariantId ?? fallbackVariant?.id ?? null);
+  const activeVariant = product.variants.find((v) => v.id === activeVariantId) ?? fallbackVariant;
+  const garmentColor: GarmentColor = (activeVariant && normalizeGarmentColorName(activeVariant.color_name)) ?? "blanco";
 
   // No shared generic mockup fallback here on purpose: the Personalizador
   // must only ever show the actual selected product's own photography, per
@@ -515,11 +546,13 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
         }
       }
 
-      // El color agregado al carrito es el mismo que el usuario ya eligió
-      // en la página del producto (`selectedVariant`, derivado arriba) --
-      // nunca "la primera variante activa" a secas, para que el carrito
-      // siempre coincida con la prenda que realmente se vio y personalizó.
-      const variant = selectedVariant ?? product.variants.find((v) => v.active) ?? product.variants[0];
+      // El color agregado al carrito es el color ACTIVO en este momento
+      // (`activeVariant`, derivado arriba) -- el que ya se eligió en la
+      // página del producto, o el que se esté mostrando en la barra
+      // Multicolor si el usuario cambió entre colores -- nunca "la primera
+      // variante activa" a secas, para que el carrito siempre coincida con
+      // la prenda que realmente se vio y personalizó.
+      const variant = activeVariant ?? product.variants.find((v) => v.active) ?? product.variants[0];
       const logos: CustomizationElement[] = [];
       const texts: CustomizationElement[] = [];
       VIEW_ORDER.forEach((v) => {
@@ -640,6 +673,38 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
             </div>
           </div>
 
+          {/* Barra de colores — SOLO aparece cuando el usuario activó
+              "Multicolor" en la página del producto Y eligió más de un
+              color (`showColorBar`, ver arriba). NO es un selector de
+              colores de la prenda en general -- únicamente permite
+              alternar entre los colores que ya se eligieron antes de
+              entrar aquí; nunca muestra los 6 colores completos. Cambiar
+              de color en esta barra SOLO cambia `activeVariantId` (y por lo
+              tanto `garmentColor`): nunca toca `elements`, así que el
+              diseño colocado por el usuario se mantiene intacto (misma
+              posición/escala/rotación %) al alternar de prenda. */}
+          {showColorBar && (
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <span className="mr-1 text-xs font-semibold text-ui-gray">Color de la prenda:</span>
+              {barVariants.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setActiveVariantId(v.id)}
+                  title={v.color_name}
+                  aria-label={`Color ${v.color_name}`}
+                  aria-pressed={activeVariant?.id === v.id}
+                  style={{ backgroundColor: v.color_hex }}
+                  className={`h-8 w-8 rounded-full border-2 transition-all duration-150 ease-out ${
+                    activeVariant?.id === v.id
+                      ? "border-primary scale-110 ring-2 ring-primary/30 shadow-[0_0_0_4px_rgba(87,224,217,0.12)]"
+                      : "border-white ring-1 ring-ui-border hover:scale-105"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
           {selectedElement && (
             <div className="mb-5">
               <SelectionToolbar
@@ -677,7 +742,7 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={activeViewSrc}
-                  alt={`${product.name} — ${VIEW_LABELS[activeView]} — ${selectedVariant?.color_name ?? ""}`}
+                  alt={`${product.name} — ${VIEW_LABELS[activeView]} — ${activeVariant?.color_name ?? ""}`}
                   className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
                   draggable={false}
                 />

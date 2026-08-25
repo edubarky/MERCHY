@@ -780,6 +780,27 @@ export default function ProductDetail({ product, priceTiers }: Props) {
     ]);
   }
 
+  // Link a "Personalizar producto": el color (o colores, en modo
+  // Multicolor) ya se eligió arriba ("1. Selecciona Color"/"Multicolor")
+  // -- se pasan como query params para que el Personalizador los reciba y
+  // nunca vuelva a preguntar. `colors` solo se manda con Multicolor
+  // encendido Y más de un color elegido (PersonalizerClient trata "un solo
+  // color" igual con o sin `colors`, así que no hace falta mandarlo en ese
+  // caso). Si el color "activo" (`selectedVariant`, el último tocado) fue
+  // desmarcado de `selectedColorIds` sin cambiar de `multicolor`, se usa el
+  // primero de la lista en su lugar, para que el color inicial del
+  // Personalizador siempre esté entre los que la barra va a mostrar.
+  const multicolorIds = multicolor && selectedColorIds.length > 1 ? selectedColorIds : null;
+  const personalizarVariantId =
+    multicolorIds && selectedVariant && !multicolorIds.includes(selectedVariant.id)
+      ? multicolorIds[0]
+      : selectedVariant?.id;
+  const personalizarParams = new URLSearchParams();
+  if (personalizarVariantId) personalizarParams.set("variant", personalizarVariantId);
+  if (multicolorIds) personalizarParams.set("colors", multicolorIds.join(","));
+  const personalizarQuery = personalizarParams.toString();
+  const personalizarHref = `/producto/${product.id}/personalizar${personalizarQuery ? `?${personalizarQuery}` : ""}`;
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
@@ -1005,14 +1026,7 @@ export default function ProductDetail({ product, priceTiers }: Props) {
           {/* CTAs */}
           <div className="flex gap-3">
             <Link
-              // El color ya se eligió arriba ("1. Selecciona Color") -- se
-              // pasa como ?variant= para que el Personalizador cargue
-              // directamente los ejes de ese color, sin volver a preguntar.
-              href={
-                selectedVariant
-                  ? `/producto/${product.id}/personalizar?variant=${selectedVariant.id}`
-                  : `/producto/${product.id}/personalizar`
-              }
+              href={personalizarHref}
               aria-disabled={!canPersonalize}
               tabIndex={canPersonalize ? undefined : -1}
               onClick={(e) => {

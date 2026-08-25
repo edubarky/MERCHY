@@ -21,7 +21,10 @@ export default async function PersonalizarPage({
   // que el Personalizador cargue únicamente los ejes de ese color, sin
   // volver a preguntarlo. Ausente/inválido (ej. un link viejo) -> cae al
   // mismo fallback de siempre dentro de PersonalizerClient.
-  searchParams: { variant?: string };
+  // ?colors=<id1>,<id2>,... -- solo presente cuando el usuario activó
+  // "Multicolor" y eligió más de un color; habilita la barra acotada de
+  // colores dentro del Personalizador (ver PersonalizerClient).
+  searchParams: { variant?: string; colors?: string };
 }) {
   const supabase = createClient();
 
@@ -56,6 +59,12 @@ export default async function PersonalizarPage({
   const initialVariantId = safeProduct.variants.some((v) => v.id === searchParams.variant)
     ? (searchParams.variant as string)
     : null;
+  // Mismo criterio: solo ids reales de ESTE producto sobreviven. Si después
+  // de filtrar queda 1 o 0 (ej. alguien manipuló la URL a mano), no hay
+  // nada que alternar -> null, mismo resultado que "Multicolor apagado".
+  const rawColorIds = (searchParams.colors ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const validColorIds = rawColorIds.filter((id) => safeProduct.variants.some((v) => v.id === id));
+  const multicolorVariantIds = validColorIds.length > 1 ? validColorIds : null;
 
   const assignedTechniqueIds = (productTechniqueLinks ?? []).map((r) => r.technique_id);
   const { data: techniques } =
@@ -71,6 +80,7 @@ export default async function PersonalizarPage({
         techniques={(techniques ?? []) as PrintTechnique[]}
         resolvedAssets={resolvedAssets}
         initialVariantId={initialVariantId}
+        multicolorVariantIds={multicolorVariantIds}
       />
     </div>
   );
