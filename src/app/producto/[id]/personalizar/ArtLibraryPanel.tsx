@@ -71,6 +71,7 @@ export default function ArtLibraryPanel({
   open,
   onClose,
   assets,
+  loading,
   onSelect,
   onRemove,
   onAddNew,
@@ -78,6 +79,11 @@ export default function ArtLibraryPanel({
   open: boolean;
   onClose: () => void;
   assets: ArtAsset[];
+  // Mientras la biblioteca todavía no terminó de cargar desde Supabase
+  // (primer render tras abrir), evita mostrar el estado "aún no has
+  // subido nada" -- que sería falso para un usuario que ya tiene diseños
+  // guardados de una sesión anterior.
+  loading: boolean;
   onSelect: (asset: ArtAsset) => void;
   onRemove: (id: string) => void;
   onAddNew: (file: File) => void;
@@ -134,7 +140,11 @@ export default function ArtLibraryPanel({
           </button>
         </div>
 
-        {assets.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center py-10 text-center">
+            <p className="text-sm text-ui-gray">Cargando tus diseños…</p>
+          </div>
+        ) : assets.length === 0 ? (
           <div className="flex flex-col items-center py-10 text-center">
             <p className="mb-1 font-semibold text-foreground">Aún no has subido ningún arte</p>
             <p className="mb-6 text-sm text-ui-gray">Los logos y diseños que agregues aparecerán aquí para reutilizarlos.</p>

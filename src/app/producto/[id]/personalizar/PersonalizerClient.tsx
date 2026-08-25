@@ -162,7 +162,7 @@ export default function PersonalizerClient({
   // sigue siendo el carrito real de la plataforma, no uno nuevo. `addItem`
   // es lo único que este componente todavía necesita del contexto.
   const { addItem } = useCart();
-  const { assets: artAssets, addAsset, removeAsset } = useArtLibrary();
+  const { assets: artAssets, loading: artLibraryLoading, addAsset, removeAsset } = useArtLibrary();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -396,11 +396,17 @@ export default function PersonalizerClient({
     });
   }
 
-  function handleLogoFiles(files: FileList | null) {
+  async function handleLogoFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
-    const asset = addAsset(files[0]);
-    placeAsset(asset);
+    // El archivo se lee ANTES de limpiar el input -- igual que antes de
+    // este cambio. addAsset ahora sube el archivo a la biblioteca
+    // permanente del usuario (Supabase) antes de poder colocarlo -- null
+    // si falló (sin sesión, error de red, etc.), en cuyo caso simplemente
+    // no se coloca nada, sin romper el resto del flujo.
+    const file = files[0];
     if (fileInputRef.current) fileInputRef.current.value = "";
+    const asset = await addAsset(file);
+    if (asset) placeAsset(asset);
   }
 
   function handleAddText() {
@@ -1188,14 +1194,15 @@ export default function PersonalizerClient({
         open={artLibraryOpen}
         onClose={() => setArtLibraryOpen(false)}
         assets={artAssets}
+        loading={artLibraryLoading}
         onSelect={(asset) => {
           placeAsset(asset);
           setArtLibraryOpen(false);
         }}
         onRemove={removeAsset}
-        onAddNew={(file) => {
-          const asset = addAsset(file);
-          placeAsset(asset);
+        onAddNew={async (file) => {
+          const asset = await addAsset(file);
+          if (asset) placeAsset(asset);
           setArtLibraryOpen(false);
         }}
       />
