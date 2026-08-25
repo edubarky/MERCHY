@@ -24,12 +24,12 @@ const CARDS = [
 
 export default function PrintTechniqueCards({
   techniques,
-  selectedId,
-  onSelect,
+  selectedIds,
+  onToggle,
 }: {
   techniques: PrintTechnique[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
+  selectedIds: string[];
+  onToggle: (id: string) => void;
 }) {
   return (
     // En desktop, el grupo de 5 (3 arriba + 2 abajo) vive en un contenedor
@@ -44,12 +44,12 @@ export default function PrintTechniqueCards({
       {CARDS.map((card, i) => {
         const technique = techniques.find((t) => t.name === card.name);
         if (!technique) return null;
-        const isSelected = selectedId === technique.id;
+        const isSelected = selectedIds.includes(technique.id);
         return (
           <button
             key={technique.id}
             type="button"
-            onClick={() => onSelect(technique.id)}
+            onClick={() => onToggle(technique.id)}
             aria-pressed={isSelected}
             // Un único contenedor: la tarjeta ES la imagen. El resaltado de
             // hover/selección se dibuja con filter:drop-shadow, que traza el

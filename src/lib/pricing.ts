@@ -27,6 +27,36 @@ export function getTechniquePrice(
   return tier.price_per_element * numElements;
 }
 
+// ---- Selección múltiple de técnicas, cada una con su propio parámetro ----
+// Ninguna de estas tres funciones inventa, interpola ni copia un precio de
+// otro renglón/tamaño/técnica: si no hay un renglón que coincida EXACTO
+// con lo pedido, regresan null (el llamador lo muestra como "requiere
+// cotización" / "esta medida requiere cotización").
+
+/** pricing_type "by_qty" (ej. DTG) -- precio por elemento según cantidad total. */
+export function findQtyPrice(technique: PrintTechnique, totalQty: number): number | null {
+  const tier = technique.price_table.find(
+    (t) => t.tintas === undefined && t.size === undefined && totalQty >= t.qty_min && (t.qty_max === null || totalQty <= t.qty_max)
+  );
+  return tier ? tier.price_per_element : null;
+}
+
+/** pricing_type "by_tintas" (ej. Serigrafía, Tampografía) -- por número de tintas Y cantidad total. */
+export function findTintasPrice(technique: PrintTechnique, tintas: number, totalQty: number): number | null {
+  const tier = technique.price_table.find(
+    (t) => t.tintas === tintas && totalQty >= t.qty_min && (t.qty_max === null || totalQty <= t.qty_max)
+  );
+  return tier ? tier.price_per_element : null;
+}
+
+/** pricing_type "by_size" (ej. DTF Textil, DTF UV) -- por tamaño del logo Y cantidad total. */
+export function findSizePrice(technique: PrintTechnique, size: string, totalQty: number): number | null {
+  const tier = technique.price_table.find(
+    (t) => t.size === size && totalQty >= t.qty_min && (t.qty_max === null || totalQty <= t.qty_max)
+  );
+  return tier ? tier.price_per_element : null;
+}
+
 export function calculateUnitPrice(
   costo: number,
   totalQty: number,

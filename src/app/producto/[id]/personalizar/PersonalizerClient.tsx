@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toPng } from "html-to-image";
 import type { Product, ProductVariant, PriceTier, PrintTechnique, CartItem, CustomizationElement } from "@/types";
-import { getProductUnitPrice, getTechniquePrice, formatMXN } from "@/lib/pricing";
+import { getProductUnitPrice, findQtyPrice, findTintasPrice, findSizePrice, formatMXN } from "@/lib/pricing";
 import { useCart } from "@/lib/cart/CartContext";
 import CartPopover from "@/components/cart/CartPopover";
 import { useArtLibrary, type ArtAsset } from "@/lib/artLibrary/ArtLibraryContext";
@@ -123,7 +123,14 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
-  const [selectedTechniqueId, setSelectedTechniqueId] = useState<string | null>(null);
+  // Selección múltiple: el usuario puede activar varias técnicas a la vez
+  // (ej. DTF Textil + Bordado), cada una suma su propio precio por
+  // separado. techniqueTintas/techniqueLogoSizes guardan el parámetro que
+  // cada técnica pide (ver PrintTechnique.pricing_type) — nunca se
+  // inventa un valor por defecto que no haya elegido el usuario.
+  const [selectedTechniqueIds, setSelectedTechniqueIds] = useState<string[]>([]);
+  const [techniqueTintas, setTechniqueTintas] = useState<Record<string, number>>({});
+  const [techniqueLogoSizes, setTechniqueLogoSizes] = useState<Record<string, Record<string, string>>>({});
   const [quantity, setQuantity] = useState(1);
   const [zCounter, setZCounter] = useState(1);
   const [cartOpen, setCartOpen] = useState(false);
@@ -405,10 +412,57 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     });
   }
 
+  function toggleTechnique(id: string) {
+    setSelectedTechniqueIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
   const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers);
   const numElements = VIEW_ORDER.reduce((sum, v) => sum + elements[v].length, 0);
-  const selectedTechnique = techniques.find((t) => t.id === selectedTechniqueId) ?? null;
-  const techniqueTotal = selectedTechnique ? getTechniquePrice(selectedTechnique, quantity, numElements) : 0;
+  const allLogoElements = VIEW_ORDER.flatMap((v) => elements[v].filter((e) => e.type === "logo"));
+
+  // Cada técnica calcula su propio precio según su pricing_type (ver
+  // types/index.ts) y se suma al total — nunca se inventa un precio: si
+  // falta el parámetro (tintas/tamaño) o no hay un renglón que coincida
+  // exacto, unitPrice queda en null y needsQuote en true.
+  interface TechniqueResult {
+    technique: PrintTechnique;
+    unitPrice: number | null;
+    needsQuote: boolean;
+  }
+  const techniqueResults: TechniqueResult[] = selectedTechniqueIds
+    .map((id) => techniques.find((t) => t.id === id))
+    .filter((t): t is PrintTechnique => !!t)
+    .map((technique): TechniqueResult => {
+      if (technique.pricing_type === "by_qty") {
+        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false };
+        const price = findQtyPrice(technique, quantity);
+        return price === null ? { technique, unitPrice: null, needsQuote: true } : { technique, unitPrice: price * numElements, needsQuote: false };
+      }
+      if (technique.pricing_type === "by_tintas") {
+        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false };
+        const tintas = techniqueTintas[technique.id];
+        if (!tintas) return { technique, unitPrice: null, needsQuote: true };
+        const price = findTintasPrice(technique, tintas, quantity);
+        return price === null ? { technique, unitPrice: null, needsQuote: true } : { technique, unitPrice: price * numElements, needsQuote: false };
+      }
+      if (technique.pricing_type === "by_size") {
+        if (allLogoElements.length === 0) return { technique, unitPrice: 0, needsQuote: false };
+        const sizes = techniqueLogoSizes[technique.id] ?? {};
+        let sum = 0;
+        let needsQuote = false;
+        for (const el of allLogoElements) {
+          const size = sizes[el.id];
+          const price = size ? findSizePrice(technique, size, quantity) : null;
+          if (price === null) needsQuote = true;
+          else sum += price;
+        }
+        return { technique, unitPrice: needsQuote ? null : sum, needsQuote };
+      }
+      // pricing_type null -> sin datos suficientes configurados todavía.
+      return { technique, unitPrice: null, needsQuote: true };
+    });
+  const anyTechniqueNeedsQuote = techniqueResults.some((r) => r.needsQuote);
+  const techniqueTotal = techniqueResults.reduce((sum, r) => sum + (r.unitPrice ?? 0), 0);
   const unitPrice = garmentUnit + techniqueTotal;
   const subtotal = unitPrice * quantity;
   const total = subtotal;
@@ -416,6 +470,15 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   const uniqueColors = new Set(
     VIEW_ORDER.flatMap((v) => elements[v].filter((e) => e.type === "text").map((e) => e.color || "#1a1a1a"))
   ).size;
+
+  // El carrito/checkout/PreviewModal todavía muestran UNA sola técnica
+  // (no se rediseñaron en este cambio) -- se usa la primera seleccionada
+  // como referencia principal; el detalle completo de todas las técnicas
+  // activas (tintas, tamaños por logo, si cada una requiere cotización)
+  // se guarda de todas formas en customization_snapshot.selected_techniques,
+  // así que no se pierde información aunque la UI del carrito no la
+  // muestre todavía.
+  const primaryTechnique = techniqueResults[0]?.technique ?? null;
 
   async function handleAddToCart() {
     if (addingToCart) return;
@@ -448,10 +511,26 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
           ? [{ variant_id: variant.id, color_name: variant.color_name, color_hex: variant.color_hex, qty: quantity, sizes_breakdown: {} }]
           : [],
         total_quantity: quantity,
-        technique_id: selectedTechnique?.id ?? null,
-        technique: selectedTechnique ?? undefined,
+        technique_id: primaryTechnique?.id ?? null,
+        technique: primaryTechnique ?? undefined,
         num_elements: numElements,
-        customization_snapshot: numElements > 0 ? { canvas_data_url: canvasDataUrl, logos, texts, applied_to: "all" } : null,
+        customization_snapshot:
+          numElements > 0
+            ? {
+                canvas_data_url: canvasDataUrl,
+                logos,
+                texts,
+                applied_to: "all",
+                selected_techniques: techniqueResults.map((r) => ({
+                  technique_id: r.technique.id,
+                  technique_name: r.technique.name,
+                  tintas: techniqueTintas[r.technique.id],
+                  logo_sizes: techniqueLogoSizes[r.technique.id],
+                  unit_price: r.unitPrice,
+                  needs_quote: r.needsQuote,
+                })),
+              }
+            : null,
         unit_price: unitPrice,
         total_price: total,
       };
@@ -832,9 +911,119 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
             {techniques.length === 0 ? (
               <p className="text-sm text-ui-gray">No hay técnicas de impresión disponibles para este producto.</p>
             ) : (
-              <div className="-mx-8">
-                <PrintTechniqueCards techniques={techniques} selectedId={selectedTechniqueId} onSelect={setSelectedTechniqueId} />
-              </div>
+              <>
+                <div className="-mx-8">
+                  <PrintTechniqueCards techniques={techniques} selectedIds={selectedTechniqueIds} onToggle={toggleTechnique} />
+                </div>
+                {/* Cada técnica activa pide su propio parámetro (ver
+                    PrintTechnique.pricing_type) -- "by_qty" no necesita
+                    ninguno extra y no dibuja nada aquí. */}
+                {techniqueResults.length > 0 && (
+                  <div className="mt-5 flex flex-col gap-3">
+                    {techniqueResults.map(({ technique }) => {
+                      if (technique.pricing_type === "by_tintas") {
+                        const options = Array.from(
+                          new Set(technique.price_table.map((t) => t.tintas).filter((t): t is number => t !== undefined))
+                        ).sort((a, b) => a - b);
+                        const chosen = techniqueTintas[technique.id];
+                        return (
+                          <div key={technique.id} className="rounded-2xl border border-ui-border p-4">
+                            <p className="mb-2.5 text-sm font-semibold text-foreground">{technique.name} — Número de tintas</p>
+                            <div className="flex flex-wrap gap-2">
+                              {options.map((n) => (
+                                <button
+                                  key={n}
+                                  type="button"
+                                  onClick={() => setTechniqueTintas((prev) => ({ ...prev, [technique.id]: n }))}
+                                  className={`flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition-colors duration-150 ease-out ${
+                                    chosen === n ? "border-primary bg-primary text-white" : "border-ui-border text-foreground hover:border-primary/50"
+                                  }`}
+                                >
+                                  {n}
+                                </button>
+                              ))}
+                            </div>
+                            {chosen !== undefined && findTintasPrice(technique, chosen, quantity) === null && (
+                              <p className="mt-2.5 text-xs font-medium text-accent-coral">Esta combinación requiere cotización.</p>
+                            )}
+                          </div>
+                        );
+                      }
+                      if (technique.pricing_type === "by_size") {
+                        const sizeOptions = Array.from(new Set(technique.price_table.map((t) => t.size).filter((s): s is string => !!s)));
+                        if (allLogoElements.length === 0) {
+                          return (
+                            <div key={technique.id} className="rounded-2xl border border-dashed border-ui-border bg-gray-50 p-4">
+                              <p className="text-sm text-ui-gray">Agrega un logo para elegir el tamaño de {technique.name}.</p>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={technique.id} className="rounded-2xl border border-ui-border p-4">
+                            <p className="mb-2.5 text-sm font-semibold text-foreground">{technique.name} — Tamaño por logo</p>
+                            <div className="flex flex-col gap-2.5">
+                              {allLogoElements.map((el) => {
+                                const chosen = techniqueLogoSizes[technique.id]?.[el.id];
+                                const priceForLogo = chosen ? findSizePrice(technique, chosen, quantity) : null;
+                                return (
+                                  <div key={el.id} className="flex flex-wrap items-center justify-between gap-2">
+                                    <span className="truncate text-xs text-ui-gray">{el.fileName ?? "Logo"}</span>
+                                    <div className="flex items-center gap-1.5">
+                                      {sizeOptions.map((size) => (
+                                        <button
+                                          key={size}
+                                          type="button"
+                                          onClick={() =>
+                                            setTechniqueLogoSizes((prev) => ({
+                                              ...prev,
+                                              [technique.id]: { ...prev[technique.id], [el.id]: size },
+                                            }))
+                                          }
+                                          className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors duration-150 ease-out ${
+                                            chosen === size
+                                              ? "border-primary bg-primary text-white"
+                                              : "border-ui-border text-foreground hover:border-primary/50"
+                                          }`}
+                                        >
+                                          {size} cm
+                                        </button>
+                                      ))}
+                                      {chosen && (
+                                        <span className="ml-1 w-16 text-right text-xs font-semibold text-foreground">
+                                          {priceForLogo === null ? (
+                                            <span className="text-accent-coral">Cotizar</span>
+                                          ) : (
+                                            `${formatMXN(priceForLogo)}`
+                                          )}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {allLogoElements.some((el) => {
+                              const chosen = techniqueLogoSizes[technique.id]?.[el.id];
+                              return chosen && findSizePrice(technique, chosen, quantity) === null;
+                            }) && <p className="mt-2.5 text-xs font-medium text-accent-coral">Esta medida requiere cotización.</p>}
+                          </div>
+                        );
+                      }
+                      if (!technique.pricing_type) {
+                        return (
+                          <div key={technique.id} className="rounded-2xl border border-dashed border-ui-border bg-gray-50 p-4">
+                            <p className="text-sm text-ui-gray">
+                              <span className="font-semibold text-foreground">{technique.name}:</span> Precio por cotizar — todavía no
+                              tiene tarifas configuradas.
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -863,9 +1052,11 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-ui-gray">Tipo de impresión</span>
-                  <span className="font-semibold text-foreground">{selectedTechnique?.name ?? "—"}</span>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="shrink-0 text-ui-gray">Tipo de impresión</span>
+                  <span className="text-right font-semibold text-foreground">
+                    {techniqueResults.length === 0 ? "—" : techniqueResults.map((r) => r.technique.name).join(", ")}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-ui-gray">Colores de impresión</span>
@@ -893,11 +1084,16 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
             <div className="mt-5 flex items-center justify-between rounded-2xl bg-primary/10 px-6 py-5">
               <div>
                 <p className="text-lg font-bold text-foreground">Total</p>
-                <p className="text-xs text-ui-gray">IVA incluido</p>
+                <p className="text-xs text-ui-gray">
+                  {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
+                </p>
               </div>
-              <p className="text-3xl font-bold text-foreground">
-                {formatMXN(total)} <span className="text-sm font-normal text-ui-gray">MXN</span>
-              </p>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-foreground">
+                  {formatMXN(total)} <span className="text-sm font-normal text-ui-gray">MXN</span>
+                </p>
+                {anyTechniqueNeedsQuote && <p className="text-xs font-semibold text-accent-coral">+ técnica(s) por cotizar</p>}
+              </div>
             </div>
           </div>
 
@@ -925,7 +1121,7 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
         onClose={() => setPreviewOpen(false)}
         elements={elements}
         productName={product.name}
-        technique={selectedTechnique}
+        technique={primaryTechnique}
         resolvedAssets={resolvedAssets}
         garmentColor={garmentColor}
         onConfirm={() => {

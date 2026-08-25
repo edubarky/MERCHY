@@ -47,10 +47,22 @@ export interface PriceTier {
   label: string;
 }
 
+// Cada técnica define su propio parámetro de precio (no hay una fórmula
+// única para todas) — pricing_type dice cómo leer price_table:
+//   "by_qty"    -> solo depende de la cantidad total (ej. DTG)
+//   "by_tintas" -> depende del número de tintas Y la cantidad (Serigrafía, Tampografía)
+//   "by_size"   -> depende del tamaño del logo Y la cantidad (DTF Textil, DTF UV)
+//   null        -> sin suficiente información todavía -> "Precio por cotizar"
+// tintas/size son opcionales en cada renglón porque solo aplican al tipo
+// correspondiente -- un renglón "by_qty" nunca los trae.
+export type PricingType = "by_qty" | "by_tintas" | "by_size" | null;
+
 export interface TechniquePrice {
   qty_min: number;
   qty_max: number | null;
   price_per_element: number;
+  tintas?: number;
+  size?: string; // ej. "5x5", "10x10", "20x20" (cm)
 }
 
 export interface PrintTechnique {
@@ -58,6 +70,7 @@ export interface PrintTechnique {
   name: string;
   description: string | null;
   price_table: TechniquePrice[];
+  pricing_type: PricingType;
   active: boolean;
   sort_order: number;
 }
@@ -87,11 +100,32 @@ export interface CustomizationElement {
   rotation: number;
 }
 
+// Detalle completo de UNA técnica activa dentro de una selección múltiple
+// (ver PersonalizerClient) -- guarda exactamente los parámetros que el
+// cliente eligió (tintas, tamaño por logo) y el precio ya calculado, para
+// que el pedido quede totalmente trazable sin tener que re-derivarlo
+// después. needs_quote=true cuando esa técnica (o alguno de sus logos, en
+// el caso "by_size") no tiene una tarifa configurada para lo elegido --
+// nunca se inventa un precio en su lugar.
+export interface SelectedTechniqueDetail {
+  technique_id: string;
+  technique_name: string;
+  tintas?: number;
+  logo_sizes?: Record<string, string>; // elementId -> "5x5" | "10x10" | "20x20" (solo pricing_type "by_size")
+  unit_price: number | null; // null cuando needs_quote es true
+  needs_quote: boolean;
+}
+
 export interface CustomizationSnapshot {
   canvas_data_url: string;
   logos: CustomizationElement[];
   texts: CustomizationElement[];
   applied_to: "all" | "per_color";
+  // Nuevo, opcional: detalle multi-técnica. technique_id/technique en
+  // CartItem se mantienen apuntando a la PRIMERA técnica seleccionada
+  // (compatibilidad con el carrito/checkout existentes, que todavía
+  // muestran una sola técnica) -- este arreglo es la fuente completa.
+  selected_techniques?: SelectedTechniqueDetail[];
 }
 
 export interface CartItem {
