@@ -33,6 +33,7 @@ import DesignElementView, { DEFAULT_FONT_SIZE_PX } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
 
 import ArtLibraryPanel from "./ArtLibraryPanel";
+import DesignsPreviewCard from "./DesignsPreviewCard";
 import SelectionToolbar from "./SelectionToolbar";
 import PrintTechniqueCards from "./PrintTechniqueCards";
 import PreviewModal from "./PreviewModal";
@@ -45,7 +46,6 @@ import {
   ArrowRightIcon,
   GarmentTabIcon,
   EyeIcon,
-  FolderIcon,
   ChevronRightIcon,
   SparkleIcon,
 } from "./Icons";
@@ -806,21 +806,17 @@ export default function PersonalizerClient({
             <span className="mb-1 block text-2xl font-bold text-foreground">3. Personaliza tu producto</span>
             <p className="mb-4 text-sm text-ui-gray">Agrega un logo o crea un texto personalizado</p>
 
-            {/* Tus diseños — biblioteca/atajo a lo ya subido, tarjeta horizontal de ancho completo */}
-            <button
-              type="button"
-              onClick={() => setArtLibraryOpen(true)}
-              className="group flex w-full items-center gap-3 rounded-2xl bg-primary/[0.06] px-4 py-3.5 text-left transition-all duration-200 ease-out hover:bg-primary/[0.1]"
-            >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary-dark">
-                <FolderIcon className="h-5 w-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-bold text-foreground">Tus diseños</span>
-                <span className="block text-xs text-ui-gray">Archivos que has subido</span>
-              </span>
-              <ChevronRightIcon className="h-5 w-5 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
-            </button>
+            {/* Tus diseños — misma tarjeta de siempre (icono/título/
+                subtítulo/flecha, sigue abriendo la galería completa), pero
+                ahora con una vista previa real de los diseños ya
+                guardados debajo, cuando existen. Vacío -> exactamente la
+                tarjeta de antes, sin miniaturas ficticias. */}
+            <DesignsPreviewCard
+              assets={artAssets}
+              onOpenAll={() => setArtLibraryOpen(true)}
+              onSelect={(asset) => placeAsset(asset)}
+              onRemove={removeAsset}
+            />
 
             {/* Agregar logo / Agregar texto — acciones para crear elementos nuevos */}
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
