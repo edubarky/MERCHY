@@ -4,7 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toPng } from "html-to-image";
 import type { Product, ProductVariant, PriceTier, PrintTechnique, CartItem, CustomizationElement } from "@/types";
-import { getProductUnitPrice, findQtyPrice, findTintasPrice, findSizePrice, formatMXN } from "@/lib/pricing";
+import {
+  getProductUnitPrice,
+  findQtyPrice,
+  findTintasPrice,
+  findSizePrice,
+  getElementRealCm,
+  roundUpToConfiguredSize,
+  formatMXN,
+} from "@/lib/pricing";
 import { useCart } from "@/lib/cart/CartContext";
 import CartPopover from "@/components/cart/CartPopover";
 import { useArtLibrary, type ArtAsset } from "@/lib/artLibrary/ArtLibraryContext";
@@ -416,6 +424,27 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     setSelectedTechniqueIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
+  // Tamaño (ej. "10x10") a usar para calcular el precio "by_size" de un
+  // logo: automático cuando esa vista/producto ya tiene medidas físicas
+  // reales cargadas (printAreas.ts -> widthCm/heightCm) -- redondeando
+  // siempre hacia el tamaño configurado inmediato superior, nunca hacia
+  // abajo. Mientras un producto/vista no tenga esas medidas, cae
+  // exactamente al comportamiento manual de siempre (el cliente elige el
+  // tamaño a mano vía techniqueLogoSizes) -- ningún producto pierde
+  // funcionalidad por no tener todavía sus medidas reales configuradas.
+  function resolveLogoSize(
+    technique: PrintTechnique,
+    el: DesignElement
+  ): { size: string | null; auto: boolean; realCm: { widthCm: number; heightCm: number } | null } {
+    const pa = getPrintArea(product.name, el.view);
+    const realCm = getElementRealCm(el.widthPct, el.heightPct, pa.widthCm, pa.heightCm);
+    if (realCm) {
+      const sizeOptions = Array.from(new Set(technique.price_table.map((t) => t.size).filter((s): s is string => !!s)));
+      return { size: roundUpToConfiguredSize(realCm.widthCm, realCm.heightCm, sizeOptions), auto: true, realCm };
+    }
+    return { size: techniqueLogoSizes[technique.id]?.[el.id] ?? null, auto: false, realCm: null };
+  }
+
   const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers);
   const numElements = VIEW_ORDER.reduce((sum, v) => sum + elements[v].length, 0);
   const allLogoElements = VIEW_ORDER.flatMap((v) => elements[v].filter((e) => e.type === "logo"));
@@ -447,11 +476,10 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
       }
       if (technique.pricing_type === "by_size") {
         if (allLogoElements.length === 0) return { technique, unitPrice: 0, needsQuote: false };
-        const sizes = techniqueLogoSizes[technique.id] ?? {};
         let sum = 0;
         let needsQuote = false;
         for (const el of allLogoElements) {
-          const size = sizes[el.id];
+          const { size } = resolveLogoSize(technique, el);
           const price = size ? findSizePrice(technique, size, quantity) : null;
           if (price === null) needsQuote = true;
           else sum += price;
@@ -963,8 +991,50 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                             <p className="mb-2.5 text-sm font-semibold text-foreground">{technique.name} — Tamaño por logo</p>
                             <div className="flex flex-col gap-2.5">
                               {allLogoElements.map((el) => {
-                                const chosen = techniqueLogoSizes[technique.id]?.[el.id];
-                                const priceForLogo = chosen ? findSizePrice(technique, chosen, quantity) : null;
+                                const resolved = resolveLogoSize(technique, el);
+                                const priceForLogo = resolved.size ? findSizePrice(technique, resolved.size, quantity) : null;
+
+                                // Medidas reales cargadas para esta vista/producto (printAreas.ts):
+                                // el tamaño se mide solo, sin selector manual.
+                                if (resolved.auto) {
+                                  return (
+                                    <div key={el.id} className="flex flex-wrap items-center justify-between gap-2">
+                                      <span className="truncate text-xs text-ui-gray">
+                                        {el.fileName ?? "Logo"}
+                                        {resolved.realCm && (
+                                          <span className="ml-1 text-ui-gray/70">
+                                            ({resolved.realCm.widthCm.toFixed(1)}×{resolved.realCm.heightCm.toFixed(1)} cm)
+                                          </span>
+                                        )}
+                                      </span>
+                                      <div className="flex items-center gap-1.5">
+                                        {resolved.size ? (
+                                          <span className="rounded-full border border-primary bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary-dark">
+                                            {resolved.size} cm · auto
+                                          </span>
+                                        ) : (
+                                          <span className="rounded-full border border-accent-coral/40 bg-accent-coral/10 px-2.5 py-1 text-[11px] font-semibold text-accent-coral">
+                                            Excede tamaño máx.
+                                          </span>
+                                        )}
+                                        {resolved.size && (
+                                          <span className="ml-1 w-16 text-right text-xs font-semibold text-foreground">
+                                            {priceForLogo === null ? (
+                                              <span className="text-accent-coral">Cotizar</span>
+                                            ) : (
+                                              `${formatMXN(priceForLogo)}`
+                                            )}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                // Sin medidas reales todavía para esta vista/producto: selector
+                                // manual, exactamente como antes de que existiera la medición
+                                // automática.
+                                const chosen = resolved.size;
                                 return (
                                   <div key={el.id} className="flex flex-wrap items-center justify-between gap-2">
                                     <span className="truncate text-xs text-ui-gray">{el.fileName ?? "Logo"}</span>
@@ -1003,8 +1073,8 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
                               })}
                             </div>
                             {allLogoElements.some((el) => {
-                              const chosen = techniqueLogoSizes[technique.id]?.[el.id];
-                              return chosen && findSizePrice(technique, chosen, quantity) === null;
+                              const resolved = resolveLogoSize(technique, el);
+                              return resolved.size ? findSizePrice(technique, resolved.size, quantity) === null : resolved.auto;
                             }) && <p className="mt-2.5 text-xs font-medium text-accent-coral">Esta medida requiere cotización.</p>}
                           </div>
                         );

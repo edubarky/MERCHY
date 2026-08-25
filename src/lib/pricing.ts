@@ -57,6 +57,53 @@ export function findSizePrice(technique: PrintTechnique, size: string, totalQty:
   return tier ? tier.price_per_element : null;
 }
 
+// ---- Medición automática del tamaño del logo (opcional, solo cuando hay
+// medidas reales cargadas) ----
+// widthPct/heightPct de un elemento son siempre % del área de impresión de
+// esa vista (ver personalizar/types.ts) -- nunca cm por sí solos. Solo se
+// pueden convertir a un tamaño real cuando esa vista/producto tiene sus
+// propias medidas físicas (printAreas.ts -> widthCm/heightCm). Mientras un
+// producto no tenga esas medidas cargadas, estas funciones regresan null y
+// el llamador debe seguir usando el selector manual -- nunca se inventa
+// una medida física que no fue configurada.
+
+/** Tamaño real (cm) de un elemento a partir de su % y las medidas físicas reales del área de impresión de esa vista. null si el área todavía no tiene esas medidas. */
+export function getElementRealCm(
+  widthPct: number,
+  heightPct: number,
+  areaWidthCm: number | undefined,
+  areaHeightCm: number | undefined
+): { widthCm: number; heightCm: number } | null {
+  if (!areaWidthCm || !areaHeightCm) return null;
+  return { widthCm: (widthPct / 100) * areaWidthCm, heightCm: (heightPct / 100) * areaHeightCm };
+}
+
+/**
+ * De los tamaños de tarifa que la técnica tiene configurados (ej. "5x5",
+ * "10x10", "20x20"), regresa el más chico que sea >= a las medidas reales
+ * del logo en AMBOS lados -- redondea siempre hacia el tamaño configurado
+ * inmediato superior, nunca hacia abajo (para no erosionar el margen). Si
+ * el logo es más grande que el tamaño configurado más grande, regresa
+ * null: nunca se inventa un tamaño que no exista en la tabla de precios
+ * (el llamador lo trata igual que cualquier otra medida sin tarifa ->
+ * "requiere cotización").
+ */
+export function roundUpToConfiguredSize(
+  widthCm: number,
+  heightCm: number,
+  configuredSizes: string[]
+): string | null {
+  const parsed = configuredSizes
+    .map((label) => {
+      const [w, h] = label.split("x").map(Number);
+      return { label, w, h };
+    })
+    .filter((p) => Number.isFinite(p.w) && Number.isFinite(p.h))
+    .sort((a, b) => a.w * a.h - b.w * b.h);
+  const fit = parsed.find((p) => widthCm <= p.w && heightCm <= p.h);
+  return fit ? fit.label : null;
+}
+
 export function calculateUnitPrice(
   costo: number,
   totalQty: number,

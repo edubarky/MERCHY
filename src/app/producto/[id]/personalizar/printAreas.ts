@@ -4,8 +4,13 @@ import type { ViewName } from "./types";
 // Per-product, per-view print-area configuration. Each product/view gets
 // its OWN area — this is not a single shared rectangle. Position/size are
 // always required (% of that view's own image, so they stay correct
-// regardless of render size); physical dimensions (cm) are optional and
-// only shown in the "ÁREA DE DISEÑO" guide label when provided.
+// regardless of render size); physical dimensions (cm) are optional. When
+// provided, PersonalizerClient uses them to auto-measure each logo's real
+// printed size (see pricing.ts's getElementRealCm/roundUpToConfiguredSize)
+// for "by_size" technique pricing (DTF Textil, DTF UV) instead of asking
+// the customer to pick a size manually. Never invented: a product/view
+// with no widthCm/heightCm here simply keeps the manual size selector,
+// exactly as before this existed.
 export interface PrintAreaConfig {
   xPct: number;
   yPct: number;
