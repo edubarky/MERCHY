@@ -46,7 +46,6 @@ import {
   ArrowRightIcon,
   GarmentTabIcon,
   EyeIcon,
-  ChevronRightIcon,
   SparkleIcon,
 } from "./Icons";
 
@@ -818,41 +817,24 @@ export default function PersonalizerClient({
               onRemove={removeAsset}
             />
 
-            {/* Agregar logo / Agregar texto — acciones para crear elementos nuevos */}
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Agregar imagen / Agregar texto — botones compactos, solo
+                ícono + texto principal (sin subtítulo ni flecha). */}
+            <div className="mt-4 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="group flex items-center gap-3 rounded-2xl border border-ui-border bg-white px-4 py-4 text-left transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:bg-primary/5"
+                className="group flex items-center justify-center gap-2 rounded-2xl border border-ui-border bg-white px-4 py-3 text-sm font-semibold text-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:bg-primary/5"
               >
-                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-50">
-                  <ImageToolIcon className="h-5 w-5 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
-                  <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold leading-none text-white">
-                    +
-                  </span>
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold text-foreground">Agregar logo</span>
-                  <span className="block text-xs text-ui-gray">Sube tu logotipo o imagen</span>
-                </span>
-                <ChevronRightIcon className="h-5 w-5 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                <ImageToolIcon className="h-4 w-4 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                Agregar imagen
               </button>
               <button
                 type="button"
                 onClick={handleAddText}
-                className="group flex items-center gap-3 rounded-2xl border border-ui-border bg-white px-4 py-4 text-left transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:bg-primary/5"
+                className="group flex items-center justify-center gap-2 rounded-2xl border border-ui-border bg-white px-4 py-3 text-sm font-semibold text-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:bg-primary/5"
               >
-                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-50">
-                  <TextToolIcon className="h-5 w-5 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
-                  <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold leading-none text-white">
-                    +
-                  </span>
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold text-foreground">Agregar texto</span>
-                  <span className="block text-xs text-ui-gray">Crea un texto personalizado</span>
-                </span>
-                <ChevronRightIcon className="h-5 w-5 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                <TextToolIcon className="h-4 w-4 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                Agregar texto
               </button>
             </div>
             <input
