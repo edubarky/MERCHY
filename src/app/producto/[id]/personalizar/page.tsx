@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Product, ProductVariant, PriceTier, PrintTechnique } from "@/types";
+import PublicHeader from "@/components/PublicHeader";
 import PersonalizerClient from "./PersonalizerClient";
 import { resolveProductViewAssets } from "./resolveProductAssets";
 
@@ -74,6 +75,12 @@ export default async function PersonalizarPage({
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Misma navbar principal del resto del sitio (ver producto/[id]/page.tsx,
+          catalogo/page.tsx, carrito/page.tsx) -- el Personalizador ya no es
+          full-screen "sin chrome"; el carrito de aquí (badge en tiempo real,
+          via el mismo CartContext) es ahora el único acceso visual al
+          carrito en esta pantalla. */}
+      <PublicHeader />
       <PersonalizerClient
         product={safeProduct}
         priceTiers={(priceTiers ?? []) as PriceTier[]}

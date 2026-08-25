@@ -14,7 +14,6 @@ import {
   formatMXN,
 } from "@/lib/pricing";
 import { useCart } from "@/lib/cart/CartContext";
-import CartPopover from "@/components/cart/CartPopover";
 import { useArtLibrary, type ArtAsset } from "@/lib/artLibrary/ArtLibraryContext";
 import {
   VIEW_ORDER,
@@ -46,7 +45,6 @@ import {
   ArrowRightIcon,
   GarmentTabIcon,
   EyeIcon,
-  CartIcon,
   FolderIcon,
   ChevronRightIcon,
   SparkleIcon,
@@ -148,7 +146,6 @@ export default function PersonalizerClient({
   const [techniqueLogoSizes, setTechniqueLogoSizes] = useState<Record<string, Record<string, string>>>({});
   const [quantity, setQuantity] = useState(1);
   const [zCounter, setZCounter] = useState(1);
-  const [cartOpen, setCartOpen] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   // Drives the discreet "fuera de la superficie del producto" notice — no
   // print-area rectangle involved anymore, this just tracks whether the
@@ -159,25 +156,18 @@ export default function PersonalizerClient({
   const [interactionInBounds, setInteractionInBounds] = useState(true);
   const [artLibraryOpen, setArtLibraryOpen] = useState(false);
 
-  const { addItem, totalItems, justAdded } = useCart();
+  // El botón/popover de carrito interno de este panel se eliminó -- el
+  // carrito ahora vive únicamente en PublicHeader (barra superior, ver
+  // page.tsx), que ya usa este mismo CartContext, así que el conteo/pulso
+  // sigue siendo el carrito real de la plataforma, no uno nuevo. `addItem`
+  // es lo único que este componente todavía necesita del contexto.
+  const { addItem } = useCart();
   const { assets: artAssets, addAsset, removeAsset } = useArtLibrary();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cartWrapperRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef({ history, historyIndex });
   historyRef.current = { history, historyIndex };
-
-  useEffect(() => {
-    if (!cartOpen) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (cartWrapperRef.current && !cartWrapperRef.current.contains(e.target as Node)) {
-        setCartOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [cartOpen]);
 
   // El/los color(es) de la prenda YA se eligieron en la página del producto
   // (ver ProductDetail.tsx's "1. Selecciona Color" + el switch Multicolor)
@@ -594,9 +584,11 @@ export default function PersonalizerClient({
         total_price: total,
       };
 
+      // Ya no se abre ningún popover local -- el badge/pulso del carrito en
+      // PublicHeader (barra superior) es la única confirmación visual, y
+      // ya reacciona solo porque comparte el mismo CartContext.
       addItem(newItem);
       setSelectedId(null);
-      setCartOpen(true);
     } finally {
       setAddingToCart(false);
     }
@@ -633,6 +625,10 @@ export default function PersonalizerClient({
               })}
             </div>
 
+            {/* El botón de carrito interno se eliminó -- el único carrito
+                de esta pantalla ahora es el de PublicHeader (barra
+                superior). El ojo conserva su función real (abre
+                PreviewModal), así que se queda igual. */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -645,31 +641,6 @@ export default function PersonalizerClient({
               >
                 <EyeIcon className="h-6 w-6" />
               </button>
-
-              <div ref={cartWrapperRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedId(null);
-                    setCartOpen((v) => !v);
-                  }}
-                  aria-label="Carrito"
-                  aria-expanded={cartOpen}
-                  className="relative flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-white text-foreground shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(0,0,0,0.14)]"
-                >
-                  <CartIcon className="h-6 w-6" />
-                  {totalItems > 0 && (
-                    <span
-                      className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white ${
-                        justAdded ? "animate-total-pulse" : ""
-                      }`}
-                    >
-                      {totalItems}
-                    </span>
-                  )}
-                </button>
-                <CartPopover open={cartOpen} />
-              </div>
             </div>
           </div>
 
