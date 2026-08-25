@@ -1005,7 +1005,14 @@ export default function ProductDetail({ product, priceTiers }: Props) {
           {/* CTAs */}
           <div className="flex gap-3">
             <Link
-              href={`/producto/${product.id}/personalizar`}
+              // El color ya se eligió arriba ("1. Selecciona Color") -- se
+              // pasa como ?variant= para que el Personalizador cargue
+              // directamente los ejes de ese color, sin volver a preguntar.
+              href={
+                selectedVariant
+                  ? `/producto/${product.id}/personalizar?variant=${selectedVariant.id}`
+                  : `/producto/${product.id}/personalizar`
+              }
               aria-disabled={!canPersonalize}
               tabIndex={canPersonalize ? undefined : -1}
               onClick={(e) => {

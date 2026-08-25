@@ -20,12 +20,12 @@ import {
   VIEW_ORDER,
   VIEW_LABELS,
   emptyViewElements,
+  normalizeGarmentColorName,
   type ViewName,
   type DesignElement,
   type ViewElements,
   type GarmentColor,
   type ResolvedProductAssets,
-  GARMENT_COLORS,
 } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
 import { getPrintArea } from "./printAreas";
@@ -56,27 +56,17 @@ interface Props {
   priceTiers: PriceTier[];
   techniques: PrintTechnique[];
   resolvedAssets: ResolvedProductAssets;
+  // El color de la prenda ya se eligió en la página del producto (ver
+  // ProductDetail.tsx) -- este es el id de esa variante, pasado por
+  // page.tsx vía ?variant=. El Personalizador NUNCA vuelve a preguntar el
+  // color: solo carga los ejes de este color específico. null cuando no
+  // llegó ninguno (ej. un link viejo sin el query param) -- en ese caso
+  // cae al mismo comportamiento de siempre (primera variante activa).
+  initialVariantId: string | null;
 }
 
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-// Maps a real product_variants.color_name (Supabase — "Blanco", "Negro",
-// "Royal", "Marino", "Rojo " [note: has a trailing space in the real row],
-// "Gris") to the internal GarmentColor key used for asset resolution.
-// Accent/case/whitespace-insensitive, same tolerance level as every other
-// name-matcher in this feature (printAreas.ts, resolveProductAssets.ts).
-// Returns null for a variant color this product's photography doesn't
-// have a GarmentColor slot for (nothing currently, but stays safe if a
-// future variant color has no matching photos yet).
-function normalizeGarmentColorName(colorName: string): GarmentColor | null {
-  const key = colorName
-    .normalize("NFD")
-    .replace(new RegExp("[\\u0300-\\u036f]", "g"), "")
-    .trim()
-    .toLowerCase();
-  return (GARMENT_COLORS as string[]).includes(key) ? (key as GarmentColor) : null;
 }
 
 // Reads an image's real natural pixel dimensions — the source of truth for
@@ -122,7 +112,7 @@ function ToolDockButton({
   );
 }
 
-export default function PersonalizerClient({ product, priceTiers, techniques, resolvedAssets }: Props) {
+export default function PersonalizerClient({ product, priceTiers, techniques, resolvedAssets, initialVariantId }: Props) {
   const [activeView, setActiveView] = useState<ViewName>("frente");
   const [filesTabView, setFilesTabView] = useState<ViewName>("frente");
   const [elements, setElements] = useState<ViewElements>(emptyViewElements());
@@ -143,7 +133,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   const [zCounter, setZCounter] = useState(1);
   const [cartOpen, setCartOpen] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
-  const [garmentColor, setGarmentColor] = useState<GarmentColor>("blanco");
   // Drives the discreet "fuera de la superficie del producto" notice — no
   // print-area rectangle involved anymore, this just tracks whether the
   // selected element's own bounding box currently sits fully inside the
@@ -173,15 +162,25 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [cartOpen]);
 
-  // Auto blanco/negro switch TEMPORALMENTE DESACTIVADO — por ahora TODAS las
-  // prendas deben mostrarse siempre en blanco, sin importar el color del
-  // arte/logo/texto colocado. `garmentColor` ya nace en "blanco" (ver
-  // useState arriba) y, con este efecto fuera, nada más lo modifica —
-  // ningún selector manual de color existe en la UI actual, así que queda
-  // fijo. La lógica de análisis de brillo (colorAnalysis.ts,
-  // analyzeDesignLuminance/LUMINANCE_THRESHOLD) NO se borra, solo se deja de
-  // invocar aquí — reconectar este mismo efecto es lo único necesario para
-  // reactivarla cuando existan más colores de prenda con sus ejes propios.
+  // El color de la prenda YA se eligió en la página del producto (ver
+  // ProductDetail.tsx's "1. Selecciona Color") — el Personalizador solo
+  // recibe ese color y lo usa, sin volver a preguntarlo. `selectedVariant`
+  // es la variante real (Supabase) que corresponde a ese color; si no
+  // llegó ningún `initialVariantId` válido (ej. un link viejo sin el query
+  // param), cae a la primera variante activa, mismo fallback que existía
+  // antes de este cambio. `garmentColor` es completamente fijo durante
+  // toda la sesión del Personalizador -- no hay ningún setter en este
+  // componente, a propósito: cambiar de color implica volver a la página
+  // del producto y elegir otra vez. La lógica de auto-switch por brillo
+  // del arte (colorAnalysis.ts, analyzeDesignLuminance/LUMINANCE_THRESHOLD)
+  // sigue sin conectarse aquí por la misma razón que antes: el color de la
+  // prenda nunca debe cambiar por el color del arte/logo/texto.
+  const selectedVariant =
+    product.variants.find((v) => v.id === initialVariantId) ??
+    product.variants.find((v) => v.active) ??
+    product.variants[0] ??
+    null;
+  const garmentColor: GarmentColor = (selectedVariant && normalizeGarmentColorName(selectedVariant.color_name)) ?? "blanco";
 
   // No shared generic mockup fallback here on purpose: the Personalizador
   // must only ever show the actual selected product's own photography, per
@@ -194,15 +193,10 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
   }
 
   const asset = VIEW_ASSETS[activeView];
-  const hasRealPhoto = GARMENT_COLORS.some((c) => getViewSrc(activeView, c) !== null);
-  // Which garment colors this product actually has real photography for —
-  // drives both the color-swatch selector and which stacked <img> get
-  // rendered below. Checked across ALL views (not just the active one) so
-  // the swatch list itself doesn't flicker/change while switching views;
-  // for any product besides Sudadera Ocean this still only ever resolves
-  // to ["blanco"] and/or ["negro"] (see resolveProductAssets.ts), so no
-  // swatch row renders there at all (same as today).
-  const availableGarmentColors = GARMENT_COLORS.filter((c) => VIEW_ORDER.some((v) => resolvedAssets[v][c] !== null));
+  // Único eje que este Personalizador carga para la vista activa: el del
+  // color ya elegido en la página del producto. No se resuelven ni cargan
+  // los ejes de ningún otro color.
+  const activeViewSrc = getViewSrc(activeView, garmentColor);
   const selectedElement = elements[activeView].find((e) => e.id === selectedId) ?? null;
 
   // Fresh selection always starts "in bounds" (it was just placed/spawned
@@ -521,7 +515,11 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
         }
       }
 
-      const variant = product.variants.find((v) => v.active) ?? product.variants[0];
+      // El color agregado al carrito es el mismo que el usuario ya eligió
+      // en la página del producto (`selectedVariant`, derivado arriba) --
+      // nunca "la primera variante activa" a secas, para que el carrito
+      // siempre coincida con la prenda que realmente se vio y personalizó.
+      const variant = selectedVariant ?? product.variants.find((v) => v.active) ?? product.variants[0];
       const logos: CustomizationElement[] = [];
       const texts: CustomizationElement[] = [];
       VIEW_ORDER.forEach((v) => {
@@ -642,47 +640,6 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
             </div>
           </div>
 
-          {/* Selector de color de prenda — solo aparece si el producto
-              tiene MÁS de los 2 colores base (blanco/negro), es decir,
-              solo cuando de verdad hay colores extra resueltos (hoy,
-              únicamente Sudadera Ocean vía resolveProductAssets.ts).
-              Deliberadamente > 2, no > 1: muchos productos ya tienen
-              tanto blanco como negro y deben seguir viéndose exactamente
-              igual que hoy (sin selector visible) — este selector es
-              nuevo, no reemplaza nada que ya existiera para ellos.
-              Reutiliza los nombres/colores reales ya definidos en
-              product_variants (Supabase) — no se inventa ningún nombre ni
-              hex nuevo aquí. Cambiar de color SOLO cambia `garmentColor`:
-              nunca toca `elements`, así que el diseño colocado por el
-              usuario se mantiene intacto (misma posición/escala/rotación
-              %) al cambiar de prenda — el contenedor del canvas no cambia
-              de forma, solo la foto de fondo dentro de él. */}
-          {availableGarmentColors.length > 2 && (
-            <div className="mb-5 flex flex-wrap items-center gap-2">
-              <span className="mr-1 text-xs font-semibold text-ui-gray">Color:</span>
-              {availableGarmentColors.map((c) => {
-                const variant = product.variants.find((v) => normalizeGarmentColorName(v.color_name) === c);
-                if (!variant) return null;
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setGarmentColor(c)}
-                    title={variant.color_name}
-                    aria-label={`Color ${variant.color_name}`}
-                    aria-pressed={garmentColor === c}
-                    style={{ backgroundColor: variant.color_hex }}
-                    className={`h-8 w-8 rounded-full border-2 transition-all duration-150 ease-out ${
-                      garmentColor === c
-                        ? "border-primary scale-110 ring-2 ring-primary/30 shadow-[0_0_0_4px_rgba(87,224,217,0.12)]"
-                        : "border-white ring-1 ring-ui-border hover:scale-105"
-                    }`}
-                  />
-                );
-              })}
-            </div>
-          )}
-
           {selectedElement && (
             <div className="mb-5">
               <SelectionToolbar
@@ -716,23 +673,14 @@ export default function PersonalizerClient({ product, priceTiers, techniques, re
               style={{ height: "min(75vh, 720px)", aspectRatio: asset.aspect }}
               onMouseDown={() => setSelectedId(null)}
             >
-              {hasRealPhoto ? (
-                availableGarmentColors.map((c) => {
-                  const src = getViewSrc(activeView, c);
-                  if (!src) return null;
-                  return (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={c}
-                      src={src}
-                      alt={`${product.name} — ${VIEW_LABELS[activeView]}`}
-                      className={`pointer-events-none absolute inset-0 h-full w-full select-none object-contain transition-opacity duration-[250ms] ease-out ${
-                        garmentColor === c ? "opacity-100" : "opacity-0"
-                      }`}
-                      draggable={false}
-                    />
-                  );
-                })
+              {activeViewSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={activeViewSrc}
+                  alt={`${product.name} — ${VIEW_LABELS[activeView]} — ${selectedVariant?.color_name ?? ""}`}
+                  className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
+                  draggable={false}
+                />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-gray-50">
                   <p className="text-sm text-ui-gray">Fotografías no disponibles aún</p>

@@ -73,12 +73,32 @@ export function emptyViewElements(): ViewElements {
 // same file's Sudadera-Ocean-only subfolder scan) — for every other
 // product they simply stay null, same as blanco/negro would if that
 // product had no matching photos. Widening this type does not change
-// behavior for any other product: GarmentColor is only ever a real,
-// selectable option in the UI when `ResolvedProductAssets` actually
-// resolves a non-null src for it (see PersonalizerClient's swatch list).
+// behavior for any other product: GarmentColor is only ever the color the
+// customer already picked on the product page (see
+// normalizeGarmentColorName below) — there is no selector inside the
+// Personalizador itself.
 export type GarmentColor = "blanco" | "negro" | "royal" | "marino" | "rojo" | "gris";
 
 export const GARMENT_COLORS: GarmentColor[] = ["blanco", "negro", "royal", "marino", "rojo", "gris"];
+
+// Maps a real product_variants.color_name (Supabase — "Blanco", "Negro",
+// "Royal", "Marino", "Rojo " [note: has a trailing space in the real row],
+// "Gris") to the internal GarmentColor key used for asset resolution.
+// Accent/case/whitespace-insensitive, same tolerance level as every other
+// name-matcher in this feature (printAreas.ts, resolveProductAssets.ts).
+// Returns null for a variant color this product's photography doesn't
+// have a GarmentColor slot for. Shared between the personalizer page
+// (Server Component — resolves the color the customer already picked on
+// the product page) and PersonalizerClient (falls back to it if no color
+// was passed at all, e.g. an old bookmarked link).
+export function normalizeGarmentColorName(colorName: string): GarmentColor | null {
+  const key = colorName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+  return (GARMENT_COLORS as string[]).includes(key) ? (key as GarmentColor) : null;
+}
 
 export type ResolvedViewAsset = Record<GarmentColor, string | null>;
 

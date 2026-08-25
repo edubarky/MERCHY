@@ -11,7 +11,18 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   return { title: `Personalizar ${data.name} — Merchy` };
 }
 
-export default async function PersonalizarPage({ params }: { params: { id: string } }) {
+export default async function PersonalizarPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  // ?variant=<id> -- el color ya se eligió en la página del producto (ver
+  // ProductDetail.tsx); este id identifica exactamente cuál variante, para
+  // que el Personalizador cargue únicamente los ejes de ese color, sin
+  // volver a preguntarlo. Ausente/inválido (ej. un link viejo) -> cae al
+  // mismo fallback de siempre dentro de PersonalizerClient.
+  searchParams: { variant?: string };
+}) {
   const supabase = createClient();
 
   const [{ data: product }, { data: priceTiers }, { data: productTechniqueLinks }] = await Promise.all([
@@ -38,6 +49,13 @@ export default async function PersonalizarPage({ params }: { params: { id: strin
 
   const safeProduct = product as unknown as Product & { variants: ProductVariant[] };
   const resolvedAssets = resolveProductViewAssets(safeProduct);
+  // Confirma que el id recibido corresponde a una variante real de ESTE
+  // producto antes de pasarlo -- un id inválido/de otro producto se
+  // descarta aquí mismo (queda null), en vez de dejar que el cliente lo
+  // resuelva a ciegas.
+  const initialVariantId = safeProduct.variants.some((v) => v.id === searchParams.variant)
+    ? (searchParams.variant as string)
+    : null;
 
   const assignedTechniqueIds = (productTechniqueLinks ?? []).map((r) => r.technique_id);
   const { data: techniques } =
@@ -52,6 +70,7 @@ export default async function PersonalizarPage({ params }: { params: { id: strin
         priceTiers={(priceTiers ?? []) as PriceTier[]}
         techniques={(techniques ?? []) as PrintTechnique[]}
         resolvedAssets={resolvedAssets}
+        initialVariantId={initialVariantId}
       />
     </div>
   );
