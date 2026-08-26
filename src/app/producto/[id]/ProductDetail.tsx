@@ -1021,7 +1021,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               style={{ background: "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5), transparent 55%)" }}
             />
             {images[selectedImage] ? (
-              <div className="absolute inset-[9%]">
+              <div className={`absolute ${images[selectedImage] === modelShotUrl ? "inset-[2%]" : "inset-[9%]"}`}>
                 {/* <img> plano a propósito, no next/image -- el optimizador de
                     Next falla ("isn't a valid image") con los ejes reales que
                     traen acento en el nombre de archivo (ej. "ATRÁS N.png"),
@@ -1051,12 +1051,15 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                 <button
                   key={url}
                   onClick={() => setSelectedImage(i)}
-                  className={`relative w-[78px] h-[78px] flex-shrink-0 rounded-full overflow-hidden border-2 shadow-md transition-colors ${
+                  className={`relative w-[78px] h-[78px] flex-shrink-0 rounded-full overflow-hidden border-2 bg-white shadow-md transition-colors ${
                     i === selectedImage ? "border-primary" : "border-white hover:border-gray-300"
                   }`}
                 >
+                  {/* object-contain (no cover): el producto completo debe
+                      verse dentro del círculo, sin recortarlo -- antes se
+                      veía solo un acercamiento de una parte de la prenda. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  <img src={url} alt="" className="absolute inset-0 h-full w-full object-contain p-1.5" />
                 </button>
               ))}
             </div>
