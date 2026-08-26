@@ -357,6 +357,126 @@ function InfoModal({
   );
 }
 
+// Modal "Rango de precios" — antes era una imagen estática con precios
+// genéricos que no correspondían al costo real de este producto (ej.
+// mostraba "$168" para 1-3 piezas de Sudadera Ocean cuando el precio real
+// es $682). Ahora calcula la tabla en vivo con el mismo costo del
+// producto y los mismos price_tiers reales que ya usa el precio
+// principal (getProductUnitPrice) -- así siempre coincide con lo que el
+// cliente realmente va a pagar. Mismo lenguaje visual/comportamiento que
+// InfoModal (overlay, animación, foco atrapado, Esc/click afuera), solo
+// que con una tabla real en vez de una imagen.
+function PriceRangeModal({
+  open,
+  onClose,
+  costo,
+  tiers,
+}: {
+  open: boolean;
+  onClose: () => void;
+  costo: number;
+  tiers: PriceTier[];
+}) {
+  const [entered, setEntered] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setEntered(false);
+      return;
+    }
+    const raf = requestAnimationFrame(() => setEntered(true));
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.focus();
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key === "Tab") {
+        const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable || focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className={`fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/45 transition-opacity duration-[220ms] ease-out ${
+        entered ? "opacity-100" : "opacity-0"
+      }`}
+      onClick={onClose}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Rango de precios"
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+        className={`relative w-full max-w-sm rounded-[30px] bg-[#F8F7F9] p-6 outline-none transition-all duration-[220ms] ease-out ${
+          entered ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar"
+          className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-foreground shadow-md transition-colors hover:text-primary"
+        >
+          ✕
+        </button>
+
+        <h2 className="mb-5 text-center font-display text-2xl font-bold leading-tight text-foreground">
+          Rango de
+          <br />
+          precios
+        </h2>
+
+        <div className="overflow-hidden rounded-2xl border border-ui-border bg-white">
+          <div className="flex bg-primary/10 px-4 py-2.5 text-xs font-bold text-primary-dark">
+            <span className="flex-1 text-center">Rango por unidades</span>
+            <span className="flex-1 text-center">Precio por unidad</span>
+          </div>
+          {tiers.map((tier, i) => (
+            <div
+              key={tier.id}
+              className={`flex items-center px-4 py-2.5 text-sm font-semibold text-foreground ${
+                i % 2 === 1 ? "bg-gray-50" : "bg-white"
+              }`}
+            >
+              <span className="flex-1 text-center">{tier.label}</span>
+              <span className="flex-1 text-center">{formatMXN(getProductUnitPrice(costo, tier.qty_min, tiers))}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const REVIEW_MAX_LENGTH = 500;
 
 // Modal para calificar y escribir una reseña — mismo lenguaje visual que
@@ -1171,11 +1291,11 @@ export default function ProductDetail({ product, priceTiers }: Props) {
         imgSrc="/Home/PAG 3/GUÍA DE TALLAS.svg"
         alt="Guía de tallas"
       />
-      <InfoModal
+      <PriceRangeModal
         open={quantityDiscountOpen}
         onClose={() => setQuantityDiscountOpen(false)}
-        imgSrc="/Home/PAG 3/RANGO DE PRECIOS.svg"
-        alt="Rango de precios"
+        costo={product.costo}
+        tiers={priceTiers}
       />
       <ReviewModal
         open={reviewModalOpen}
