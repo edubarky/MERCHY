@@ -870,26 +870,24 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   // sigue escribiendo en sizeQuantities, la misma fuente de verdad única.
   function setMainQuantity(newQtyRaw: number) {
     const newQty = Number.isFinite(newQtyRaw) && newQtyRaw > 0 ? Math.floor(newQtyRaw) : 1;
-    const delta = newQty - sizeSum;
-    if (delta === 0) return;
-    if (delta > 0) {
-      const target = activeSections[0];
-      if (!target || sizes.length === 0) return;
-      setSizeQty(target.variant, sizes[0], getSizeQty(target.variant, sizes[0]) + delta);
-      return;
-    }
-    let remaining = -delta;
-    for (const s of activeSections) {
-      if (remaining <= 0) break;
-      for (const size of sizes) {
-        if (remaining <= 0) break;
-        const current = getSizeQty(s.variant, size);
-        if (current <= 0) continue;
-        const take = Math.min(current, remaining);
-        setSizeQty(s.variant, size, current - take);
-        remaining -= take;
-      }
-    }
+    const target = activeSections[0];
+    if (!target || sizes.length === 0) return;
+    // Si hay más de una sección visible (Multicolor con varios colores),
+    // las demás mantienen exactamente lo que ya tenían -- solo la primera
+    // sección absorbe la diferencia, repartida parejo entre SUS tallas.
+    const targetCurrentTotal = sizes.reduce((sum, size) => sum + getSizeQty(target.variant, size), 0);
+    const otherSectionsTotal = sizeSum - targetCurrentTotal;
+    const targetNewTotal = Math.max(0, newQty - otherSectionsTotal);
+
+    // Reparto lo más parejo posible entre todas las tallas: base entera
+    // para todas, y el residuo (si no divide exacto) se le suma a las
+    // primeras tallas, una unidad de más cada una -- nunca todo apilado
+    // en una sola talla.
+    const base = Math.floor(targetNewTotal / sizes.length);
+    const remainder = targetNewTotal % sizes.length;
+    const perSize = Object.fromEntries(sizes.map((size, i) => [size, base + (i < remainder ? 1 : 0)]));
+
+    setSizeQuantities((prev) => ({ ...prev, [target.variant.id]: perSize }));
   }
   function decrementMainQuantity() {
     for (const s of activeSections) {
