@@ -234,3 +234,26 @@ export function resolveProductViewAssets(product: Pick<Product, "id" | "name">):
 
   return result;
 }
+
+// Foto "con modelo" -- una sola por producto (no por color, a diferencia de
+// los ejes), y opcional: la mayoría del catálogo todavía no tiene una. Vive
+// suelta directamente en la carpeta del producto (no dentro de /ejes/ ni de
+// ninguna subcarpeta de color -- ver SUDADERA OCEAN/Sudadera Ocean con
+// modelo.png). Cualquier archivo ahí cuyo nombre contenga "MODELO" cuenta
+// -- mismo criterio tolerante (acentos/mayúsculas) que el resto de este
+// archivo, sin exigir un nombre exacto. null cuando el producto no tiene
+// ninguna -- la galería del PDP entonces simplemente no la incluye, nunca
+// se inventa una.
+export function resolveProductModelShot(product: Pick<Product, "id" | "name">): string | null {
+  const publicRoot = path.join(process.cwd(), "public");
+  const productsRoot = path.join(publicRoot, PRODUCTS_ROOT_NAME);
+  const productDir = findMatchingDir(productsRoot, product.name);
+  if (!productDir) return null;
+
+  const file = listFiles(productDir).find((f) => {
+    const ext = path.extname(f).slice(1).toLowerCase();
+    if (!EXTENSIONS.includes(ext)) return false;
+    return stripAccents(f).toUpperCase().includes("MODELO");
+  });
+  return file ? toPublicUrl(path.join(productDir, file), publicRoot) : null;
+}

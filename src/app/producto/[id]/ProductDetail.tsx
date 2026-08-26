@@ -2,14 +2,22 @@
 // Force-rebuild marker: trivial touch to bust a stale Vercel build cache.
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import type { Product, ProductVariant, PriceTier } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
+import { VIEW_ORDER, normalizeGarmentColorName, type ResolvedProductAssets } from "./personalizar/types";
 
 interface Props {
   product: Product & { variants: ProductVariant[] };
   priceTiers: PriceTier[];
+  // Ejes reales (Frente/Reverso/Izquierda/Derecha) por color + foto "con
+  // modelo" opcional (una sola, no por color) -- mismos archivos que ya usa
+  // el Personalizador (ver page.tsx). Alimentan la galería de miniaturas
+  // debajo de la foto principal (mismo mecanismo que ya usan productos como
+  // Tapete, solo que ahí viene de product_variants.images en vez de estos
+  // archivos locales).
+  resolvedGallery: ResolvedProductAssets;
+  modelShotUrl: string | null;
 }
 
 interface Review {
@@ -741,7 +749,7 @@ function TotalPzasCard({ total }: { total: number }) {
   );
 }
 
-export default function ProductDetail({ product, priceTiers }: Props) {
+export default function ProductDetail({ product, priceTiers, resolvedGallery, modelShotUrl }: Props) {
   const activeVariants = product.variants.filter((v) => v.active);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -769,7 +777,22 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const [mainQtyDraft, setMainQtyDraft] = useState("1");
   const mainQtyInputRef = useRef<HTMLInputElement>(null);
 
-  const images = selectedVariant?.images ?? [];
+  // Galería: si este producto/color tiene ejes reales resueltos (mismos
+  // archivos que ya usa el Personalizador) se arma con "con modelo" primero
+  // (cuando existe) y luego Frente/Reverso/Izquierda/Derecha -- igual
+  // mecanismo de miniaturas que ya usan productos como Tapete, solo que acá
+  // las imágenes vienen de esos archivos locales en vez de
+  // product_variants.images. Si el producto/color no tiene ejes resueltos
+  // todavía, cae exactamente al comportamiento de siempre (las fotos ya
+  // subidas a Supabase para esa variante) -- nunca se inventa nada.
+  const selectedColorKey = selectedVariant ? normalizeGarmentColorName(selectedVariant.color_name) : null;
+  const ejesForColor = selectedColorKey
+    ? VIEW_ORDER.map((v) => resolvedGallery[v][selectedColorKey]).filter((url): url is string => !!url)
+    : [];
+  const images =
+    ejesForColor.length > 0
+      ? [modelShotUrl, ...ejesForColor].filter((url): url is string => !!url)
+      : selectedVariant?.images ?? [];
   const sizes = product.sizes_available;
 
   function getSizeQty(variant: ProductVariant, size: string) {
@@ -999,13 +1022,18 @@ export default function ProductDetail({ product, priceTiers }: Props) {
             />
             {images[selectedImage] ? (
               <div className="absolute inset-[9%]">
-                <Image
+                {/* <img> plano a propósito, no next/image -- el optimizador de
+                    Next falla ("isn't a valid image") con los ejes reales que
+                    traen acento en el nombre de archivo (ej. "ATRÁS N.png"),
+                    aunque el archivo es válido y el servidor estático lo
+                    sirve bien; un <img> normal no pasa por ese optimizador y
+                    evita el bug por completo, tanto para estos archivos
+                    locales como para las fotos ya alojadas en Supabase. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={images[selectedImage]}
                   alt={`${product.name} — ${selectedVariant?.color_name}`}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                  className="object-contain"
-                  priority
+                  className="absolute inset-0 h-full w-full object-contain"
                 />
               </div>
             ) : (
@@ -1027,7 +1055,8 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                     i === selectedImage ? "border-primary" : "border-white hover:border-gray-300"
                   }`}
                 >
-                  <Image src={url} alt="" fill sizes="78px" className="object-cover" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="absolute inset-0 h-full w-full object-cover" />
                 </button>
               ))}
             </div>

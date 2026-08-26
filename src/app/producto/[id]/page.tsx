@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import PublicHeader from "@/components/PublicHeader";
 import type { Product, ProductVariant, PriceTier } from "@/types";
 import ProductDetail from "./ProductDetail";
+import { resolveProductViewAssets, resolveProductModelShot } from "./personalizar/resolveProductAssets";
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -34,6 +35,13 @@ export default async function ProductoPage({ params }: { params: { id: string } 
   if (!product) notFound();
 
   const safeProduct = product as unknown as Product & { variants: ProductVariant[] };
+  // Ejes (Frente/Reverso/Izquierda/Derecha, por color) + foto "con modelo"
+  // (una sola, opcional) -- mismos archivos reales ya usados en el
+  // Personalizador, ahora también como miniaturas de galería en la ficha
+  // del producto. Ninguno de los dos se inventa: un producto sin ejes/
+  // modelo reales simplemente no los incluye (ver ProductDetail.tsx).
+  const resolvedGallery = resolveProductViewAssets(safeProduct);
+  const modelShotUrl = resolveProductModelShot(safeProduct);
 
   return (
     <div
@@ -50,6 +58,8 @@ export default async function ProductoPage({ params }: { params: { id: string } 
       <ProductDetail
         product={safeProduct}
         priceTiers={(priceTiers ?? []) as PriceTier[]}
+        resolvedGallery={resolvedGallery}
+        modelShotUrl={modelShotUrl}
       />
     </div>
   );
