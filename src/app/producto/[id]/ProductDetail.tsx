@@ -763,6 +763,11 @@ export default function ProductDetail({ product, priceTiers }: Props) {
   const [reviewSort, setReviewSort] = useState<"recent" | "best" | "worst">("recent");
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [modalInitialRating, setModalInitialRating] = useState(0);
+  // Edición manual del selector superior de cantidad (clic en el número ->
+  // input editable), mismo patrón de interacción que SizeCounter.
+  const [editingMainQty, setEditingMainQty] = useState(false);
+  const [mainQtyDraft, setMainQtyDraft] = useState("1");
+  const mainQtyInputRef = useRef<HTMLInputElement>(null);
 
   const images = selectedVariant?.images ?? [];
   const sizes = product.sizes_available;
@@ -855,6 +860,37 @@ export default function ProductDetail({ product, priceTiers }: Props) {
     if (!target || sizes.length === 0) return;
     setSizeQty(target.variant, sizes[0], getSizeQty(target.variant, sizes[0]) + 1);
   }
+  // Captura escribir un número directamente en el selector superior (en
+  // vez de solo +/-). Reparte la diferencia con el mismo criterio que ya
+  // usan los botones: si sube, todo el aumento va a la primera talla de
+  // la primera sección (igual que "+"); si baja, se descuenta recorriendo
+  // secciones/tallas en orden, tomando de cada una lo que tenga hasta
+  // completar la diferencia (igual que "−", solo que de un solo golpe en
+  // vez de una unidad a la vez). Nunca un segundo estado de cantidad --
+  // sigue escribiendo en sizeQuantities, la misma fuente de verdad única.
+  function setMainQuantity(newQtyRaw: number) {
+    const newQty = Number.isFinite(newQtyRaw) && newQtyRaw > 0 ? Math.floor(newQtyRaw) : 1;
+    const delta = newQty - sizeSum;
+    if (delta === 0) return;
+    if (delta > 0) {
+      const target = activeSections[0];
+      if (!target || sizes.length === 0) return;
+      setSizeQty(target.variant, sizes[0], getSizeQty(target.variant, sizes[0]) + delta);
+      return;
+    }
+    let remaining = -delta;
+    for (const s of activeSections) {
+      if (remaining <= 0) break;
+      for (const size of sizes) {
+        if (remaining <= 0) break;
+        const current = getSizeQty(s.variant, size);
+        if (current <= 0) continue;
+        const take = Math.min(current, remaining);
+        setSizeQty(s.variant, size, current - take);
+        remaining -= take;
+      }
+    }
+  }
   function decrementMainQuantity() {
     for (const s of activeSections) {
       for (const size of sizes) {
@@ -865,6 +901,23 @@ export default function ProductDetail({ product, priceTiers }: Props) {
         }
       }
     }
+  }
+
+  useEffect(() => {
+    if (!editingMainQty) setMainQtyDraft(String(quantity));
+  }, [quantity, editingMainQty]);
+
+  useEffect(() => {
+    if (editingMainQty) {
+      mainQtyInputRef.current?.focus();
+      mainQtyInputRef.current?.select();
+    }
+  }, [editingMainQty]);
+
+  function commitMainQtyDraft() {
+    const parsed = parseInt(mainQtyDraft, 10);
+    if (!Number.isNaN(parsed)) setMainQuantity(parsed);
+    setEditingMainQty(false);
   }
   // El título de la sección de tallas es fijo — "Selecciona la talla" no
   // cambia con la cantidad. La leyenda debajo sí, en tiempo real: como la
@@ -1086,9 +1139,31 @@ export default function ProductDetail({ product, priceTiers }: Props) {
                 >
                   −
                 </button>
-                <span key={quantity} className="text-sm font-medium text-foreground w-8 text-center animate-badge-in">
-                  {quantity}
-                </span>
+                {editingMainQty ? (
+                  <input
+                    ref={mainQtyInputRef}
+                    type="text"
+                    inputMode="numeric"
+                    value={mainQtyDraft}
+                    onChange={(e) => setMainQtyDraft(e.target.value.replace(/[^0-9]/g, ""))}
+                    onBlur={commitMainQtyDraft}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                    }}
+                    className="text-sm font-medium text-foreground w-8 text-center bg-transparent outline-none"
+                  />
+                ) : (
+                  <span
+                    key={quantity}
+                    onClick={() => {
+                      setMainQtyDraft(String(quantity));
+                      setEditingMainQty(true);
+                    }}
+                    className="text-sm font-medium text-foreground w-8 text-center animate-badge-in cursor-text"
+                  >
+                    {quantity}
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={incrementMainQuantity}
