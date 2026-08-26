@@ -458,7 +458,7 @@ function PriceRangeModal({
         <div className="overflow-hidden rounded-2xl border border-ui-border bg-white">
           <div className="flex bg-primary/10 px-4 py-2.5 text-xs font-bold text-primary-dark">
             <span className="flex-1 text-center">Rango por unidades</span>
-            <span className="flex-1 text-center">Precio por unidad</span>
+            <span className="flex-1 text-center">Precio por unidad con IVA incluido</span>
           </div>
           {tiers.map((tier, i) => (
             <div
