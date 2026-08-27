@@ -133,6 +133,14 @@ export default function PersonalizerClient({
   const [history, setHistory] = useState<ViewElements[]>([emptyViewElements()]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Drag-over highlight while a file is dragged over the canvas — a ref
+  // counter (not a plain boolean) because dragenter/dragleave fire once
+  // per child element the pointer crosses, not just for the container as
+  // a whole; without counting, moving over the product photo/an existing
+  // design element inside the canvas would fire a spurious dragleave and
+  // flicker the highlight off mid-drag.
+  const [isDragOverCanvas, setIsDragOverCanvas] = useState(false);
+  const dragCounterRef = useRef(0);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   // Selección múltiple: el usuario puede activar varias técnicas a la vez
@@ -357,6 +365,42 @@ export default function PersonalizerClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [undo, redo, deleteElement, selectedId, elements, activeView]);
 
+  // Ctrl/Cmd+V pastes an image straight from the clipboard as a new logo —
+  // e.g. a screenshot, or a file copied from Finder. Same guard style as
+  // the Shift+flecha shortcut: skip while the user is actually typing free
+  // text somewhere (the design's own text-edit <input>, a future textarea/
+  // contentEditable) so a normal text paste there is never hijacked; a
+  // paste anywhere else on the page (including while focus sits in a
+  // numeric field like Rotación, or nowhere at all) places the image.
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const isTypingFreeText =
+        !!target &&
+        (target.tagName === "TEXTAREA" ||
+          target.isContentEditable ||
+          (target.tagName === "INPUT" && (target as HTMLInputElement).type === "text"));
+      if (isTypingFreeText) return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === "file" && item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            placeUploadedFile(file);
+          }
+          return;
+        }
+      }
+    }
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView, zCounter]);
+
   function addElement(el: DesignElement) {
     const next = { ...elements, [el.view]: [...elements[el.view], el] };
     commit(next);
@@ -457,17 +501,22 @@ export default function PersonalizerClient({
     });
   }
 
-  async function handleLogoFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    // El archivo se lee ANTES de limpiar el input -- igual que antes de
-    // este cambio. addAsset ahora sube el archivo a la biblioteca
-    // permanente del usuario (Supabase) antes de poder colocarlo -- null
-    // si falló (sin sesión, error de red, etc.), en cuyo caso simplemente
-    // no se coloca nada, sin romper el resto del flujo.
-    const file = files[0];
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  // Shared by every way a file can reach the canvas — the hidden file
+  // input's own onChange, dropping a file onto the canvas, and pasting an
+  // image from the clipboard (Ctrl/Cmd+V). addAsset uploads to the user's
+  // permanent library (Supabase) before it can be placed — null if that
+  // failed (no session, network error, etc.), in which case nothing is
+  // placed, without breaking anything else.
+  async function placeUploadedFile(file: File) {
     const asset = await addAsset(file);
     if (asset) placeAsset(asset);
+  }
+
+  async function handleLogoFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    await placeUploadedFile(file);
   }
 
   function handleAddText() {
@@ -791,6 +840,28 @@ export default function PersonalizerClient({
                 if ((e.target as HTMLElement).closest(".moveable-control-box")) return;
                 setSelectedId(null);
               }}
+              onDragEnter={(e) => {
+                if (!e.dataTransfer.types.includes("Files")) return;
+                e.preventDefault();
+                dragCounterRef.current += 1;
+                setIsDragOverCanvas(true);
+              }}
+              onDragOver={(e) => {
+                // Required for onDrop to ever fire at all — a bare <div>
+                // rejects drops by default unless dragover is prevented.
+                if (!e.dataTransfer.types.includes("Files")) return;
+                e.preventDefault();
+              }}
+              onDragLeave={() => {
+                dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+                if (dragCounterRef.current === 0) setIsDragOverCanvas(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                dragCounterRef.current = 0;
+                setIsDragOverCanvas(false);
+                handleLogoFiles(e.dataTransfer.files);
+              }}
             >
               {activeViewSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -803,6 +874,14 @@ export default function PersonalizerClient({
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-gray-50">
                   <p className="text-sm text-ui-gray">Fotografías no disponibles aún</p>
+                </div>
+              )}
+
+              {isDragOverCanvas && (
+                <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-2xl border-2 border-dashed border-primary bg-primary/10">
+                  <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-primary shadow-md">
+                    Suelta la imagen para agregarla
+                  </span>
                 </div>
               )}
 
