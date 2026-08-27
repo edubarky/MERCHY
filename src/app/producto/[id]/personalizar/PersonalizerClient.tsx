@@ -29,7 +29,7 @@ import {
 } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
 import { getPrintArea } from "./printAreas";
-import DesignElementView, { DEFAULT_FONT_SIZE_PX } from "./DesignElementView";
+import DesignElementView, { DEFAULT_FONT_SIZE_PX, FONT_SIZE_MIN_PX, FONT_SIZE_MAX_PX } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
 
 import ArtLibraryPanel from "./ArtLibraryPanel";
@@ -262,6 +262,42 @@ export default function PersonalizerClient({
     [elements, activeView, commit]
   );
 
+  // Shift+ArrowRight/ArrowLeft grows/shrinks the currently selected element
+  // — same keepRatio-preserving scaling react-moveable's own corner-drag
+  // already does, just driven by keyboard instead of a mouse gesture. Text
+  // scales via `fontSizePx` (DesignElementView's own auto-fit effect then
+  // re-measures and resizes the box, exactly like a real corner drag ends
+  // for text — see that file's onResizeEnd for the mouse equivalent); logos
+  // scale `widthPct`/`heightPct` directly, both anchored on the element's
+  // own current center so it grows/shrinks in place rather than drifting
+  // toward a corner.
+  const RESIZE_STEP_FACTOR = 1.06;
+  const LOGO_MIN_PCT = 1;
+
+  function resizeSelectedElementByKeyboard(direction: 1 | -1) {
+    const el = elements[activeView].find((e) => e.id === selectedId);
+    if (!el) return;
+    const factor = direction === 1 ? RESIZE_STEP_FACTOR : 1 / RESIZE_STEP_FACTOR;
+
+    if (el.type === "text") {
+      const currentPx = el.fontSizePx ?? DEFAULT_FONT_SIZE_PX;
+      const nextPx = Math.min(FONT_SIZE_MAX_PX, Math.max(FONT_SIZE_MIN_PX, currentPx * factor));
+      updateElement(el.id, { fontSizePx: nextPx });
+      return;
+    }
+
+    const centerXPct = el.xPct + el.widthPct / 2;
+    const centerYPct = el.yPct + el.heightPct / 2;
+    const nextWidthPct = Math.max(LOGO_MIN_PCT, el.widthPct * factor);
+    const nextHeightPct = Math.max(LOGO_MIN_PCT, el.heightPct * factor);
+    updateElement(el.id, {
+      widthPct: nextWidthPct,
+      heightPct: nextHeightPct,
+      xPct: centerXPct - nextWidthPct / 2,
+      yPct: centerYPct - nextHeightPct / 2,
+    });
+  }
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       const ctrlOrCmd = e.ctrlKey || e.metaKey;
@@ -272,6 +308,14 @@ export default function PersonalizerClient({
         return;
       }
 
+      const target = e.target as HTMLElement | null;
+      const isEditableField =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+
       // Suprimir/Delete/Backspace deletes the currently selected element —
       // but never while the user is typing somewhere (text edit mode's own
       // <input> in DesignElementView, the quantity/size/color/etc. fields
@@ -279,21 +323,22 @@ export default function PersonalizerClient({
       // not the element. Checking the focused element covers every such
       // field generically, with no need to know about them individually.
       if (e.key === "Delete" || e.key === "Backspace") {
-        const target = e.target as HTMLElement | null;
-        const isEditableField =
-          !!target &&
-          (target.tagName === "INPUT" ||
-            target.tagName === "TEXTAREA" ||
-            target.tagName === "SELECT" ||
-            target.isContentEditable);
         if (isEditableField || !selectedId) return;
         e.preventDefault();
         deleteElement(selectedId);
+        return;
+      }
+
+      if (e.shiftKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+        if (isEditableField || !selectedId) return;
+        e.preventDefault();
+        resizeSelectedElementByKeyboard(e.key === "ArrowRight" ? 1 : -1);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [undo, redo, deleteElement, selectedId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [undo, redo, deleteElement, selectedId, elements, activeView]);
 
   function addElement(el: DesignElement) {
     const next = { ...elements, [el.view]: [...elements[el.view], el] };
@@ -712,7 +757,23 @@ export default function PersonalizerClient({
               ref={canvasRef}
               className="relative"
               style={{ height: "min(75vh, 720px)", aspectRatio: asset.aspect }}
-              onMouseDown={() => setSelectedId(null)}
+              onMouseDown={(e) => {
+                // react-moveable's own resize/rotate handles live inside this
+                // same canvas div (DesignElementView renders <Moveable> as a
+                // sibling of the target, not portaled elsewhere) — their DOM
+                // node is `.moveable-control-box`. Without this guard, EVERY
+                // mousedown on a handle also bubbles up here and deselects,
+                // unmounting <Moveable> mid-gesture before a single onResize/
+                // onRotate frame can fire — this is why dragging a corner
+                // handle looked like it "didn't respond" at all: the drag
+                // never actually started, the element was just deselected
+                // instantly. Same root-cause family as the eye-button
+                // click-suppression bug documented for this file — any
+                // click that starts on Moveable's own UI must never reach
+                // this deselect-on-elsewhere handler.
+                if ((e.target as HTMLElement).closest(".moveable-control-box")) return;
+                setSelectedId(null);
+              }}
             >
               {activeViewSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element

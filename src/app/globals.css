@@ -63,3 +63,14 @@
   border-width: 1px !important;
   box-shadow: none !important;
 }
+
+/* The line connecting the box to the rotation handle defaults to 40px
+   (react-moveable's own base stylesheet: `.rotation { height: 40px; ...
+   height: calc(40px * var(--zoom)); }`) — same !important-required
+   override-tie situation as `.moveable-control` above. Cut down well
+   below half per explicit request ("mucho más chica ... la mitad o
+   más"). Still scales with the same --zoom the handles use, so it stays
+   proportionate to small vs large art. */
+.merchy-moveable .moveable-rotation {
+  height: calc(16px * var(--zoom, 1)) !important;
+}
