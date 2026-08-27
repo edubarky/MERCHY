@@ -579,6 +579,7 @@ export default function PersonalizerClient({
 
   const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers);
   const numElements = VIEW_ORDER.reduce((sum, v) => sum + elements[v].length, 0);
+  const numLogoElements = VIEW_ORDER.reduce((sum, v) => sum + elements[v].filter((e) => e.type === "logo").length, 0);
 
   // Cada técnica calcula su propio precio según su pricing_type (ver
   // types/index.ts) y se suma al total — nunca se inventa un precio: si
@@ -619,10 +620,6 @@ export default function PersonalizerClient({
   const unitPrice = garmentUnit + techniqueTotal;
   const subtotal = unitPrice * quantity;
   const total = subtotal;
-
-  const uniqueColors = new Set(
-    VIEW_ORDER.flatMap((v) => elements[v].filter((e) => e.type === "text").map((e) => e.color || "#1a1a1a"))
-  ).size;
 
   // El carrito/checkout/PreviewModal todavía muestran UNA sola técnica
   // (no se rediseñaron en este cambio) -- se usa la primera seleccionada
@@ -1107,74 +1104,58 @@ export default function PersonalizerClient({
             )}
           </div>
 
-          {/* Resumen del pedido */}
-          <div className="rounded-2xl border border-ui-border p-6">
-            <p className="mb-5 text-base font-bold text-foreground">Resumen del pedido</p>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-ui-gray">Cantidad</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="flex h-7 w-7 items-center justify-center rounded-full border border-ui-border text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary"
-                    >
-                      −
-                    </button>
-                    <span className="w-6 text-center font-semibold text-foreground">{quantity}</span>
-                    <button
-                      type="button"
-                      onClick={() => setQuantity((q) => q + 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full border border-ui-border text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span className="shrink-0 text-ui-gray">Tipo de impresión</span>
-                  <span className="text-right font-semibold text-foreground">
-                    {techniqueResults.length === 0 ? "—" : techniqueResults.map((r) => r.technique.name).join(", ")}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-ui-gray">Colores de impresión</span>
-                  <span className="font-semibold text-foreground">
-                    {uniqueColors} Color{uniqueColors === 1 ? "" : "es"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-ui-gray">Logos / Elementos</span>
-                  <span className="font-semibold text-foreground">{numElements} Elemento{numElements === 1 ? "" : "s"}</span>
-                </div>
-              </div>
-              <div className="space-y-3 border-l border-ui-border pl-8 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-ui-gray">Precio unitario</span>
-                  <span className="font-semibold text-foreground">{formatMXN(unitPrice)} MXN</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-ui-gray">Subtotal ({quantity} unidades)</span>
-                  <span className="font-semibold text-foreground">{formatMXN(subtotal)} MXN</span>
-                </div>
-              </div>
+          {/* Resumen del pedido -- píldora compacta por pedido explícito
+              (reemplaza el desglose detallado de antes: Cantidad/Tipo de
+              impresión/Colores/Elementos/Precio unitario/Subtotal en una
+              grilla). El stepper de Cantidad se queda aquí mismo porque es
+              el ÚNICO control de cantidad en todo el Personalizador
+              (confirmado con el usuario antes de simplificar este bloque,
+              para no perder la función) -- unitPrice/total siguen
+              calculándose exactamente igual que antes, solo ya no se
+              muestran desglosados por técnica/color. */}
+          <div className="flex flex-wrap items-center gap-5 rounded-full border border-ui-border bg-white px-6 py-4 shadow-sm">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-ui-border text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary"
+              >
+                −
+              </button>
+              <span className="w-6 text-center text-sm font-semibold text-foreground">{quantity}</span>
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => q + 1)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-ui-border text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary"
+              >
+                +
+              </button>
             </div>
 
-            <div className="mt-5 flex items-center justify-between rounded-2xl bg-primary/10 px-6 py-5">
-              <div>
-                <p className="text-lg font-bold text-foreground">Total</p>
-                <p className="text-xs text-ui-gray">
-                  {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-3xl font-bold text-foreground">
+            <div className="h-9 w-px bg-ui-border" />
+
+            <div>
+              <p className="flex items-baseline gap-2 whitespace-nowrap">
+                <span className="text-base font-bold text-foreground">Total:</span>
+                <span className="text-xl font-bold text-foreground">
                   {formatMXN(total)} <span className="text-sm font-normal text-ui-gray">MXN</span>
-                </p>
-                {anyTechniqueNeedsQuote && <p className="text-xs font-semibold text-accent-coral">+ técnica(s) por cotizar</p>}
-              </div>
+                </span>
+                <span className="text-xs text-ui-gray">{formatMXN(unitPrice)} c/u</span>
+              </p>
+              <p className="text-[11px] text-ui-gray">
+                {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
+              </p>
             </div>
+
+            <div className="h-9 w-px bg-ui-border" />
+
+            <span className="text-sm font-semibold text-foreground">
+              {numLogoElements} {numLogoElements === 1 ? "Logo" : "Logos"}
+            </span>
+
+            {anyTechniqueNeedsQuote && (
+              <span className="text-xs font-semibold text-accent-coral">+ técnica(s) por cotizar</span>
+            )}
           </div>
 
           <div className="flex gap-4">
