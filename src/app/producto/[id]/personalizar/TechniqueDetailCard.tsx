@@ -22,6 +22,15 @@ const ICON_SRC: Record<string, string> = {
   "Tampografía": "/Home/PERSONALIZADOR/TECNICAS/DETALLE/TAMPOGRAFÍA.svg",
 };
 
+// El nombre real en la base de datos ("Textil DTF") quedó así por cómo se
+// dio de alta la técnica -- pero el editable/mockup y el resto de la app
+// la llaman "DTF Textil". Este mapa solo cambia lo que se MUESTRA en el
+// encabezado de la tarjeta; technique.name (usado para ICON_SRC, pricing,
+// el snapshot guardado, etc.) no se toca en ningún otro lado.
+const DISPLAY_NAME: Record<string, string> = {
+  "Textil DTF": "DTF Textil",
+};
+
 const NATIVE_W = 330;
 const NATIVE_H = 219;
 // Caja de recorte (px, coordenadas nativas del SVG) centrada en la insignia
@@ -42,7 +51,12 @@ function TechniqueIconBadge({ name, size = 44 }: { name: string; size?: number }
       style={{
         width: size,
         height: size,
-        backgroundImage: `url(${src})`,
+        // Comillas explícitas dentro de url() -- sin ellas, un nombre de
+        // archivo con espacio (ej. "DTF TEXTIL.svg") produce un token CSS
+        // inválido que el navegador simplemente ignora en silencio, dejando
+        // la insignia en blanco. Con comillas es un <string> CSS válido,
+        // espacios incluidos -- bug real, confirmado en producción.
+        backgroundImage: `url("${src}")`,
         backgroundSize: `${NATIVE_W * scale}px ${NATIVE_H * scale}px`,
         backgroundPosition: `${-CROP.x * scale}px ${-CROP.y * scale}px`,
         backgroundRepeat: "no-repeat",
@@ -109,7 +123,7 @@ export default function TechniqueDetailCard({
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <TechniqueIconBadge name={technique.name} />
-          <p className="truncate text-base font-bold text-primary-dark">{technique.name}</p>
+          <p className="truncate text-base font-bold text-primary-dark">{DISPLAY_NAME[technique.name] ?? technique.name}</p>
         </div>
         <button
           type="button"
