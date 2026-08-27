@@ -9,7 +9,6 @@ import {
   findQtyPrice,
   findTintasPrice,
   findSizePrice,
-  getElementRealCm,
   roundUpToConfiguredSize,
   formatMXN,
 } from "@/lib/pricing";
@@ -36,6 +35,7 @@ import ArtLibraryPanel from "./ArtLibraryPanel";
 import DesignsPreviewCard from "./DesignsPreviewCard";
 import SelectionToolbar from "./SelectionToolbar";
 import PrintTechniqueCards from "./PrintTechniqueCards";
+import TechniqueDetailCard from "./TechniqueDetailCard";
 import PreviewModal from "./PreviewModal";
 import {
   TextToolIcon,
@@ -145,12 +145,17 @@ export default function PersonalizerClient({
   const [layersOpen, setLayersOpen] = useState(false);
   // Selección múltiple: el usuario puede activar varias técnicas a la vez
   // (ej. DTF Textil + Bordado), cada una suma su propio precio por
-  // separado. techniqueTintas/techniqueLogoSizes guardan el parámetro que
-  // cada técnica pide (ver PrintTechnique.pricing_type) — nunca se
-  // inventa un valor por defecto que no haya elegido el usuario.
+  // separado. Cada técnica seleccionada pide su propio parámetro (ver
+  // PrintTechnique.pricing_type) — nunca se inventa un valor por defecto
+  // que no haya escrito el usuario. Los tres guardan texto crudo tal cual
+  // lo escribe (no number), igual que cualquier otro <input> controlado
+  // de este archivo — se parsean solo al calcular el precio.
+  // techniquePositions ("Posiciones") es SIEMPRE informativo -- se guarda
+  // en el pedido pero nunca multiplica ni afecta ningún precio.
   const [selectedTechniqueIds, setSelectedTechniqueIds] = useState<string[]>([]);
-  const [techniqueTintas, setTechniqueTintas] = useState<Record<string, number>>({});
-  const [techniqueLogoSizes, setTechniqueLogoSizes] = useState<Record<string, Record<string, string>>>({});
+  const [techniqueTintas, setTechniqueTintas] = useState<Record<string, string>>({});
+  const [techniquePositions, setTechniquePositions] = useState<Record<string, string>>({});
+  const [techniqueSizeCm, setTechniqueSizeCm] = useState<Record<string, { largo: string; alto: string }>>({});
   const [quantity, setQuantity] = useState(1);
   const [zCounter, setZCounter] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
@@ -555,30 +560,25 @@ export default function PersonalizerClient({
     setSelectedTechniqueIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
-  // Tamaño (ej. "10x10") a usar para calcular el precio "by_size" de un
-  // logo: automático cuando esa vista/producto ya tiene medidas físicas
-  // reales cargadas (printAreas.ts -> widthCm/heightCm) -- redondeando
-  // siempre hacia el tamaño configurado inmediato superior, nunca hacia
-  // abajo. Mientras un producto/vista no tenga esas medidas, cae
-  // exactamente al comportamiento manual de siempre (el cliente elige el
-  // tamaño a mano vía techniqueLogoSizes) -- ningún producto pierde
-  // funcionalidad por no tener todavía sus medidas reales configuradas.
-  function resolveLogoSize(
-    technique: PrintTechnique,
-    el: DesignElement
-  ): { size: string | null; auto: boolean; realCm: { widthCm: number; heightCm: number } | null } {
-    const pa = getPrintArea(product.name, el.view);
-    const realCm = getElementRealCm(el.widthPct, el.heightPct, pa.widthCm, pa.heightCm);
-    if (realCm) {
-      const sizeOptions = Array.from(new Set(technique.price_table.map((t) => t.size).filter((s): s is string => !!s)));
-      return { size: roundUpToConfiguredSize(realCm.widthCm, realCm.heightCm, sizeOptions), auto: true, realCm };
-    }
-    return { size: techniqueLogoSizes[technique.id]?.[el.id] ?? null, auto: false, realCm: null };
+  // Tamaño (ej. "10x10") a usar para calcular el precio "by_size" de una
+  // técnica: el cliente escribe Largo/Alto (cm) directo en la tarjeta de
+  // esa técnica (una sola medida por técnica, no por logo) y se redondea
+  // siempre hacia el tamaño configurado inmediato superior de esa técnica,
+  // nunca hacia abajo -- nunca se inventa un tamaño que no exista en la
+  // tabla de precios (si el logo excede el tamaño configurado más grande,
+  // o el campo sigue vacío, regresa null y el llamador lo trata como
+  // "requiere cotización").
+  function resolveTechniqueSize(technique: PrintTechnique): string | null {
+    const dims = techniqueSizeCm[technique.id];
+    const largo = parseFloat(dims?.largo ?? "");
+    const alto = parseFloat(dims?.alto ?? "");
+    if (!Number.isFinite(largo) || !Number.isFinite(alto) || largo <= 0 || alto <= 0) return null;
+    const sizeOptions = Array.from(new Set(technique.price_table.map((t) => t.size).filter((s): s is string => !!s)));
+    return roundUpToConfiguredSize(largo, alto, sizeOptions);
   }
 
   const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers);
   const numElements = VIEW_ORDER.reduce((sum, v) => sum + elements[v].length, 0);
-  const allLogoElements = VIEW_ORDER.flatMap((v) => elements[v].filter((e) => e.type === "logo"));
 
   // Cada técnica calcula su propio precio según su pricing_type (ver
   // types/index.ts) y se suma al total — nunca se inventa un precio: si
@@ -600,22 +600,16 @@ export default function PersonalizerClient({
       }
       if (technique.pricing_type === "by_tintas") {
         if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false };
-        const tintas = techniqueTintas[technique.id];
-        if (!tintas) return { technique, unitPrice: null, needsQuote: true };
+        const tintas = parseInt(techniqueTintas[technique.id] ?? "", 10);
+        if (!Number.isFinite(tintas) || tintas <= 0) return { technique, unitPrice: null, needsQuote: true };
         const price = findTintasPrice(technique, tintas, quantity);
         return price === null ? { technique, unitPrice: null, needsQuote: true } : { technique, unitPrice: price * numElements, needsQuote: false };
       }
       if (technique.pricing_type === "by_size") {
-        if (allLogoElements.length === 0) return { technique, unitPrice: 0, needsQuote: false };
-        let sum = 0;
-        let needsQuote = false;
-        for (const el of allLogoElements) {
-          const { size } = resolveLogoSize(technique, el);
-          const price = size ? findSizePrice(technique, size, quantity) : null;
-          if (price === null) needsQuote = true;
-          else sum += price;
-        }
-        return { technique, unitPrice: needsQuote ? null : sum, needsQuote };
+        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false };
+        const size = resolveTechniqueSize(technique);
+        const price = size ? findSizePrice(technique, size, quantity) : null;
+        return price === null ? { technique, unitPrice: null, needsQuote: true } : { technique, unitPrice: price * numElements, needsQuote: false };
       }
       // pricing_type null -> sin datos suficientes configurados todavía.
       return { technique, unitPrice: null, needsQuote: true };
@@ -686,14 +680,22 @@ export default function PersonalizerClient({
                 logos,
                 texts,
                 applied_to: "all",
-                selected_techniques: techniqueResults.map((r) => ({
-                  technique_id: r.technique.id,
-                  technique_name: r.technique.name,
-                  tintas: techniqueTintas[r.technique.id],
-                  logo_sizes: techniqueLogoSizes[r.technique.id],
-                  unit_price: r.unitPrice,
-                  needs_quote: r.needsQuote,
-                })),
+                selected_techniques: techniqueResults.map((r) => {
+                  const tintasRaw = parseInt(techniqueTintas[r.technique.id] ?? "", 10);
+                  const positionsRaw = parseInt(techniquePositions[r.technique.id] ?? "", 10);
+                  const dims = techniqueSizeCm[r.technique.id];
+                  const largo = parseFloat(dims?.largo ?? "");
+                  const alto = parseFloat(dims?.alto ?? "");
+                  return {
+                    technique_id: r.technique.id,
+                    technique_name: r.technique.name,
+                    tintas: Number.isFinite(tintasRaw) && tintasRaw > 0 ? tintasRaw : undefined,
+                    positions: Number.isFinite(positionsRaw) && positionsRaw > 0 ? positionsRaw : undefined,
+                    size_cm: largo > 0 && alto > 0 ? { largo, alto } : undefined,
+                    unit_price: r.unitPrice,
+                    needs_quote: r.needsQuote,
+                  };
+                }),
               }
             : null,
         unit_price: unitPrice,
@@ -1068,154 +1070,37 @@ export default function PersonalizerClient({
                 <div className="-mx-8">
                   <PrintTechniqueCards techniques={techniques} selectedIds={selectedTechniqueIds} onToggle={toggleTechnique} />
                 </div>
-                {/* Cada técnica activa pide su propio parámetro (ver
-                    PrintTechnique.pricing_type) -- "by_qty" no necesita
-                    ninguno extra y no dibuja nada aquí. */}
+                {/* Cada técnica seleccionada se desglosa en su propia
+                    tarjeta con "Posiciones" (siempre informativo, nunca
+                    afecta el precio) + Largo/Alto en cm (DTF Textil, DTF
+                    UV, DTG, Bordado, Grabado en Láser) o Tintas (Serigrafía,
+                    Tampografía) según su pricing_type -- ver
+                    resolveTechniqueSize/techniqueResults arriba. El botón
+                    de basura quita esa técnica de la selección (mismo
+                    toggleTechnique que su tarjeta en el selector de
+                    arriba). */}
                 {techniqueResults.length > 0 && (
                   <div className="mt-5 flex flex-col gap-3">
-                    {techniqueResults.map(({ technique }) => {
-                      if (technique.pricing_type === "by_tintas") {
-                        const options = Array.from(
-                          new Set(technique.price_table.map((t) => t.tintas).filter((t): t is number => t !== undefined))
-                        ).sort((a, b) => a - b);
-                        const chosen = techniqueTintas[technique.id];
-                        return (
-                          <div key={technique.id} className="rounded-2xl border border-ui-border p-4">
-                            <p className="mb-2.5 text-sm font-semibold text-foreground">{technique.name} — Número de tintas</p>
-                            <div className="flex flex-wrap gap-2">
-                              {options.map((n) => (
-                                <button
-                                  key={n}
-                                  type="button"
-                                  onClick={() => setTechniqueTintas((prev) => ({ ...prev, [technique.id]: n }))}
-                                  className={`flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition-colors duration-150 ease-out ${
-                                    chosen === n ? "border-primary bg-primary text-white" : "border-ui-border text-foreground hover:border-primary/50"
-                                  }`}
-                                >
-                                  {n}
-                                </button>
-                              ))}
-                            </div>
-                            {chosen !== undefined && findTintasPrice(technique, chosen, quantity) === null && (
-                              <p className="mt-2.5 text-xs font-medium text-accent-coral">Esta combinación requiere cotización.</p>
-                            )}
-                          </div>
-                        );
-                      }
-                      if (technique.pricing_type === "by_size") {
-                        const sizeOptions = Array.from(new Set(technique.price_table.map((t) => t.size).filter((s): s is string => !!s)));
-                        if (allLogoElements.length === 0) {
-                          return (
-                            <div key={technique.id} className="rounded-2xl border border-dashed border-ui-border bg-gray-50 p-4">
-                              <p className="text-sm text-ui-gray">Agrega un logo para elegir el tamaño de {technique.name}.</p>
-                            </div>
-                          );
+                    {techniqueResults.map(({ technique, unitPrice, needsQuote }) => (
+                      <TechniqueDetailCard
+                        key={technique.id}
+                        technique={technique}
+                        unitPrice={unitPrice}
+                        needsQuote={needsQuote}
+                        positions={techniquePositions[technique.id] ?? ""}
+                        onPositionsChange={(v) => setTechniquePositions((prev) => ({ ...prev, [technique.id]: v }))}
+                        sizeCm={techniqueSizeCm[technique.id] ?? { largo: "", alto: "" }}
+                        onSizeCmChange={(patch) =>
+                          setTechniqueSizeCm((prev) => ({
+                            ...prev,
+                            [technique.id]: { ...(prev[technique.id] ?? { largo: "", alto: "" }), ...patch },
+                          }))
                         }
-                        return (
-                          <div key={technique.id} className="rounded-2xl border border-ui-border p-4">
-                            <p className="mb-2.5 text-sm font-semibold text-foreground">{technique.name} — Tamaño por logo</p>
-                            <div className="flex flex-col gap-2.5">
-                              {allLogoElements.map((el) => {
-                                const resolved = resolveLogoSize(technique, el);
-                                const priceForLogo = resolved.size ? findSizePrice(technique, resolved.size, quantity) : null;
-
-                                // Medidas reales cargadas para esta vista/producto (printAreas.ts):
-                                // el tamaño se mide solo, sin selector manual.
-                                if (resolved.auto) {
-                                  return (
-                                    <div key={el.id} className="flex flex-wrap items-center justify-between gap-2">
-                                      <span className="truncate text-xs text-ui-gray">
-                                        {el.fileName ?? "Logo"}
-                                        {resolved.realCm && (
-                                          <span className="ml-1 text-ui-gray/70">
-                                            ({resolved.realCm.widthCm.toFixed(1)}×{resolved.realCm.heightCm.toFixed(1)} cm)
-                                          </span>
-                                        )}
-                                      </span>
-                                      <div className="flex items-center gap-1.5">
-                                        {resolved.size ? (
-                                          <span className="rounded-full border border-primary bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary-dark">
-                                            {resolved.size} cm · auto
-                                          </span>
-                                        ) : (
-                                          <span className="rounded-full border border-accent-coral/40 bg-accent-coral/10 px-2.5 py-1 text-[11px] font-semibold text-accent-coral">
-                                            Excede tamaño máx.
-                                          </span>
-                                        )}
-                                        {resolved.size && (
-                                          <span className="ml-1 w-16 text-right text-xs font-semibold text-foreground">
-                                            {priceForLogo === null ? (
-                                              <span className="text-accent-coral">Cotizar</span>
-                                            ) : (
-                                              `${formatMXN(priceForLogo)}`
-                                            )}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                }
-
-                                // Sin medidas reales todavía para esta vista/producto: selector
-                                // manual, exactamente como antes de que existiera la medición
-                                // automática.
-                                const chosen = resolved.size;
-                                return (
-                                  <div key={el.id} className="flex flex-wrap items-center justify-between gap-2">
-                                    <span className="truncate text-xs text-ui-gray">{el.fileName ?? "Logo"}</span>
-                                    <div className="flex items-center gap-1.5">
-                                      {sizeOptions.map((size) => (
-                                        <button
-                                          key={size}
-                                          type="button"
-                                          onClick={() =>
-                                            setTechniqueLogoSizes((prev) => ({
-                                              ...prev,
-                                              [technique.id]: { ...prev[technique.id], [el.id]: size },
-                                            }))
-                                          }
-                                          className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors duration-150 ease-out ${
-                                            chosen === size
-                                              ? "border-primary bg-primary text-white"
-                                              : "border-ui-border text-foreground hover:border-primary/50"
-                                          }`}
-                                        >
-                                          {size} cm
-                                        </button>
-                                      ))}
-                                      {chosen && (
-                                        <span className="ml-1 w-16 text-right text-xs font-semibold text-foreground">
-                                          {priceForLogo === null ? (
-                                            <span className="text-accent-coral">Cotizar</span>
-                                          ) : (
-                                            `${formatMXN(priceForLogo)}`
-                                          )}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            {allLogoElements.some((el) => {
-                              const resolved = resolveLogoSize(technique, el);
-                              return resolved.size ? findSizePrice(technique, resolved.size, quantity) === null : resolved.auto;
-                            }) && <p className="mt-2.5 text-xs font-medium text-accent-coral">Esta medida requiere cotización.</p>}
-                          </div>
-                        );
-                      }
-                      if (!technique.pricing_type) {
-                        return (
-                          <div key={technique.id} className="rounded-2xl border border-dashed border-ui-border bg-gray-50 p-4">
-                            <p className="text-sm text-ui-gray">
-                              <span className="font-semibold text-foreground">{technique.name}:</span> Precio por cotizar — todavía no
-                              tiene tarifas configuradas.
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
+                        tintas={techniqueTintas[technique.id] ?? ""}
+                        onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [technique.id]: v }))}
+                        onRemove={() => toggleTechnique(technique.id)}
+                      />
+                    ))}
                   </div>
                 )}
               </>
