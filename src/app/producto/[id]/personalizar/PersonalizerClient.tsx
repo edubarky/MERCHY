@@ -1119,21 +1119,21 @@ export default function PersonalizerClient({
           <div className="flex flex-wrap items-center gap-5 rounded-full border border-ui-border bg-white px-6 py-4 shadow-sm">
             <div className="flex items-baseline gap-2 whitespace-nowrap">
               <span className="text-base font-bold text-foreground">Total:</span>
-              {/* "IVA incluido" centrado justo debajo del precio (no debajo
-                  de "Total:") -- por eso este bloque va aparte, en su
-                  propia columna centrada, en vez de una segunda línea
-                  alineada a la izquierda de todo el conjunto. */}
-              <div className="flex flex-col items-center">
-                <p className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold text-foreground">
-                    {formatMXN(total)} <span className="text-sm font-normal text-ui-gray">MXN</span>
+              <p className="flex items-baseline gap-2">
+                <span className="text-xl font-bold text-foreground">{formatMXN(total)}</span>
+                {/* "MXN" en negritas y, justo debajo, "IVA incluido" -- del
+                    mismo ancho angosto que "MXN" (no del bloque de precio
+                    completo), también en negritas y chiquito. Van juntos
+                    en su propia columna centrada para que ese ancho sea
+                    real, no heredado del resto de la línea. */}
+                <span className="flex flex-col items-center">
+                  <span className="text-sm font-bold text-foreground leading-tight">MXN</span>
+                  <span className="whitespace-nowrap text-[9px] font-bold leading-tight text-foreground">
+                    {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
                   </span>
-                  <span className="text-xs text-ui-gray">{formatMXN(unitPrice)} c/u</span>
-                </p>
-                <p className="text-[11px] font-semibold text-foreground">
-                  {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
-                </p>
-              </div>
+                </span>
+                <span className="text-xs text-ui-gray">{formatMXN(unitPrice)} c/u</span>
+              </p>
             </div>
 
             <div className="h-9 w-px bg-ui-border" />
