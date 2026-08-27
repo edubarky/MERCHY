@@ -5,19 +5,19 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Product, ProductVariant, PriceTier } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
-import { VIEW_ORDER, normalizeGarmentColorName, type ResolvedProductAssets } from "./personalizar/types";
+import { VIEW_ORDER, normalizeGarmentColorName, type ResolvedProductAssets, type GarmentColor } from "./personalizar/types";
 
 interface Props {
   product: Product & { variants: ProductVariant[] };
   priceTiers: PriceTier[];
   // Ejes reales (Frente/Reverso/Izquierda/Derecha) por color + foto "con
-  // modelo" opcional (una sola, no por color) -- mismos archivos que ya usa
-  // el Personalizador (ver page.tsx). Alimentan la galería de miniaturas
-  // debajo de la foto principal (mismo mecanismo que ya usan productos como
-  // Tapete, solo que ahí viene de product_variants.images en vez de estos
-  // archivos locales).
+  // modelo" opcional, también por color cuando el producto tiene
+  // subcarpetas de color -- mismos archivos que ya usa el Personalizador
+  // (ver page.tsx). Alimentan la galería de miniaturas debajo de la foto
+  // principal (mismo mecanismo que ya usan productos como Tapete, solo que
+  // ahí viene de product_variants.images en vez de estos archivos locales).
   resolvedGallery: ResolvedProductAssets;
-  modelShotUrl: string | null;
+  modelShots: Record<GarmentColor, string | null>;
 }
 
 interface Review {
@@ -749,7 +749,7 @@ function TotalPzasCard({ total }: { total: number }) {
   );
 }
 
-export default function ProductDetail({ product, priceTiers, resolvedGallery, modelShotUrl }: Props) {
+export default function ProductDetail({ product, priceTiers, resolvedGallery, modelShots }: Props) {
   const activeVariants = product.variants.filter((v) => v.active);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -789,6 +789,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const ejesForColor = selectedColorKey
     ? VIEW_ORDER.map((v) => resolvedGallery[v][selectedColorKey]).filter((url): url is string => !!url)
     : [];
+  const modelShotUrl = selectedColorKey ? modelShots[selectedColorKey] : null;
   const images =
     ejesForColor.length > 0
       ? [modelShotUrl, ...ejesForColor].filter((url): url is string => !!url)
