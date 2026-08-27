@@ -32,16 +32,22 @@ export default function PrintTechniqueCards({
   onToggle: (id: string) => void;
 }) {
   return (
-    // En desktop, el grupo de 5 (3 arriba + 2 abajo) vive en un contenedor
-    // más angosto que el panel y centrado (mx-auto + sm:w-[92%]) — antes
-    // usaba una 4ª columna fantasma para mantener el tamaño de tarjeta, lo
-    // que dejaba toda la fila pegada a la izquierda con un hueco a la
-    // derecha. Ahora son 3 columnas reales (sin columna vacía) dentro de
-    // ese contenedor más angosto, así las tarjetas quedan un poco más
-    // grandes Y el grupo entero queda centrado. En móvil (sin el prefijo
-    // sm:) sigue siendo una grilla simple de 2 columnas a ancho completo.
-    <div className="mx-auto grid grid-cols-2 gap-0.5 sm:w-[92%] sm:grid-cols-3">
-      {CARDS.map((card, i) => {
+    // Antes esto era un CSS Grid de 3 columnas con Bordado/DTG fijados por
+    // índice a la fila 2 — asumía que las 5 técnicas SIEMPRE existen. En la
+    // práctica una técnica puede faltar en la base de datos para un
+    // producto dado (ej. "DTF UV"), y como un <button> que retorna null no
+    // ocupa ninguna celda, la 3ª columna quedaba completamente vacía en vez
+    // de reacomodarse — el grupo entero se veía pegado a la izquierda con
+    // un hueco a la derecha, sin importar cuántas tarjetas hubiera.
+    //
+    // flex-wrap + justify-center resuelve esto de raíz: cada fila (completa
+    // o no) se centra sola según cuántas tarjetas realmente haya, sin
+    // ningún índice fijo — funciona igual con 5 técnicas, con 4, o con
+    // cualquier otro subconjunto futuro. El ancho de cada tarjeta imita
+    // exactamente las mismas 2 columnas en móvil / 3 en desktop de antes
+    // (mismo gap-0.5 de 2px, restado del cálculo del ancho).
+    <div className="mx-auto flex flex-wrap justify-center gap-0.5 sm:w-[92%]">
+      {CARDS.map((card) => {
         const technique = techniques.find((t) => t.name === card.name);
         if (!technique) return null;
         const isSelected = selectedIds.includes(technique.id);
@@ -56,9 +62,7 @@ export default function PrintTechniqueCards({
             // contorno real y transparente-respetuoso del SVG (no una caja
             // rectangular aparte) — así nunca aparece un "segundo cuadro".
             // Sin scale ni translate: la tarjeta no cambia de tamaño ni se mueve.
-            className={`relative block w-full transition-[filter] duration-150 ease-out ${
-              i === 3 ? "sm:[grid-row:2] sm:[grid-column:1]" : i === 4 ? "sm:[grid-row:2] sm:[grid-column:2]" : ""
-            } ${
+            className={`relative block shrink-0 basis-[calc((100%-2px)/2)] transition-[filter] duration-150 ease-out sm:basis-[calc((100%-4px)/3)] ${
               isSelected
                 ? "[filter:drop-shadow(0_0_2px_rgba(87,224,217,0.9))_drop-shadow(0_6px_16px_rgba(87,224,217,0.3))]"
                 : "hover:[filter:drop-shadow(0_0_2px_rgba(87,224,217,0.85))_drop-shadow(0_6px_14px_rgba(87,224,217,0.18))]"
