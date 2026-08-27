@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { ArtAsset } from "@/lib/artLibrary/ArtLibraryContext";
 import { FolderIcon, ChevronRightIcon } from "./Icons";
 
@@ -12,8 +11,6 @@ import { FolderIcon, ChevronRightIcon } from "./Icons";
 const VISIBLE_DESKTOP = 4;
 
 function DesignThumb({ asset, onSelect, onRemove }: { asset: ArtAsset; onSelect: () => void; onRemove: () => void }) {
-  const [confirming, setConfirming] = useState(false);
-
   return (
     <div className="min-w-0">
       <div className="group relative aspect-square overflow-hidden rounded-2xl border border-ui-border bg-white transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)]">
@@ -33,39 +30,20 @@ function DesignThumb({ asset, onSelect, onRemove }: { asset: ArtAsset; onSelect:
           )}
         </button>
 
-        {/* "•••" -- misma acción de eliminar que ya existe en la galería
-            completa (ArtLibraryPanel), solo con este estilo para calzar
-            con la referencia visual. No es un sistema nuevo. */}
+        {/* Una sola "×" que elimina directo -- sin confirmación intermedia,
+            por pedido explícito ("eliminar rápido"). Misma acción de
+            eliminar que ya existía, solo sin el paso "•••" -> "¿Eliminar?"
+            Sí/No de antes. */}
         <button
           type="button"
-          onClick={() => setConfirming(true)}
-          aria-label={`Más opciones de ${asset.fileName}`}
-          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white/95 text-sm leading-none text-ui-gray opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-opacity duration-150 ease-out hover:text-accent-coral group-hover:opacity-100"
+          onClick={onRemove}
+          aria-label={`Eliminar ${asset.fileName}`}
+          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white/95 text-ui-gray opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-opacity duration-150 ease-out hover:text-accent-coral group-hover:opacity-100"
         >
-          ⋯
+          <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+            <path d="M5 5l10 10M15 5L5 15" />
+          </svg>
         </button>
-
-        {confirming && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/95 p-2 text-center backdrop-blur-sm">
-            <p className="text-[11px] font-medium leading-tight text-foreground">¿Eliminar?</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirming(false)}
-                className="rounded-full border border-ui-border px-2.5 py-1 text-[10px] font-semibold text-foreground transition-colors duration-150 hover:border-primary"
-              >
-                No
-              </button>
-              <button
-                type="button"
-                onClick={onRemove}
-                className="rounded-full bg-accent-coral px-2.5 py-1 text-[10px] font-semibold text-white transition-transform duration-150 hover:scale-105"
-              >
-                Sí
-              </button>
-            </div>
-          </div>
-        )}
       </div>
       <p className="mt-1.5 truncate text-[11px] text-ui-gray" title={asset.fileName}>
         {asset.fileName}
