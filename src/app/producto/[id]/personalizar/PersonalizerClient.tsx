@@ -1119,16 +1119,21 @@ export default function PersonalizerClient({
           <div className="flex flex-wrap items-center gap-5 rounded-full border border-ui-border bg-white px-6 py-4 shadow-sm">
             <div className="flex items-baseline gap-2 whitespace-nowrap">
               <span className="text-base font-bold text-foreground">Total:</span>
-              <p className="flex items-baseline gap-2">
+              <p className="flex items-baseline gap-1">
                 <span className="text-xl font-bold text-foreground">{formatMXN(total)}</span>
-                {/* "MXN" en negritas y, justo debajo, "IVA incluido" -- del
-                    mismo ancho angosto que "MXN" (no del bloque de precio
-                    completo), también en negritas y chiquito. Van juntos
-                    en su propia columna centrada para que ese ancho sea
-                    real, no heredado del resto de la línea. */}
-                <span className="flex flex-col items-center">
+                {/* "IVA incluido" es más ancho que "MXN" en texto normal --
+                    si van juntos en una columna flex centrada, esa columna
+                    hereda el ancho del texto MÁS ancho (IVA incluido), y
+                    "MXN" se termina centrando DENTRO de ese ancho extra,
+                    lo que lo empuja lejos de $682 (el "muy separados" que
+                    se reportó). Fix real: sacar "IVA incluido" del flujo
+                    (absolute) para que NO participe en el cálculo de ancho
+                    -- el ancho de este bloque queda determinado solo por
+                    "MXN", y "IVA incluido" se centra visualmente debajo de
+                    ese ancho angosto sin poder ensancharlo. */}
+                <span className="relative inline-block">
                   <span className="text-sm font-bold text-foreground leading-tight">MXN</span>
-                  <span className="whitespace-nowrap text-[9px] font-bold leading-tight text-foreground">
+                  <span className="absolute left-1/2 top-full mt-0.5 -translate-x-1/2 whitespace-nowrap text-[9px] font-bold leading-tight text-foreground">
                     {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
                   </span>
                 </span>
