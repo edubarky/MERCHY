@@ -40,13 +40,16 @@ export default function PrintTechniqueCards({
     // de reacomodarse — el grupo entero se veía pegado a la izquierda con
     // un hueco a la derecha, sin importar cuántas tarjetas hubiera.
     //
-    // flex-wrap + justify-center resuelve esto de raíz: cada fila (completa
-    // o no) se centra sola según cuántas tarjetas realmente haya, sin
-    // ningún índice fijo — funciona igual con 5 técnicas, con 4, o con
-    // cualquier otro subconjunto futuro. El ancho de cada tarjeta imita
-    // exactamente las mismas 2 columnas en móvil / 3 en desktop de antes
-    // (mismo gap-0.5 de 2px, restado del cálculo del ancho).
-    <div className="mx-auto flex flex-wrap justify-center gap-0.5 sm:w-[92%]">
+    // flex-wrap resuelve el hueco de raíz: ninguna posición está fijada por
+    // índice, así que una fila incompleta (ej. una sola tarjeta sobrante)
+    // nunca deja una columna vacía en medio — funciona igual con 5
+    // técnicas, con 4, o con cualquier otro subconjunto futuro.
+    // justify-start (no justify-center): por pedido explícito, la última
+    // tarjeta suelta siempre queda alineada a la izquierda, no centrada.
+    // El ancho de cada tarjeta imita exactamente las mismas 2 columnas en
+    // móvil / 3 en desktop de antes (mismo gap-0.5 de 2px, restado del
+    // cálculo del ancho).
+    <div className="mx-auto flex flex-wrap justify-start gap-0.5 sm:w-[92%]">
       {CARDS.map((card) => {
         const technique = techniques.find((t) => t.name === card.name);
         if (!technique) return null;
