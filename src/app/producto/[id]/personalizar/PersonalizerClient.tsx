@@ -329,8 +329,25 @@ export default function PersonalizerClient({
         return;
       }
 
+      // Shift+flecha resizes the selected element. This needs a NARROWER
+      // guard than Delete/Backspace above: it must still be blocked while
+      // literally typing the design's own text content (the type="text"
+      // inline edit <input> in DesignElementView, or any future
+      // contentEditable/textarea), where Shift+Arrow is a real text-
+      // selection gesture — but it must NOT be blocked just because focus
+      // happens to be sitting in an unrelated numeric field like the
+      // toolbar's "Rotación" input (type="number", the only other input
+      // this toolbar has besides the color swatch) — real reported bug:
+      // clicking that field (or any non-text control) before pressing the
+      // shortcut made it silently do nothing, since the broader
+      // isEditableField check above treated every input the same way.
+      const isTypingFreeText =
+        !!target &&
+        (target.tagName === "TEXTAREA" ||
+          target.isContentEditable ||
+          (target.tagName === "INPUT" && (target as HTMLInputElement).type === "text"));
       if (e.shiftKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
-        if (isEditableField || !selectedId) return;
+        if (isTypingFreeText || !selectedId) return;
         e.preventDefault();
         resizeSelectedElementByKeyboard(e.key === "ArrowRight" ? 1 : -1);
       }
