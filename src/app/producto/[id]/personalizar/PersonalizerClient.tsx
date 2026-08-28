@@ -156,12 +156,14 @@ export default function PersonalizerClient({
   const [techniqueTintas, setTechniqueTintas] = useState<Record<string, string>>({});
   const [techniquePositions, setTechniquePositions] = useState<Record<string, string>>({});
   const [techniqueSizeCm, setTechniqueSizeCm] = useState<Record<string, { largo: string; alto: string }>>({});
-  // Ya no hay control visible de cantidad en el Personalizador (se quitó
-  // el stepper de "Resumen del pedido" por pedido explícito) -- queda fija
-  // en 1, pero sigue siendo la misma variable que ya usan unitPrice/total/
-  // el snapshot del carrito, así que nada más se rompe si en el futuro se
-  // vuelve a exponer un control (aquí o en otro lugar).
-  const [quantity] = useState(1);
+  // El stepper se había quitado de "Resumen del pedido" por pedido
+  // explícito -- pero regresa aquí: los tramos de precio por cantidad de
+  // la tabla de cada técnica (ej. DTF Textil: 1-9/10-49/50-99/...) dependen
+  // de esta cantidad real de PRENDAS del pedido (confirmado explícitamente
+  // con el usuario), no del número de logos -- sin un control editable
+  // aquí, esos tramos nunca pueden bajar de precio, que es justo el bug
+  // reportado ("si el usuario agrega más piezas el costo baja").
+  const [quantity, setQuantity] = useState(1);
   const [zCounter, setZCounter] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   // Drives the discreet "fuera de la superficie del producto" notice — no
@@ -1109,14 +1111,34 @@ export default function PersonalizerClient({
             )}
           </div>
 
-          {/* Resumen del pedido -- píldora compacta, ya sin el stepper de
-              Cantidad (quitado por pedido explícito: "sin que el usuario
-              pueda modificarlo") -- ahora solo muestra Total + N Logos, sin
-              ningún control editable. `quantity` sigue existiendo en el
-              estado/cálculo de precio (queda fijo en su valor inicial, 1,
-              ya que nada más en el Personalizador lo cambia), no se borró
-              del modelo -- solo se le quitó el control visible. */}
+          {/* Resumen del pedido -- píldora compacta. El stepper de Cantidad
+              regresa aquí (se había quitado antes): los tramos de precio
+              por cantidad de cada técnica (1-9/10-49/50-99/... en la tabla
+              real de DTF Textil, por ejemplo) dependen de esta cantidad de
+              PRENDAS del pedido -- sin poder editarla, el precio nunca
+              podía bajar de tramo, confirmado explícitamente con el
+              usuario como el comportamiento correcto. */}
           <div className="flex flex-wrap items-center gap-5 rounded-full border border-ui-border bg-white px-6 py-4 shadow-sm">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-ui-border text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary"
+              >
+                −
+              </button>
+              <span className="w-6 text-center text-sm font-semibold text-foreground">{quantity}</span>
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => q + 1)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-ui-border text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary"
+              >
+                +
+              </button>
+            </div>
+
+            <div className="h-9 w-px bg-ui-border" />
+
             <div className="flex items-baseline gap-2 whitespace-nowrap">
               <span className="text-base font-bold text-foreground">Total:</span>
               <p className="flex items-baseline gap-1">
