@@ -82,11 +82,20 @@ export function getElementRealCm(
  * De los tamaños de tarifa que la técnica tiene configurados (ej. "5x5",
  * "10x10", "20x20"), regresa el más chico que sea >= a las medidas reales
  * del logo en AMBOS lados -- redondea siempre hacia el tamaño configurado
- * inmediato superior, nunca hacia abajo (para no erosionar el margen). Si
- * el logo es más grande que el tamaño configurado más grande, regresa
- * null: nunca se inventa un tamaño que no exista en la tabla de precios
- * (el llamador lo trata igual que cualquier otra medida sin tarifa ->
- * "requiere cotización").
+ * inmediato superior, nunca hacia abajo (para no erosionar el margen).
+ *
+ * Si el logo es más grande que el tamaño configurado más grande, regresa
+ * ESE tamaño más grande (se cobra su tarifa) en vez de "requiere
+ * cotización" -- decisión explícita del usuario para DTF Textil/DTF UV
+ * mientras la tabla de precios real todavía no cubre medidas más grandes
+ * que 20x20: "quiero que para medidas mayores de 20x20 cm se siga
+ * manteniendo el precio de 20x20 cm hasta que tengamos completa la tabla
+ * de precios y se pueda modificar más adelante". No es "inventar" un
+ * precio nuevo -- es usar la tarifa real ya configurada del tamaño más
+ * grande como tope, a propósito, hasta que existan tramos más grandes.
+ * Si en el futuro se agregan tramos reales más grandes, este mismo código
+ * los usa automáticamente sin cambios (el "tamaño más grande" que
+ * encuentra ya no sería 20x20).
  */
 export function roundUpToConfiguredSize(
   widthCm: number,
@@ -100,8 +109,9 @@ export function roundUpToConfiguredSize(
     })
     .filter((p) => Number.isFinite(p.w) && Number.isFinite(p.h))
     .sort((a, b) => a.w * a.h - b.w * b.h);
+  if (parsed.length === 0) return null;
   const fit = parsed.find((p) => widthCm <= p.w && heightCm <= p.h);
-  return fit ? fit.label : null;
+  return fit ? fit.label : parsed[parsed.length - 1].label;
 }
 
 export function calculateUnitPrice(
