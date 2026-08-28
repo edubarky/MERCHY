@@ -1157,16 +1157,16 @@ export default function PersonalizerClient({
               uso normal. Alturas/paddings/tamaños de fuente reducidos a
               propósito frente a la versión anterior para que quepa
               cómodo en el ancho real del panel (~35% del viewport). */}
-          <div className="flex flex-nowrap items-center gap-[16.1px] overflow-x-auto rounded-full border border-white bg-white/[0.05] px-[49.6px] py-[21.1px] shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-[49.6px]">
+          <div className="flex flex-nowrap items-center gap-[13.8px] overflow-x-auto rounded-full border border-white bg-white/[0.05] px-[42.4px] py-[18px] shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-[42.4px]">
             {/* Cantidad -- compacta, botones circulares chicos, turquesa. */}
-            <div className="flex shrink-0 items-center gap-[3.7px]">
+            <div className="flex shrink-0 items-center gap-[3.2px]">
               <button
                 type="button"
                 onClick={() => setQty(quantity - 1)}
                 aria-label="Quitar una pieza"
-                className="flex h-[22.3px] w-[22.3px] shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
+                className="flex h-[19.1px] w-[19.1px] shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
               >
-                <svg viewBox="0 0 16 16" className="h-[11.2px] w-[11.2px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                <svg viewBox="0 0 16 16" className="h-[9.5px] w-[9.5px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
                   <path d="M3 8h10" />
                 </svg>
               </button>
@@ -1183,49 +1183,49 @@ export default function PersonalizerClient({
                 onBlur={handleQtyDraftBlur}
                 onFocus={(e) => e.currentTarget.select()}
                 aria-label="Cantidad de piezas"
-                className="w-[53.3px] rounded-full bg-white/80 py-0.5 text-center text-xs font-semibold text-foreground outline-none ring-1 ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-primary/40"
+                className="w-[45.6px] rounded-full bg-white/80 py-0.5 text-center text-xs font-semibold text-foreground outline-none ring-1 ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-primary/40"
               />
               <button
                 type="button"
                 onClick={() => setQty(quantity + 1)}
                 aria-label="Agregar una pieza"
-                className="flex h-[22.3px] w-[22.3px] shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
+                className="flex h-[19.1px] w-[19.1px] shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
               >
-                <svg viewBox="0 0 16 16" className="h-[11.2px] w-[11.2px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                <svg viewBox="0 0 16 16" className="h-[9.5px] w-[9.5px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
                   <path d="M8 3v10M3 8h10" />
                 </svg>
               </button>
             </div>
 
-            <div className="h-[37.2px] w-px shrink-0 bg-black/[0.06]" />
+            <div className="h-[31.8px] w-px shrink-0 bg-black/[0.06]" />
 
             {/* Total -- el elemento visual principal, con jerarquía clara:
                 etiqueta "TOTAL" chica, el monto grande, y "c/u · IVA
                 incluido" discreto debajo -- todo en el mismo bloque
                 compacto, sin forzar la altura del contenedor. */}
             <div className="flex shrink-0 flex-col justify-center gap-0">
-              <span className="w-fit rounded-full bg-primary/10 px-[2.5px] py-[1.2px] text-[9.9px] font-bold uppercase leading-tight tracking-wide text-primary-dark">
+              <span className="w-fit rounded-full bg-primary/10 px-[2.1px] py-[1.1px] text-[8.5px] font-bold uppercase leading-tight tracking-wide text-primary-dark">
                 Total
               </span>
-              <p className="flex items-baseline gap-[5px] whitespace-nowrap">
-                <span className="text-[22.3px] font-extrabold leading-none tracking-tight text-foreground">{formatMXN(total)}</span>
-                <span className="text-[12.4px] font-semibold text-ui-gray">MXN</span>
+              <p className="flex items-baseline gap-[4.2px] whitespace-nowrap">
+                <span className="text-[19.1px] font-extrabold leading-none tracking-tight text-foreground">{formatMXN(total)}</span>
+                <span className="text-[10.6px] font-semibold text-ui-gray">MXN</span>
               </p>
-              <p className="whitespace-nowrap text-[8.7px] leading-tight text-ui-gray">
+              <p className="whitespace-nowrap text-[7.4px] leading-tight text-ui-gray">
                 {formatMXN(unitPrice)} c/u <span className="mx-0.5 opacity-50">·</span>
                 {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
               </p>
             </div>
 
-            <div className="h-[37.2px] w-px shrink-0 bg-black/[0.06]" />
+            <div className="h-[31.8px] w-px shrink-0 bg-black/[0.06]" />
 
             {/* Logo -- ícono de imagen (no carrito/bolsa) en una cajita
                 glass con borde turquesa muy sutil. */}
-            <div className="flex shrink-0 items-center gap-[7.4px]">
-              <div className="flex h-[29.8px] w-[29.8px] shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/5">
-                <ImageToolIcon className="h-[14.9px] w-[14.9px] text-primary" />
+            <div className="flex shrink-0 items-center gap-[6.4px]">
+              <div className="flex h-[25.4px] w-[25.4px] shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/5">
+                <ImageToolIcon className="h-[12.7px] w-[12.7px] text-primary" />
               </div>
-              <span className="whitespace-nowrap text-[14.9px] font-semibold text-foreground">
+              <span className="whitespace-nowrap text-[12.7px] font-semibold text-foreground">
                 {numLogoElements} {numLogoElements === 1 ? "Logo" : "Logos"}
               </span>
             </div>
