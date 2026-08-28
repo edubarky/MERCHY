@@ -1140,22 +1140,27 @@ export default function PersonalizerClient({
             )}
           </div>
 
-          {/* Resumen del pedido -- píldora compacta. El stepper de Cantidad
-              regresa aquí (se había quitado antes): los tramos de precio
-              por cantidad de cada técnica (1-9/10-49/50-99/... en la tabla
-              real de DTF Textil, por ejemplo) dependen de esta cantidad de
-              PRENDAS del pedido -- sin poder editarla, el precio nunca
-              podía bajar de tramo, confirmado explícitamente con el
-              usuario como el comportamiento correcto. */}
-          <div className="flex flex-wrap items-center gap-5 rounded-full border border-ui-border bg-white px-6 py-4 shadow-sm">
-            <div className="flex items-center gap-1">
+          {/* Resumen del pedido -- píldora glassmorphism (rediseño puramente
+              visual, pedido explícito: "NO cambies la lógica, cálculos,
+              precios, funcionalidades ni comportamiento existente"). Todo
+              el estado/cálculo (setQty, handleQtyDraftChange/Blur,
+              quantity, qtyDraft, total, unitPrice, numLogoElements,
+              anyTechniqueNeedsQuote) es exactamente el mismo de antes --
+              solo cambió el marcado/clases visuales. Los tramos de precio
+              por cantidad de cada técnica siguen dependiendo de esta misma
+              `quantity`, sin tocar esa lógica. */}
+          <div className="flex flex-wrap items-center gap-4 rounded-full border border-white/70 bg-white/70 px-5 py-3 shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+            {/* Cantidad -- compacta, botones circulares chicos, turquesa. */}
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setQty(quantity - 1)}
                 aria-label="Quitar una pieza"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ui-border text-lg text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary active:scale-95"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
               >
-                −
+                <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                  <path d="M3 8h10" />
+                </svg>
               </button>
               {/* Cuadro de texto SIEMPRE visible y editable -- sin estado
                   "modo edición" que haya que activar con un clic aparte
@@ -1170,49 +1175,51 @@ export default function PersonalizerClient({
                 onBlur={handleQtyDraftBlur}
                 onFocus={(e) => e.currentTarget.select()}
                 aria-label="Cantidad de piezas"
-                className="w-12 rounded-full border border-ui-border py-1.5 text-center text-sm font-semibold text-foreground outline-none transition-colors focus:border-primary"
+                className="w-11 rounded-full bg-white/80 py-1 text-center text-sm font-semibold text-foreground outline-none ring-1 ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-primary/40"
               />
               <button
                 type="button"
                 onClick={() => setQty(quantity + 1)}
                 aria-label="Agregar una pieza"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ui-border text-lg text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary active:scale-95"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
               >
-                +
+                <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                  <path d="M8 3v10M3 8h10" />
+                </svg>
               </button>
             </div>
 
-            <div className="h-9 w-px bg-ui-border" />
+            <div className="h-8 w-px bg-black/[0.06]" />
 
-            <div className="flex items-baseline gap-2 whitespace-nowrap">
-              <span className="text-base font-bold text-foreground">Total:</span>
-              <p className="flex items-baseline gap-1">
-                <span className="text-xl font-bold text-foreground">{formatMXN(total)}</span>
-                {/* "IVA incluido" es más ancho que "MXN" en texto normal --
-                    si van juntos en una columna flex centrada, esa columna
-                    hereda el ancho del texto MÁS ancho (IVA incluido), y
-                    "MXN" se termina centrando DENTRO de ese ancho extra,
-                    lo que lo empuja lejos de $682 (el "muy separados" que
-                    se reportó). Fix real: sacar "IVA incluido" del flujo
-                    (absolute) para que NO participe en el cálculo de ancho
-                    -- el ancho de este bloque queda determinado solo por
-                    "MXN", y "IVA incluido" se centra visualmente debajo de
-                    ese ancho angosto sin poder ensancharlo. */}
-                <span className="relative inline-block">
-                  <span className="text-sm font-bold text-foreground leading-tight">MXN</span>
-                  <span className="absolute left-1/2 top-full mt-0.5 -translate-x-1/2 whitespace-nowrap text-[9px] font-bold leading-tight text-foreground">
-                    {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
-                  </span>
-                </span>
-                <span className="text-xs text-ui-gray">{formatMXN(unitPrice)} c/u</span>
+            {/* Total -- el elemento visual principal, con jerarquía clara:
+                etiqueta "TOTAL" chica, el monto grande, y "c/u · IVA
+                incluido" discreto debajo. */}
+            <div className="flex flex-col gap-0.5">
+              <span className="w-fit rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-dark">
+                Total
+              </span>
+              <p className="flex items-baseline gap-1.5">
+                <span className="text-[26px] font-extrabold leading-none tracking-tight text-foreground">{formatMXN(total)}</span>
+                <span className="text-sm font-semibold text-ui-gray">MXN</span>
+              </p>
+              <p className="text-xs text-ui-gray">
+                {formatMXN(unitPrice)} c/u <span className="mx-0.5 opacity-50">·</span>{" "}
+                {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
               </p>
             </div>
 
-            <div className="h-9 w-px bg-ui-border" />
+            <div className="h-8 w-px bg-black/[0.06]" />
 
-            <span className="text-sm font-semibold text-foreground">
-              {numLogoElements} {numLogoElements === 1 ? "Logo" : "Logos"}
-            </span>
+            {/* Logo -- ícono de imagen (no carrito/bolsa) en una cajita
+                glass con borde turquesa muy sutil. */}
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/5">
+                <ImageToolIcon className="h-4 w-4 text-primary" />
+              </div>
+              <span className="whitespace-nowrap text-sm font-semibold text-foreground">
+                {numLogoElements} {numLogoElements === 1 ? "Logo" : "Logos"}
+              </span>
+            </div>
 
             {anyTechniqueNeedsQuote && (
               <span className="text-xs font-semibold text-accent-coral">+ técnica(s) por cotizar</span>
