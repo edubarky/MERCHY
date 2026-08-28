@@ -164,13 +164,13 @@ export default function PersonalizerClient({
   // aquí, esos tramos nunca pueden bajar de precio, que es justo el bug
   // reportado ("si el usuario agrega más piezas el costo baja").
   const [quantity, setQuantity] = useState(1);
-  // Click-to-edit sobre el número de cantidad -- mismo patrón ya usado
-  // para la cantidad principal de la ficha del producto (ProductDetail.tsx:
-  // editingMainQty/mainQtyDraft/commitMainQtyDraft), para que escribir un
-  // número grande (ej. 100) no requiera darle a "+" cien veces.
-  const [editingQty, setEditingQty] = useState(false);
+  // Input SIEMPRE visible y editable (no click-to-edit, se reportó como
+  // "muy complicado") -- un cuadro de texto normal entre los botones -/+,
+  // igual que cualquier campo de cantidad estándar. qtyDraft es el texto
+  // crudo que se ve mientras se escribe (para poder borrar y volver a
+  // teclear sin que se resetee a cada tecla); se confirma a `quantity` en
+  // cada cambio válido y también al perder el foco (por si queda vacío).
   const [qtyDraft, setQtyDraft] = useState("1");
-  const qtyInputRef = useRef<HTMLInputElement>(null);
   const [zCounter, setZCounter] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   // Drives the discreet "fuera de la superficie del producto" notice — no
@@ -574,21 +574,26 @@ export default function PersonalizerClient({
     setSelectedTechniqueIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
-  useEffect(() => {
-    if (!editingQty) setQtyDraft(String(quantity));
-  }, [quantity, editingQty]);
+  // Único punto que cambia la cantidad real -- lo usan tanto los botones
+  // -/+ como el cuadro de texto, así los dos siempre quedan sincronizados
+  // sin necesidad de un efecto aparte tratando de adivinar cuál "manda".
+  function setQty(next: number) {
+    const clamped = Math.max(1, Math.floor(next));
+    setQuantity(clamped);
+    setQtyDraft(String(clamped));
+  }
 
-  useEffect(() => {
-    if (editingQty) {
-      qtyInputRef.current?.focus();
-      qtyInputRef.current?.select();
-    }
-  }, [editingQty]);
-
-  function commitQtyDraft() {
-    const parsed = parseInt(qtyDraft, 10);
+  function handleQtyDraftChange(raw: string) {
+    const digitsOnly = raw.replace(/[^0-9]/g, "");
+    setQtyDraft(digitsOnly);
+    const parsed = parseInt(digitsOnly, 10);
     if (Number.isFinite(parsed) && parsed > 0) setQuantity(parsed);
-    setEditingQty(false);
+  }
+
+  function handleQtyDraftBlur() {
+    // Cuadro vacío o en 0 al salir -- vuelve a mostrar la cantidad real
+    // (mínimo 1) en vez de quedarse vacío.
+    if (!qtyDraft || parseInt(qtyDraft, 10) <= 0) setQtyDraft(String(quantity));
   }
 
   // Tamaño (ej. "10x10") a usar para calcular el precio "by_size" de una
@@ -1143,42 +1148,35 @@ export default function PersonalizerClient({
               podía bajar de tramo, confirmado explícitamente con el
               usuario como el comportamiento correcto. */}
           <div className="flex flex-wrap items-center gap-5 rounded-full border border-ui-border bg-white px-6 py-4 shadow-sm">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-ui-border text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary"
+                onClick={() => setQty(quantity - 1)}
+                aria-label="Quitar una pieza"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ui-border text-lg text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary active:scale-95"
               >
                 −
               </button>
-              {editingQty ? (
-                <input
-                  ref={qtyInputRef}
-                  type="text"
-                  inputMode="numeric"
-                  value={qtyDraft}
-                  onChange={(e) => setQtyDraft(e.target.value.replace(/[^0-9]/g, ""))}
-                  onBlur={commitQtyDraft}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") e.currentTarget.blur();
-                  }}
-                  className="w-10 text-center text-sm font-semibold text-foreground bg-transparent outline-none"
-                />
-              ) : (
-                <span
-                  onClick={() => {
-                    setQtyDraft(String(quantity));
-                    setEditingQty(true);
-                  }}
-                  className="w-6 cursor-text text-center text-sm font-semibold text-foreground"
-                >
-                  {quantity}
-                </span>
-              )}
+              {/* Cuadro de texto SIEMPRE visible y editable -- sin estado
+                  "modo edición" que haya que activar con un clic aparte
+                  (eso era lo reportado como "muy complicado"). Escribir
+                  aquí actualiza el precio al instante, igual que los
+                  botones -/+. */}
+              <input
+                type="text"
+                inputMode="numeric"
+                value={qtyDraft}
+                onChange={(e) => handleQtyDraftChange(e.target.value)}
+                onBlur={handleQtyDraftBlur}
+                onFocus={(e) => e.currentTarget.select()}
+                aria-label="Cantidad de piezas"
+                className="w-12 rounded-full border border-ui-border py-1.5 text-center text-sm font-semibold text-foreground outline-none transition-colors focus:border-primary"
+              />
               <button
                 type="button"
-                onClick={() => setQuantity((q) => q + 1)}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-ui-border text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary"
+                onClick={() => setQty(quantity + 1)}
+                aria-label="Agregar una pieza"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ui-border text-lg text-foreground transition-colors duration-150 ease-out hover:border-primary hover:text-primary active:scale-95"
               >
                 +
               </button>
