@@ -1149,16 +1149,24 @@ export default function PersonalizerClient({
               solo cambió el marcado/clases visuales. Los tramos de precio
               por cantidad de cada técnica siguen dependiendo de esta misma
               `quantity`, sin tocar esa lógica. */}
-          <div className="flex flex-wrap items-center gap-4 rounded-full border border-white/70 bg-white/70 px-5 py-3 shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+          {/* Todo en una sola fila (flex-nowrap, no flex-wrap) -- cada
+              sección lleva shrink-0 para que ninguna se comprima de forma
+              rara; overflow-x-auto es solo una red de seguridad para un
+              caso extremo (ej. un total de 6+ cifras + la nota de
+              "técnica por cotizar" al mismo tiempo), nunca visible en el
+              uso normal. Alturas/paddings/tamaños de fuente reducidos a
+              propósito frente a la versión anterior para que quepa
+              cómodo en el ancho real del panel (~35% del viewport). */}
+          <div className="flex flex-nowrap items-center gap-2 overflow-x-auto rounded-full border border-white/70 bg-white/70 px-3 py-2 shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-xl">
             {/* Cantidad -- compacta, botones circulares chicos, turquesa. */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
                 onClick={() => setQty(quantity - 1)}
                 aria-label="Quitar una pieza"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
               >
-                <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                <svg viewBox="0 0 16 16" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
                   <path d="M3 8h10" />
                 </svg>
               </button>
@@ -1175,55 +1183,59 @@ export default function PersonalizerClient({
                 onBlur={handleQtyDraftBlur}
                 onFocus={(e) => e.currentTarget.select()}
                 aria-label="Cantidad de piezas"
-                className="w-11 rounded-full bg-white/80 py-1 text-center text-sm font-semibold text-foreground outline-none ring-1 ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-primary/40"
+                className="w-8 rounded-full bg-white/80 py-0.5 text-center text-xs font-semibold text-foreground outline-none ring-1 ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-primary/40"
               />
               <button
                 type="button"
                 onClick={() => setQty(quantity + 1)}
                 aria-label="Agregar una pieza"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
               >
-                <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                <svg viewBox="0 0 16 16" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
                   <path d="M8 3v10M3 8h10" />
                 </svg>
               </button>
             </div>
 
-            <div className="h-8 w-px bg-black/[0.06]" />
+            <div className="h-6 w-px shrink-0 bg-black/[0.06]" />
 
             {/* Total -- el elemento visual principal, con jerarquía clara:
                 etiqueta "TOTAL" chica, el monto grande, y "c/u · IVA
-                incluido" discreto debajo. */}
-            <div className="flex flex-col gap-0.5">
-              <span className="w-fit rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-dark">
+                incluido" discreto debajo -- todo en el mismo bloque
+                compacto, sin forzar la altura del contenedor. */}
+            <div className="flex shrink-0 flex-col justify-center gap-0.5">
+              <span className="w-fit rounded-full bg-primary/10 px-1.5 py-px text-[8px] font-bold uppercase leading-tight tracking-wide text-primary-dark">
                 Total
               </span>
-              <p className="flex items-baseline gap-1.5">
-                <span className="text-[26px] font-extrabold leading-none tracking-tight text-foreground">{formatMXN(total)}</span>
-                <span className="text-sm font-semibold text-ui-gray">MXN</span>
+              <p className="flex items-baseline gap-1 whitespace-nowrap">
+                <span className="text-lg font-extrabold leading-none tracking-tight text-foreground">{formatMXN(total)}</span>
+                <span className="text-[10px] font-semibold text-ui-gray">MXN</span>
               </p>
-              <p className="text-xs text-ui-gray">
-                {formatMXN(unitPrice)} c/u <span className="mx-0.5 opacity-50">·</span>{" "}
+              <p className="whitespace-nowrap text-[10px] leading-tight text-ui-gray">
+                {formatMXN(unitPrice)} c/u <span className="mx-0.5 opacity-50">·</span>
                 {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
               </p>
             </div>
 
-            <div className="h-8 w-px bg-black/[0.06]" />
+            <div className="h-6 w-px shrink-0 bg-black/[0.06]" />
 
             {/* Logo -- ícono de imagen (no carrito/bolsa) en una cajita
                 glass con borde turquesa muy sutil. */}
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/5">
-                <ImageToolIcon className="h-4 w-4 text-primary" />
+            <div className="flex shrink-0 items-center gap-1.5">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/5">
+                <ImageToolIcon className="h-3 w-3 text-primary" />
               </div>
-              <span className="whitespace-nowrap text-sm font-semibold text-foreground">
+              <span className="whitespace-nowrap text-xs font-semibold text-foreground">
                 {numLogoElements} {numLogoElements === 1 ? "Logo" : "Logos"}
               </span>
             </div>
-
-            {anyTechniqueNeedsQuote && (
-              <span className="text-xs font-semibold text-accent-coral">+ técnica(s) por cotizar</span>
-            )}
+            {/* La nota de "técnica por cotizar" ya no se repite aquí como
+                un cuarto bloque -- era texto redundante (la línea
+                secundaria del Total ya dice "No incluye técnicas por
+                cotizar", y la propia tarjeta de la técnica ya muestra
+                "Por cotizar") que además era la causa real de que la fila
+                se desbordara en este caso específico. anyTechniqueNeedsQuote
+                sigue exactamente igual, solo se quitó el texto duplicado. */}
           </div>
 
           <div className="flex gap-4">
