@@ -164,6 +164,13 @@ export default function PersonalizerClient({
   // aquí, esos tramos nunca pueden bajar de precio, que es justo el bug
   // reportado ("si el usuario agrega más piezas el costo baja").
   const [quantity, setQuantity] = useState(1);
+  // Click-to-edit sobre el número de cantidad -- mismo patrón ya usado
+  // para la cantidad principal de la ficha del producto (ProductDetail.tsx:
+  // editingMainQty/mainQtyDraft/commitMainQtyDraft), para que escribir un
+  // número grande (ej. 100) no requiera darle a "+" cien veces.
+  const [editingQty, setEditingQty] = useState(false);
+  const [qtyDraft, setQtyDraft] = useState("1");
+  const qtyInputRef = useRef<HTMLInputElement>(null);
   const [zCounter, setZCounter] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   // Drives the discreet "fuera de la superficie del producto" notice — no
@@ -565,6 +572,23 @@ export default function PersonalizerClient({
 
   function toggleTechnique(id: string) {
     setSelectedTechniqueIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  useEffect(() => {
+    if (!editingQty) setQtyDraft(String(quantity));
+  }, [quantity, editingQty]);
+
+  useEffect(() => {
+    if (editingQty) {
+      qtyInputRef.current?.focus();
+      qtyInputRef.current?.select();
+    }
+  }, [editingQty]);
+
+  function commitQtyDraft() {
+    const parsed = parseInt(qtyDraft, 10);
+    if (Number.isFinite(parsed) && parsed > 0) setQuantity(parsed);
+    setEditingQty(false);
   }
 
   // Tamaño (ej. "10x10") a usar para calcular el precio "by_size" de una
@@ -1127,7 +1151,30 @@ export default function PersonalizerClient({
               >
                 −
               </button>
-              <span className="w-6 text-center text-sm font-semibold text-foreground">{quantity}</span>
+              {editingQty ? (
+                <input
+                  ref={qtyInputRef}
+                  type="text"
+                  inputMode="numeric"
+                  value={qtyDraft}
+                  onChange={(e) => setQtyDraft(e.target.value.replace(/[^0-9]/g, ""))}
+                  onBlur={commitQtyDraft}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                  }}
+                  className="w-10 text-center text-sm font-semibold text-foreground bg-transparent outline-none"
+                />
+              ) : (
+                <span
+                  onClick={() => {
+                    setQtyDraft(String(quantity));
+                    setEditingQty(true);
+                  }}
+                  className="w-6 cursor-text text-center text-sm font-semibold text-foreground"
+                >
+                  {quantity}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => setQuantity((q) => q + 1)}
