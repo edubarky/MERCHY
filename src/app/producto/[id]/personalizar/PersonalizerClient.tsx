@@ -1157,7 +1157,7 @@ export default function PersonalizerClient({
               uso normal. Alturas/paddings/tamaños de fuente reducidos a
               propósito frente a la versión anterior para que quepa
               cómodo en el ancho real del panel (~35% del viewport). */}
-          <div className="flex flex-nowrap items-center gap-[13.8px] overflow-x-auto rounded-full border border-white bg-white/[0.05] px-[42.4px] py-[18px] shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-[42.4px]">
+          <div className="scrollbar-none flex flex-nowrap items-center gap-[13.8px] overflow-x-auto rounded-full border border-white bg-white/[0.05] px-[42.4px] py-[18px] shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-[42.4px]">
             {/* Cantidad -- compacta, botones circulares chicos, turquesa. */}
             <div className="flex shrink-0 items-center gap-[3.2px]">
               <button
