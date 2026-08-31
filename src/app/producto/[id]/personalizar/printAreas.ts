@@ -1,5 +1,5 @@
 import { VIEW_ASSETS } from "./viewAssets";
-import { VIEW_ORDER, type ViewName } from "./types";
+import type { ViewName } from "./types";
 
 // Per-product, per-view print-area configuration. Each product/view gets
 // its OWN area — this is not a single shared rectangle. Position/size are
@@ -35,6 +35,9 @@ const DEFAULT_PRINT_AREAS: ProductPrintAreas = {
   derecha: { ...VIEW_ASSETS.derecha.printArea },
   fundaHorizontal: { ...VIEW_ASSETS.fundaHorizontal.printArea },
   fundaVertical: { ...VIEW_ASSETS.fundaVertical.printArea },
+  bolsa: { ...VIEW_ASSETS.bolsa.printArea },
+  ligaFrente: { ...VIEW_ASSETS.ligaFrente.printArea },
+  ligaReverso: { ...VIEW_ASSETS.ligaReverso.printArea },
 };
 
 export function normalizeProductKey(value: string): string {
@@ -67,12 +70,15 @@ const HOODIE_PRINT_AREAS: ProductPrintAreas = {
   reverso: { xPct: 25, yPct: 32, widthPct: 50, heightPct: 48 },
   izquierda: { xPct: 20, yPct: 23, widthPct: 58, heightPct: 55 },
   derecha: { xPct: 22, yPct: 23, widthPct: 58, heightPct: 55 },
-  // Ninguna sudadera ofrece pestañas de funda (getApplicableViews las deja
-  // en los 4 costados de siempre) -- estos valores nunca se leen en la
-  // práctica, solo existen para que ProductPrintAreas (Record<ViewName, ...>)
-  // quede completo.
+  // Ninguna sudadera ofrece pestañas de funda/bolsa/liga (getApplicableViews
+  // las deja en los 4 costados de siempre) -- estos valores nunca se leen
+  // en la práctica, solo existen para que ProductPrintAreas
+  // (Record<ViewName, ...>) quede completo.
   fundaHorizontal: { ...DEFAULT_PRINT_AREAS.fundaHorizontal },
   fundaVertical: { ...DEFAULT_PRINT_AREAS.fundaVertical },
+  bolsa: { ...DEFAULT_PRINT_AREAS.bolsa },
+  ligaFrente: { ...DEFAULT_PRINT_AREAS.ligaFrente },
+  ligaReverso: { ...DEFAULT_PRINT_AREAS.ligaReverso },
 };
 
 // Category default matchers, checked in order — the first whose keyword
@@ -110,14 +116,12 @@ export function getPrintArea(productName: string, view: ViewName): PrintAreaConf
 
 // Los 4 costados clásicos de una prenda -- el default de getApplicableViews
 // para todo el catálogo excepto los productos agregados a mano abajo.
-// Deliberadamente NO es VIEW_ORDER completo: VIEW_ORDER incluye los ejes
-// de funda porque el TIPO de estado (ViewElements/ResolvedProductAssets)
-// siempre tiene que poder representarlos, pero nunca deben aparecer por
-// default en una prenda de vestir -- solo cuando un producto se agrega
-// aquí explícitamente pidiéndolo.
-const DEFAULT_APPLICABLE_VIEWS: ViewName[] = VIEW_ORDER.filter(
-  (v) => v !== "fundaHorizontal" && v !== "fundaVertical"
-);
+// Lista explícita a propósito (no "VIEW_ORDER menos los ejes especiales"):
+// VIEW_ORDER va a seguir creciendo cada vez que un producto necesite su
+// propio accesorio/componente (funda, bolsa, liga, el que siga...), y
+// ninguno de esos debe aparecer por default en una prenda de vestir sin
+// tener que acordarse de excluirlo aquí a mano cada vez.
+const DEFAULT_APPLICABLE_VIEWS: ViewName[] = ["frente", "reverso", "izquierda", "derecha"];
 
 // Qué ejes ofrece REALMENTE cada producto -- no todo el catálogo es una
 // prenda con cuatro costados. Por defecto (el resto del catálogo, toda
@@ -149,6 +153,14 @@ const PRODUCT_APPLICABLE_VIEWS: Record<string, ViewName[]> = {
   // Vertical para este producto (ver isFundaViewActive: solo aparece
   // cuando el producto ofrece las DOS orientaciones).
   "tapete century": ["frente", "reverso", "fundaVertical"],
+  // Set de ejercicio Bor: de los 3 artículos reales del set (banda
+  // elástica, cuerda, bolso de malla) solo la banda ("liga") y la bolsa
+  // se pueden personalizar -- pedido explícito ("solo se va poder
+  // personalizar la banda y la bolsa"), la cuerda no tiene ningún eje.
+  // La bolsa va sola (un solo eje, sin Reverso) porque solo se puede
+  // personalizar de frente ("la bolsa solo se va poder personalizar de
+  // la parte de enfrente"); la liga sí trae Frente y Reverso reales.
+  "set de ejercicio bor": ["bolsa", "ligaFrente", "ligaReverso"],
 };
 
 export function getApplicableViews(productName: string): ViewName[] {
@@ -158,12 +170,15 @@ export function getApplicableViews(productName: string): ViewName[] {
 
 // Es "prenda de vestir" (para elegir el set de íconos de las pestañas de
 // eje, ver PersonalizerClient.tsx) exactamente cuando este producto usa
-// los 4 costados clásicos de siempre, sin acotar ni sumar funda -- se
-// deriva de getApplicableViews en vez de mantener una segunda lista
-// aparte: un producto que necesitó su propio PRODUCT_APPLICABLE_VIEWS
-// (como Tapete de Yoga Minsk) ya dejó de comportarse como una prenda
-// estándar, así que tampoco debe verse como una en los íconos.
+// los 4 costados clásicos de siempre y nada más -- se deriva de
+// getApplicableViews en vez de mantener una segunda lista aparte: un
+// producto que necesitó su propio PRODUCT_APPLICABLE_VIEWS (Tapete de
+// Yoga Minsk, Tapete Century, Set de ejercicio Bor...) ya dejó de
+// comportarse como una prenda estándar, así que tampoco debe verse como
+// una en los íconos. Comparado contra DEFAULT_APPLICABLE_VIEWS en vez de
+// un "views.length === 4" hardcodeado + una lista de exclusiones que
+// mantener a mano cada vez que se agrega un componente nuevo.
 export function isGarmentProduct(productName: string): boolean {
   const views = getApplicableViews(productName);
-  return views.length === 4 && !views.includes("fundaHorizontal") && !views.includes("fundaVertical");
+  return views.length === DEFAULT_APPLICABLE_VIEWS.length && DEFAULT_APPLICABLE_VIEWS.every((v) => views.includes(v));
 }

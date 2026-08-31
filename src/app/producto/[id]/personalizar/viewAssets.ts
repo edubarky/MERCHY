@@ -64,4 +64,24 @@ export const VIEW_ASSETS: Record<ViewName, ViewAsset> = {
     aspect: 335 / 848,
     printArea: { xPct: 25, yPct: 20, widthPct: 50, heightPct: 60 },
   },
+  // "bolsa"/"ligaFrente"/"ligaReverso" (ver ViewName): Set de ejercicio
+  // Bor, único producto que los usa hoy -- `aspect` tomado directo de sus
+  // fotos reales (BOLSA.png 1019×1031, casi cuadrada; "LIGA FRENTE.png"/
+  // "LIGA REVERSO.png" 2063×284, una liga plana muy ancha). src/printArea
+  // igual de inertes que en fundaHorizontal/fundaVertical arriba.
+  bolsa: {
+    src: "/Home/PERSONALIZADOR/Group 1161.svg",
+    aspect: 1019 / 1031,
+    printArea: { xPct: 25, yPct: 25, widthPct: 50, heightPct: 50 },
+  },
+  ligaFrente: {
+    src: "/Home/PERSONALIZADOR/Group 1161.svg",
+    aspect: 2063 / 284,
+    printArea: { xPct: 15, yPct: 30, widthPct: 70, heightPct: 40 },
+  },
+  ligaReverso: {
+    src: "/Home/PERSONALIZADOR/Group 1161.svg",
+    aspect: 2063 / 284,
+    printArea: { xPct: 15, yPct: 30, widthPct: 70, heightPct: 40 },
+  },
 };

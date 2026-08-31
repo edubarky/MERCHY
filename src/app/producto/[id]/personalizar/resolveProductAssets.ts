@@ -92,6 +92,15 @@ const PRODUCTS_ROOT_NAME = "VISTA DE PRODUCTOS";
 // so "ATRÁS" and "ATRAS" are the same thing to this matcher — no need to
 // enumerate every accented/unaccented spelling by hand.
 const VIEW_STEMS: [ViewName, string[]][] = [
+  // "LIGA FRENTE.png"/"LIGA REVERSO.png" (Set de ejercicio Bor) contienen
+  // "FRENTE"/"REVERSO" a secas -- revisadas ANTES que esos stems genéricos
+  // (frase completa "LIGA FRENTE", no solo "LIGA" + "FRENTE" por
+  // separado) para que nunca dependan del orden ni se confundan con el
+  // Frente/Reverso normal del producto. "BOLSA.png" no colisiona con
+  // nada, pero se deja aquí junto a las suyas por contexto.
+  ["ligaFrente", ["LIGA FRENTE"]],
+  ["ligaReverso", ["LIGA REVERS", "LIGA ATRAS", "LIGA ESPALDA"]],
+  ["bolsa", ["BOLSA", "BAG"]],
   ["frente", ["FRENTE", "FRONT"]],
   ["reverso", ["REVERS", "ATRAS", "ESPALDA", "BACK"]],
   ["izquierda", ["IZQUIERD", "LEFT"]], // matches both izquierda/izquierdo

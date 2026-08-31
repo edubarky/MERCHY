@@ -42,7 +42,12 @@ interface Review {
 // esos dos colores (ver detectColor en resolveProductAssets.ts) haría
 // que la ficha sustituyera esas 2 fotos reales por la única de Frente --
 // la misma regresión ya detectada y corregida una vez con el otro tapete.
-const PRODUCTS_PREFERRING_REAL_GALLERY = new Set(["tapete de yoga minsk", "tapete century"]);
+// Set de ejercicio Bor: mismo patrón otra vez -- sus "ejes" (bolsa +
+// liga frente/reverso) son fondo del Personalizador, mientras que
+// product_variants.images ya trae 4 fotos reales curadas del set
+// completo. Agregado de una vez (no después de detectar la regresión en
+// producción, como pasó con los dos tapetes) al introducir sus ejes.
+const PRODUCTS_PREFERRING_REAL_GALLERY = new Set(["tapete de yoga minsk", "tapete century", "set de ejercicio bor"]);
 
 // "Guía de Tallas" por defecto es la tabla de prenda (Ancho/Largo/Manga,
 // XS-XXXL) -- no aplica a un producto que no es ropa. Un producto agregado

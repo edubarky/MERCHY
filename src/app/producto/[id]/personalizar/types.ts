@@ -1,20 +1,45 @@
-// "fundaHorizontal"/"fundaVertical" son ejes aparte de los 4 costados de
-// una prenda: la superficie imprimible de un ACCESORIO que trae el propio
-// producto (ej. la funda transportadora del Tapete de Yoga Minsk) -- no
-// todos los productos lo tienen. Van como dos ejes independientes (no uno
-// solo "funda") porque el accesorio tiene fotos reales en las dos
-// orientaciones y el cliente debe poder ELEGIR con cuál personalizar
-// (pedido explícito) -- cada orientación es una foto/print-area/lienzo
-// propio, igual que cualquier otro eje, no una vista compartida con un
-// selector encima. Qué ejes de esta lista se muestran REALMENTE para un
-// producto dado (nunca los 6 a la fuerza) lo decide getApplicableViews en
+// Ejes aparte de los 4 costados clásicos de una prenda -- la superficie
+// imprimible de un ACCESORIO o COMPONENTE distinto que trae el propio
+// producto (ej. la funda transportadora del Tapete de Yoga Minsk, o la
+// bolsa/liga de Set de ejercicio Bor) -- no todos los productos los
+// tienen. "fundaHorizontal"/"fundaVertical" y "ligaFrente"/"ligaReverso"
+// van como DOS ejes independientes cada par (nunca uno solo) porque ese
+// accesorio tiene foto real en las dos orientaciones y el cliente debe
+// poder ELEGIR con cuál personalizar (pedido explícito) -- cada
+// orientación es una foto/print-area/lienzo propio, igual que cualquier
+// otro eje, no una vista compartida con un selector encima (ver
+// PersonalizerClient.tsx's tabGroups, que las agrupa visualmente bajo
+// una sola pestaña con un toggle debajo). "bolsa" va sola porque ese
+// componente solo se puede personalizar de un lado (pedido explícito:
+// "la bolsa solo se va poder personalizar de la parte de enfrente").
+// Qué ejes de esta lista se muestran REALMENTE para un producto dado
+// (nunca todos a la fuerza) lo decide getApplicableViews en
 // printAreas.ts, no este archivo -- aquí solo vive la forma completa que
-// puede tomar el estado (ver emptyViewElements/emptyResolvedAssets abajo),
-// para que un producto sin funda simplemente nunca tenga nada en esos
-// ejes, en vez de necesitar un tipo distinto.
-export type ViewName = "frente" | "reverso" | "izquierda" | "derecha" | "fundaHorizontal" | "fundaVertical";
+// puede tomar el estado (ver emptyViewElements/emptyResolvedAssets
+// abajo), para que un producto sin alguno de estos ejes simplemente
+// nunca tenga nada ahí, en vez de necesitar un tipo distinto.
+export type ViewName =
+  | "frente"
+  | "reverso"
+  | "izquierda"
+  | "derecha"
+  | "fundaHorizontal"
+  | "fundaVertical"
+  | "bolsa"
+  | "ligaFrente"
+  | "ligaReverso";
 
-export const VIEW_ORDER: ViewName[] = ["frente", "reverso", "izquierda", "derecha", "fundaHorizontal", "fundaVertical"];
+export const VIEW_ORDER: ViewName[] = [
+  "frente",
+  "reverso",
+  "izquierda",
+  "derecha",
+  "fundaHorizontal",
+  "fundaVertical",
+  "bolsa",
+  "ligaFrente",
+  "ligaReverso",
+];
 
 export const VIEW_LABELS: Record<ViewName, string> = {
   frente: "Frente",
@@ -23,6 +48,9 @@ export const VIEW_LABELS: Record<ViewName, string> = {
   derecha: "Derecha",
   fundaHorizontal: "Funda Horizontal",
   fundaVertical: "Funda Vertical",
+  bolsa: "Bolsa",
+  ligaFrente: "Liga Frente",
+  ligaReverso: "Liga Reverso",
 };
 
 export type LogoFileType = "svg" | "png" | "pdf" | "ai";
@@ -78,7 +106,17 @@ export interface DesignElement {
 export type ViewElements = Record<ViewName, DesignElement[]>;
 
 export function emptyViewElements(): ViewElements {
-  return { frente: [], reverso: [], izquierda: [], derecha: [], fundaHorizontal: [], fundaVertical: [] };
+  return {
+    frente: [],
+    reverso: [],
+    izquierda: [],
+    derecha: [],
+    fundaHorizontal: [],
+    fundaVertical: [],
+    bolsa: [],
+    ligaFrente: [],
+    ligaReverso: [],
+  };
 }
 
 // ---- Per-product real photography (blanco/negro + per-product extra colors) ----
@@ -136,5 +174,8 @@ export function emptyResolvedAssets(): ResolvedProductAssets {
     derecha: emptyResolvedViewAsset(),
     fundaHorizontal: emptyResolvedViewAsset(),
     fundaVertical: emptyResolvedViewAsset(),
+    bolsa: emptyResolvedViewAsset(),
+    ligaFrente: emptyResolvedViewAsset(),
+    ligaReverso: emptyResolvedViewAsset(),
   };
 }

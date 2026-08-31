@@ -62,8 +62,12 @@ import {
 // (para el catálogo de ropa, pedido explícito -- "en lo de prendas...
 // iconos referentes a ellas") y uno de orientación genérico (para
 // cualquier otro producto, ej. Tapete de Yoga Minsk, donde una silueta de
-// playera no tiene sentido). Los ejes de funda son iguales en los dos --
-// nunca son un costado de prenda, así que su ícono de bolsa no cambia.
+// playera no tiene sentido). Los ejes de funda/bolsa/liga son iguales en
+// los dos -- nunca son un costado de prenda: "bolsa" reusa el ícono de
+// bolsa (FundaTabIcon, mismo concepto -- una bolsa con cordón), "liga"
+// reusa el lenguaje de plano/plano-con-flecha-de-giro ya construido para
+// Frente/Reverso genéricos (una liga plana también tiene un frente y un
+// reverso sin abertura que dibujar distinto).
 const VIEW_TAB_ICON: Record<ViewName, typeof FrenteTabIcon> = {
   frente: FrenteTabIcon,
   reverso: ReversoTabIcon,
@@ -71,6 +75,9 @@ const VIEW_TAB_ICON: Record<ViewName, typeof FrenteTabIcon> = {
   derecha: DerechaTabIcon,
   fundaHorizontal: FundaTabIcon,
   fundaVertical: FundaTabIcon,
+  bolsa: FundaTabIcon,
+  ligaFrente: FrenteTabIcon,
+  ligaReverso: ReversoTabIcon,
 };
 const VIEW_TAB_ICON_GARMENT: Record<ViewName, typeof FrenteTabIcon> = {
   frente: FrentePrendaTabIcon,
@@ -79,7 +86,37 @@ const VIEW_TAB_ICON_GARMENT: Record<ViewName, typeof FrenteTabIcon> = {
   derecha: DerechaPrendaTabIcon,
   fundaHorizontal: FundaTabIcon,
   fundaVertical: FundaTabIcon,
+  bolsa: FundaTabIcon,
+  ligaFrente: FrenteTabIcon,
+  ligaReverso: ReversoTabIcon,
 };
+
+// Ejes que se agrupan bajo UNA sola pestaña visual con un toggle sutil
+// debajo (ver tabGroups/groupOrientation en el componente) en vez de
+// aparecer cada uno como su propia pestaña suelta arriba -- mismo
+// mecanismo reusado para cualquier accesorio/componente con más de una
+// orientación/lado real: Funda (Horizontal/Vertical, Tapete de Yoga
+// Minsk), Liga (Frente/Reverso, Set de ejercicio Bor). Un producto que
+// solo ofrece UNO de los ejes de un grupo (ej. Tapete Century, solo
+// fundaVertical) sigue viéndose como una pestaña plana normal -- el
+// toggle solo aparece cuando applicableViews trae los 2+ ejes del mismo
+// grupo (ver activeGroupViews más abajo). Agregar un componente nuevo
+// con más de una orientación real es agregar una entrada aquí, no
+// duplicar este mecanismo entero.
+const VIEW_GROUP_DEFS: { key: string; label: string; views: ViewName[]; subLabel: (v: ViewName) => string }[] = [
+  {
+    key: "funda",
+    label: "Funda",
+    views: ["fundaHorizontal", "fundaVertical"],
+    subLabel: (v) => (v === "fundaHorizontal" ? "Horizontal" : "Vertical"),
+  },
+  {
+    key: "liga",
+    label: "Liga",
+    views: ["ligaFrente", "ligaReverso"],
+    subLabel: (v) => (v === "ligaFrente" ? "Frente" : "Reverso"),
+  },
+];
 
 interface Props {
   product: Product & { variants: ProductVariant[] };
@@ -168,15 +205,21 @@ export default function PersonalizerClient({
   multicolorVariantIds,
   initialQuantity,
 }: Props) {
-  const [activeView, setActiveView] = useState<ViewName>("frente");
-  const [filesTabView, setFilesTabView] = useState<ViewName>("frente");
-  // Qué orientación de la funda usar cuando se hace clic en la pestaña
-  // agrupada "Funda" (ver tabGroups abajo) -- pedido explícito: la
-  // pestaña de arriba vuelve a ser una sola "Funda" (como antes de
-  // separarla en dos), y Horizontal/Vertical se elige con un control
-  // aparte, sutil, debajo. Recuerda la última orientación elegida en vez
-  // de resetear siempre a la misma.
-  const [fundaOrientation, setFundaOrientation] = useState<ViewName>("fundaHorizontal");
+  // "frente" es el default de siempre, pero deja de ser válido para un
+  // producto cuyos ejes ni siquiera incluyen "frente" (ej. Set de
+  // ejercicio Bor: solo bolsa/ligaFrente/ligaReverso) -- inicializador
+  // perezoso que arranca en el primer eje real de ESTE producto en vez
+  // de un literal fijo, para no arrancar en una pestaña que no existe.
+  const [activeView, setActiveView] = useState<ViewName>(() => getApplicableViews(product.name)[0] ?? "frente");
+  const [filesTabView, setFilesTabView] = useState<ViewName>(() => getApplicableViews(product.name)[0] ?? "frente");
+  // Qué eje usar dentro de cada pestaña AGRUPADA (ver tabGroups abajo) --
+  // pedido explícito: la pestaña de arriba muestra un solo nombre por
+  // grupo ("Funda", "Liga"), no cada orientación/lado suelto como pestaña
+  // aparte, y el eje real se elige con un control aparte, sutil, debajo.
+  // Recuerda la última elección de cada grupo (clave = group.key) en vez
+  // de resetear siempre a la misma; un grupo sin elección guardada cae al
+  // primer eje de ese grupo (ver tabGroups.map más abajo).
+  const [groupOrientation, setGroupOrientation] = useState<Partial<Record<string, ViewName>>>({});
   const [elements, setElements] = useState<ViewElements>(emptyViewElements());
   const [history, setHistory] = useState<ViewElements[]>([emptyViewElements()]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -321,19 +364,20 @@ export default function PersonalizerClient({
   const applicableViews = getApplicableViews(product.name);
   const tabIconMap = isGarmentProduct(product.name) ? VIEW_TAB_ICON_GARMENT : VIEW_TAB_ICON;
 
-  // Las pestañas que se MUESTRAN agrupan fundaHorizontal/fundaVertical en
-  // una sola "Funda" -- pedido explícito ("solo quiero la parte de Funda
-  // como estaba antes"). Cada eje que no es de funda sigue siendo su
-  // propia pestaña de siempre, sin cambio (esto no afecta a ningún
-  // producto que no tenga ejes de funda). El eje real que le toca a esa
-  // pestaña agrupada lo decide fundaOrientation (ver el toggle Horizontal/
-  // Vertical debajo del canvas).
+  // Las pestañas que se MUESTRAN agrupan los ejes de VIEW_GROUP_DEFS
+  // (Funda, Liga) en una sola pestaña visual -- pedido explícito ("solo
+  // quiero la parte de Funda como estaba antes"). Cada eje que no
+  // pertenece a ningún grupo sigue siendo su propia pestaña de siempre,
+  // sin cambio (esto no afecta a ningún producto sin esos componentes).
+  // El eje real que le toca a una pestaña agrupada lo decide
+  // groupOrientation (ver el toggle debajo del canvas).
   const tabGroups: { key: string; label: string; icon: typeof FrenteTabIcon; views: ViewName[] }[] = [];
   for (const v of applicableViews) {
-    if (v === "fundaHorizontal" || v === "fundaVertical") {
-      let group = tabGroups.find((g) => g.key === "funda");
+    const groupDef = VIEW_GROUP_DEFS.find((g) => g.views.includes(v));
+    if (groupDef) {
+      let group = tabGroups.find((g) => g.key === groupDef.key);
       if (!group) {
-        group = { key: "funda", label: "Funda", icon: tabIconMap.fundaHorizontal, views: [] };
+        group = { key: groupDef.key, label: groupDef.label, icon: tabIconMap[groupDef.views[0]], views: [] };
         tabGroups.push(group);
       }
       group.views.push(v);
@@ -341,15 +385,14 @@ export default function PersonalizerClient({
       tabGroups.push({ key: v, label: VIEW_LABELS[v], icon: tabIconMap[v], views: [v] });
     }
   }
-  // El toggle Horizontal/Vertical (ver más abajo) solo tiene sentido
-  // cuando el producto de verdad ofrece las DOS orientaciones -- un
-  // producto con una sola foto de funda (ej. Tapete Century, solo
+  // El toggle (ver más abajo) solo tiene sentido cuando el producto de
+  // verdad ofrece 2+ ejes del MISMO grupo que el eje activo -- un
+  // producto con un solo eje de ese grupo (ej. Tapete Century, solo
   // "fundaVertical") nunca debe mostrar un toggle ofreciendo una segunda
-  // opción que no existe. `isFundaViewActive` ya no basta por sí solo
-  // (activeView podría ser "fundaVertical" igual con una sola orientación
-  // disponible).
-  const hasBothFundaOrientations = applicableViews.includes("fundaHorizontal") && applicableViews.includes("fundaVertical");
-  const isFundaViewActive = hasBothFundaOrientations && (activeView === "fundaHorizontal" || activeView === "fundaVertical");
+  // opción que no existe.
+  const activeGroupDef = VIEW_GROUP_DEFS.find((g) => g.views.includes(activeView));
+  const activeGroupViews = activeGroupDef ? activeGroupDef.views.filter((v) => applicableViews.includes(v)) : [];
+  const showGroupToggle = activeGroupViews.length > 1;
 
   const asset = VIEW_ASSETS[activeView];
   // Único eje que este Personalizador carga para la vista activa: el del
@@ -949,11 +992,11 @@ export default function PersonalizerClient({
                 const active = group.views.includes(activeView);
                 const TabIcon = group.icon;
                 // Pestaña de un solo eje: activa ese eje directo, igual
-                // que siempre. Pestaña agrupada ("Funda", 2 ejes):
-                // activa la orientación recordada en fundaOrientation --
-                // el Horizontal/Vertical real se elige con el toggle
-                // debajo del canvas, no aquí arriba.
-                const target = group.views.length > 1 ? fundaOrientation : group.views[0];
+                // que siempre. Pestaña agrupada ("Funda"/"Liga", 2 ejes):
+                // activa la última elección recordada de ESE grupo -- el
+                // eje real se elige con el toggle debajo del canvas, no
+                // aquí arriba.
+                const target = group.views.length > 1 ? groupOrientation[group.key] ?? group.views[0] : group.views[0];
                 return (
                   <button
                     key={group.key}
@@ -995,22 +1038,24 @@ export default function PersonalizerClient({
             </div>
           </div>
 
-          {/* Toggle Horizontal/Vertical -- SOLO aparece con la pestaña
-              agrupada "Funda" activa (ver tabGroups arriba). Sutil (texto
-              pequeño, fondo gris claro) pero entendible (etiquetas
-              explícitas, no solo íconos) -- pedido explícito: la elección
-              de orientación ya no vive arriba como una pestaña más, vive
-              aquí debajo. Cambiar de orientación NUNCA toca `elements` de
-              la otra orientación -- cada una es su propio eje con su
-              propio diseño, exactamente como cambiar de Frente a Reverso. */}
-          {isFundaViewActive && (
+          {/* Toggle del grupo activo (Horizontal/Vertical para Funda,
+              Frente/Reverso para Liga...) -- SOLO aparece con una pestaña
+              agrupada activa que de verdad ofrezca 2+ ejes (ver
+              showGroupToggle arriba). Sutil (texto pequeño, fondo gris
+              claro) pero entendible (etiquetas explícitas, no solo
+              íconos) -- pedido explícito: la elección real ya no vive
+              arriba como una pestaña más, vive aquí debajo. Cambiar de
+              eje dentro del grupo NUNCA toca `elements` de los demás --
+              cada uno es su propio eje con su propio diseño, exactamente
+              como cambiar de Frente a Reverso. */}
+          {showGroupToggle && activeGroupDef && (
             <div className="mb-5 inline-flex items-center gap-1 rounded-full bg-gray-50 p-1">
-              {(["fundaHorizontal", "fundaVertical"] as const).map((v) => (
+              {activeGroupViews.map((v) => (
                 <button
                   key={v}
                   type="button"
                   onClick={() => {
-                    setFundaOrientation(v);
+                    setGroupOrientation((prev) => ({ ...prev, [activeGroupDef.key]: v }));
                     setActiveView(v);
                     setFilesTabView(v);
                     setSelectedId(null);
@@ -1019,7 +1064,7 @@ export default function PersonalizerClient({
                     activeView === v ? "bg-white text-foreground shadow-sm" : "text-ui-gray hover:text-foreground"
                   }`}
                 >
-                  {v === "fundaHorizontal" ? "Horizontal" : "Vertical"}
+                  {activeGroupDef.subLabel(v)}
                 </button>
               ))}
             </div>
@@ -1298,7 +1343,7 @@ export default function PersonalizerClient({
               <div className="mb-3 flex gap-6 text-sm">
                 {tabGroups.map((group) => {
                   const active = group.views.includes(filesTabView);
-                  const target = group.views.length > 1 ? fundaOrientation : group.views[0];
+                  const target = group.views.length > 1 ? groupOrientation[group.key] ?? group.views[0] : group.views[0];
                   return (
                     <button
                       key={group.key}
