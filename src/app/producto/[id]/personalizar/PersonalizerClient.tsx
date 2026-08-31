@@ -223,6 +223,14 @@ export default function PersonalizerClient({
   // re-renderizar), pisaba el arreglo y el primer logo desaparecía.
   const elementsRef = useRef(elements);
   elementsRef.current = elements;
+  // Portapapeles interno para Ctrl/Cmd+C + Ctrl/Cmd+V sobre el elemento
+  // seleccionado (logo o texto) -- pedido explícito para que duplicar sea
+  // tan fácil como en cualquier editor real. Guarda una copia de los datos
+  // del elemento en el momento del copy (no solo el id, porque el usuario
+  // puede seguir editándolo o incluso borrarlo antes de pegar). Vive fuera
+  // de React state a propósito: copiar/pegar no debe generar historial de
+  // undo por sí solo, solo el pegado (que sí crea un elemento real).
+  const copiedElementRef = useRef<DesignElement | null>(null);
 
   // El/los color(es) de la prenda YA se eligieron en la página del producto
   // (ver ProductDetail.tsx's "1. Selecciona Color" + el switch Multicolor)
@@ -406,6 +414,26 @@ export default function PersonalizerClient({
         if (isTypingFreeText || !selectedId) return;
         e.preventDefault();
         resizeSelectedElementByKeyboard(e.key === "ArrowRight" ? 1 : -1);
+        return;
+      }
+
+      // Ctrl/Cmd+C copia el elemento seleccionado a copiedElementRef; el
+      // pegado real ocurre en el listener "paste" de abajo (mismo evento
+      // nativo que ya maneja pegar una imagen del portapapeles del SO), no
+      // aquí en el keydown de "v" -- así los dos flujos (pegar una imagen
+      // externa vs. pegar un elemento copiado dentro del propio lienzo)
+      // conviven en un solo lugar sin arriesgarse a disparar los dos a la
+      // vez. Mismo criterio que Shift+flecha arriba: se ignora mientras se
+      // esté escribiendo texto libre de verdad, pero SÍ actúa aunque el
+      // foco esté en un campo numérico como "Rotación" -- ahí Ctrl+C no
+      // tiene nada útil que copiar de todos modos.
+      if (ctrlOrCmd && e.key.toLowerCase() === "c") {
+        if (isTypingFreeText || !selectedId) return;
+        const el = elementsRef.current[activeView].find((item) => item.id === selectedId);
+        if (el) {
+          copiedElementRef.current = el;
+          e.preventDefault();
+        }
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -413,13 +441,19 @@ export default function PersonalizerClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [undo, redo, deleteElement, selectedId, elements, activeView]);
 
-  // Ctrl/Cmd+V pastes an image straight from the clipboard as a new logo —
-  // e.g. a screenshot, or a file copied from Finder. Same guard style as
-  // the Shift+flecha shortcut: skip while the user is actually typing free
-  // text somewhere (the design's own text-edit <input>, a future textarea/
-  // contentEditable) so a normal text paste there is never hijacked; a
-  // paste anywhere else on the page (including while focus sits in a
-  // numeric field like Rotación, or nowhere at all) places the image.
+  // Ctrl/Cmd+V hace dos cosas distintas con el mismo evento nativo "paste",
+  // en este orden de prioridad: 1) si el portapapeles del SO trae una
+  // imagen real (screenshot, archivo copiado de Finder), la coloca como
+  // logo nuevo -- comportamiento original, intacto; 2) si no, y el usuario
+  // copió un elemento del lienzo con Ctrl/Cmd+C (ver copiedElementRef +
+  // onKeyDown arriba), pega una copia de ESE elemento -- duplicar así de
+  // fácil era un pedido explícito ("que el usuario tenga facilidad... una
+  // gran experiencia"). Mismo guard que el Shift+flecha: se ignora
+  // mientras se esté escribiendo texto libre de verdad (el <input> de
+  // edición de un texto del diseño, una futura textarea/contentEditable),
+  // para no secuestrar un paste normal ahí; en cualquier otro punto de la
+  // página (incluyendo con el foco en un campo numérico como "Rotación",
+  // o sin foco en nada) actúa sobre el lienzo.
   useEffect(() => {
     function onPaste(e: ClipboardEvent) {
       const target = e.target as HTMLElement | null;
@@ -431,17 +465,39 @@ export default function PersonalizerClient({
       if (isTypingFreeText) return;
 
       const items = e.clipboardData?.items;
-      if (!items) return;
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.kind === "file" && item.type.startsWith("image/")) {
-          const file = item.getAsFile();
-          if (file) {
-            e.preventDefault();
-            placeUploadedFile(file);
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.kind === "file" && item.type.startsWith("image/")) {
+            const file = item.getAsFile();
+            if (file) {
+              e.preventDefault();
+              placeUploadedFile(file);
+            }
+            return;
           }
-          return;
         }
+      }
+
+      // Sin imagen real en el portapapeles del SO -- si el usuario copió un
+      // elemento del propio lienzo con Ctrl/Cmd+C (ver onKeyDown arriba),
+      // este es el Ctrl/Cmd+V que lo pega: una copia nueva en la vista
+      // activa ahora mismo (puede ser otra distinta a la que tenía cuando
+      // se copió), con su propio id y ligeramente desplazada para que no
+      // quede exactamente encima del original.
+      const copied = copiedElementRef.current;
+      if (copied) {
+        e.preventDefault();
+        const z = zCounter + 1;
+        setZCounter(z);
+        addElement({
+          ...copied,
+          id: uid(),
+          view: activeView,
+          xPct: Math.min(copied.xPct + 4, 100 - copied.widthPct),
+          yPct: Math.min(copied.yPct + 4, 100 - copied.heightPct),
+          zIndex: z,
+        });
       }
     }
     window.addEventListener("paste", onPaste);
