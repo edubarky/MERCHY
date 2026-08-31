@@ -36,7 +36,7 @@ const DEFAULT_PRINT_AREAS: ProductPrintAreas = {
   funda: { ...VIEW_ASSETS.funda.printArea },
 };
 
-function normalizeProductKey(value: string): string {
+export function normalizeProductKey(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")

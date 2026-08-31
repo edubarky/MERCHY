@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { Product, ProductVariant, PriceTier } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 import { VIEW_ORDER, normalizeGarmentColorName, type ResolvedProductAssets, type GarmentColor } from "./personalizar/types";
+import { normalizeProductKey } from "./personalizar/printAreas";
 
 interface Props {
   product: Product & { variants: ProductVariant[] };
@@ -27,6 +28,14 @@ interface Review {
   comment: string;
   date: Date;
 }
+
+// Productos cuya galería real ya subida (product_variants.images) debe
+// ganar SIEMPRE, aunque este producto/color también tenga "ejes"
+// resueltos -- ver el comentario junto a `preferRealGallery` más abajo.
+// Nombre exacto del producto (mismo normalizeProductKey tolerante que
+// PRODUCT_PRINT_AREAS/getApplicableViews en printAreas.ts), agregado a
+// mano solo cuando el usuario confirma que la galería real es mejor.
+const PRODUCTS_PREFERRING_REAL_GALLERY = new Set(["tapete de yoga minsk"]);
 
 // Reseñas de muestra — no persisten en base de datos; viven en estado del cliente.
 const REVIEWS_SEED: Review[] = [
@@ -779,16 +788,31 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
 
   // Galería: si este producto/color tiene ejes reales resueltos (mismos
   // archivos que ya usa el Personalizador) se arma con "con modelo" primero
-  // (cuando existe) y luego Frente/Reverso/Izquierda/Derecha -- igual
-  // mecanismo de miniaturas que ya usan productos como Tapete, solo que acá
-  // las imágenes vienen de esos archivos locales en vez de
+  // (cuando existe) y luego Frente/Reverso/Izquierda/Derecha/Funda -- igual
+  // mecanismo de miniaturas que ya usan productos como Sudadera Ocean, solo
+  // que acá las imágenes vienen de esos archivos locales en vez de
   // product_variants.images. Si el producto/color no tiene ejes resueltos
   // todavía, cae exactamente al comportamiento de siempre (las fotos ya
   // subidas a Supabase para esa variante) -- nunca se inventa nada.
+  //
+  // Excepción explícita (PRODUCTS_PREFERRING_REAL_GALLERY abajo): un
+  // producto puede tener "ejes" resueltos y AÚN ASÍ preferir su galería
+  // real. Caso real que expuso esto -- Tapete de Yoga Minsk: sus "ejes"
+  // son solo 1 foto suelta pensada como fondo del canvas del
+  // Personalizador (nunca como fotografía de producto), mientras que
+  // product_variants.images ya trae 3 fotos reales curadas (rollo, plano,
+  // funda) -- dejar que 1 foto de fondo sustituyera esas 3 fue justo el
+  // reporte del usuario ("quiero que se vean los productos como antes
+  // estaba"). Nunca se decide automáticamente comparando cantidades --
+  // mismo criterio explícito por nombre exacto que getApplicableViews en
+  // printAreas.ts: se agrega aquí a mano cuando el usuario confirma que la
+  // galería real es la que debe ganar.
+  const preferRealGallery = PRODUCTS_PREFERRING_REAL_GALLERY.has(normalizeProductKey(product.name));
   const selectedColorKey = selectedVariant ? normalizeGarmentColorName(selectedVariant.color_name) : null;
-  const ejesForColor = selectedColorKey
-    ? VIEW_ORDER.map((v) => resolvedGallery[v][selectedColorKey]).filter((url): url is string => !!url)
-    : [];
+  const ejesForColor =
+    selectedColorKey && !preferRealGallery
+      ? VIEW_ORDER.map((v) => resolvedGallery[v][selectedColorKey]).filter((url): url is string => !!url)
+      : [];
   const modelShotUrl = selectedColorKey ? modelShots[selectedColorKey] : null;
   const images =
     ejesForColor.length > 0
