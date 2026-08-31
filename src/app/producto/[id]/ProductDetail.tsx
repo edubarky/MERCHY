@@ -921,25 +921,28 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const quantity = sizeSum > 0 ? sizeSum : 1;
   const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers);
   const totalPrice = unitPrice * quantity;
-  // 1 pieza ya es una cantidad válida y completa por sí sola: la sección
-  // de tallas se muestra siempre que el producto maneje MÁS DE UNA talla
-  // real entre las que elegir -- un producto con una sola talla ("Único",
-  // ej. Tapete de Yoga Minsk) no tiene nada que distribuir (repartir 1
-  // pieza entre 1 sola talla es siempre la misma pieza), así que la
-  // sección completa se oculta. El stepper de "2. Selecciona Cantidad"
-  // arriba sigue funcionando exactamente igual sin esta sección --
-  // incrementMainQuantity/decrementMainQuantity/setMainQuantity ya
-  // escriben directamente en sizes[0] (la única talla), que es la misma
-  // fuente de verdad (sizeQuantities) de siempre. Personalizar está
-  // disponible desde el primer render.
-  const showSizes = sizes.length > 1;
-  const canPersonalize = true;
   // Talla que absorbe los +/- del selector superior de cantidad: la
   // primera talla de la primera sección visible. Al bajar, se descuenta
   // de la primera talla que tenga piezas asignadas (recorriendo secciones
   // y tallas en orden), para no dejar nunca un número negativo ni tocar
   // una talla vacía.
   const activeSections = sections.filter((s) => !s.leaving);
+  // 1 pieza ya es una cantidad válida y completa por sí sola: la sección
+  // de tallas se muestra cuando hay algo real que repartir -- MÁS DE UNA
+  // talla entre las que elegir (como siempre), O MÁS DE UN color activo
+  // (Multicolor con 2+ colores elegidos, aunque el producto solo maneje
+  // una talla "Único") -- sin esto, un producto de una sola talla pero
+  // varios colores (ej. Tapete Century en Multicolor) no tenía ninguna
+  // forma de decir cuántas piezas de CADA color quiere, ni de verlo
+  // reflejado: el stepper de arriba solo escribe en la primera sección
+  // (ver incrementMainQuantity/setMainQuantity), dejando el resto de
+  // colores siempre en 0 sin que el cliente pudiera cambiarlo -- pedido
+  // explícito ("para cualquier producto que tenga multicolor sí se debe
+  // agregar la cantidad de producto de cada color"). Un producto de una
+  // sola talla Y un solo color activo (el caso original que se pidió
+  // ocultar) sigue sin mostrar nada -- el stepper de arriba ya alcanza.
+  const showSizes = sizes.length > 1 || activeSections.length > 1;
+  const canPersonalize = true;
   function incrementMainQuantity() {
     const target = activeSections[0];
     if (!target || sizes.length === 0) return;
