@@ -113,13 +113,16 @@ export interface SelectedTechniqueDetail {
   tintas?: number;
   logo_sizes?: Record<string, string>; // elementId -> "5x5" | "10x10" | "20x20" (solo pricing_type "by_size")
   // Nuevo: capturados directamente en la tarjeta de detalle de la técnica
-  // (una vez por técnica seleccionada, no por logo). "positions" es
-  // puramente informativo para producción -- nunca multiplica el precio.
+  // (una vez por técnica seleccionada, no por logo). "positions" ya NO se
+  // escribe a mano -- son los ejes (Frente/Reverso/Izquierda/Derecha, ver
+  // VIEW_LABELS) donde el cliente realmente colocó algún elemento en el
+  // canvas, derivado en vivo de `elements` -- nunca inventado ni tecleado.
+  // Puramente informativo para producción, nunca multiplica el precio.
   // "size_cm" es lo que el cliente escribe a mano; para pricing_type
   // "by_size" alimenta el redondeo a un tamaño configurado (ver
   // roundUpToConfiguredSize en pricing.ts) -- para el resto de técnicas
   // (by_qty / null) es informativo igual que positions.
-  positions?: number;
+  positions?: string[];
   size_cm?: { largo: number; alto: number };
   unit_price: number | null; // null cuando needs_quote es true
   needs_quote: boolean;

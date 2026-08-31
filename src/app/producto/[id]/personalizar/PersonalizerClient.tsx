@@ -156,14 +156,14 @@ export default function PersonalizerClient({
   // (ej. DTF Textil + Bordado), cada una suma su propio precio por
   // separado. Cada técnica seleccionada pide su propio parámetro (ver
   // PrintTechnique.pricing_type) — nunca se inventa un valor por defecto
-  // que no haya escrito el usuario. Los tres guardan texto crudo tal cual
-  // lo escribe (no number), igual que cualquier otro <input> controlado
-  // de este archivo — se parsean solo al calcular el precio.
-  // techniquePositions ("Posiciones") es SIEMPRE informativo -- se guarda
-  // en el pedido pero nunca multiplica ni afecta ningún precio.
+  // que no haya escrito el usuario. Ambos guardan texto crudo tal cual lo
+  // escribe (no number), igual que cualquier otro <input> controlado de
+  // este archivo — se parsean solo al calcular el precio. "Posiciones" ya
+  // NO es un campo que el usuario escribe -- se deriva en vivo de en qué
+  // ejes (frente/reverso/izquierda/derecha) hay elementos colocados (ver
+  // activePositionLabels más abajo), así que no necesita su propio estado.
   const [selectedTechniqueIds, setSelectedTechniqueIds] = useState<string[]>([]);
   const [techniqueTintas, setTechniqueTintas] = useState<Record<string, string>>({});
-  const [techniquePositions, setTechniquePositions] = useState<Record<string, string>>({});
   const [techniqueSizeCm, setTechniqueSizeCm] = useState<Record<string, { largo: string; alto: string }>>({});
   // El stepper se había quitado de "Resumen del pedido" por pedido
   // explícito -- pero regresa aquí: los tramos de precio por cantidad de
@@ -628,6 +628,13 @@ export default function PersonalizerClient({
   const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers);
   const numElements = VIEW_ORDER.reduce((sum, v) => sum + elements[v].length, 0);
   const numLogoElements = VIEW_ORDER.reduce((sum, v) => sum + elements[v].filter((e) => e.type === "logo").length, 0);
+  // "Posiciones" (tarjeta de detalle de cada técnica): los ejes reales
+  // donde el cliente ya colocó algún elemento (logo o texto) en el
+  // canvas, no un número que se escriba a mano -- mismos VIEW_LABELS que
+  // ya se usan en las pestañas Frente/Reverso/Izquierda/Derecha de arriba.
+  // Es el mismo para las 4 vistas, sin importar cuál esté activa ahora
+  // mismo, porque la técnica aplica al diseño completo, no a una vista.
+  const activePositionLabels = VIEW_ORDER.filter((v) => elements[v].length > 0).map((v) => VIEW_LABELS[v]);
 
   // Cada técnica calcula su propio precio según su pricing_type (ver
   // types/index.ts) y se suma al total — nunca se inventa un precio: si
@@ -727,7 +734,6 @@ export default function PersonalizerClient({
                 applied_to: "all",
                 selected_techniques: techniqueResults.map((r) => {
                   const tintasRaw = parseInt(techniqueTintas[r.technique.id] ?? "", 10);
-                  const positionsRaw = parseInt(techniquePositions[r.technique.id] ?? "", 10);
                   const dims = techniqueSizeCm[r.technique.id];
                   const largo = parseFloat(dims?.largo ?? "");
                   const alto = parseFloat(dims?.alto ?? "");
@@ -735,7 +741,7 @@ export default function PersonalizerClient({
                     technique_id: r.technique.id,
                     technique_name: r.technique.name,
                     tintas: Number.isFinite(tintasRaw) && tintasRaw > 0 ? tintasRaw : undefined,
-                    positions: Number.isFinite(positionsRaw) && positionsRaw > 0 ? positionsRaw : undefined,
+                    positions: activePositionLabels.length > 0 ? activePositionLabels : undefined,
                     size_cm: largo > 0 && alto > 0 ? { largo, alto } : undefined,
                     unit_price: r.unitPrice,
                     needs_quote: r.needsQuote,
@@ -1116,13 +1122,14 @@ export default function PersonalizerClient({
                   <PrintTechniqueCards techniques={techniques} selectedIds={selectedTechniqueIds} onToggle={toggleTechnique} />
                 </div>
                 {/* Cada técnica seleccionada se desglosa en su propia
-                    tarjeta con "Posiciones" (siempre informativo, nunca
-                    afecta el precio) + Largo/Alto en cm (DTF Textil, DTF
-                    UV, DTG, Bordado, Grabado en Láser) o Tintas (Serigrafía,
-                    Tampografía) según su pricing_type -- ver
-                    resolveTechniqueSize/techniqueResults arriba. El botón
-                    de basura quita esa técnica de la selección (mismo
-                    toggleTechnique que su tarjeta en el selector de
+                    tarjeta con "Posiciones" (los ejes reales donde ya hay
+                    algo colocado -- activePositionLabels, siempre
+                    informativo, nunca afecta el precio) + Largo/Alto en cm
+                    (DTF Textil, DTF UV, DTG, Bordado, Grabado en Láser) o
+                    Tintas (Serigrafía, Tampografía) según su pricing_type
+                    -- ver resolveTechniqueSize/techniqueResults arriba. El
+                    botón de basura quita esa técnica de la selección
+                    (mismo toggleTechnique que su tarjeta en el selector de
                     arriba). */}
                 {techniqueResults.length > 0 && (
                   <div className="mt-5 flex flex-col gap-3">
@@ -1132,8 +1139,7 @@ export default function PersonalizerClient({
                         technique={technique}
                         unitPrice={unitPrice}
                         needsQuote={needsQuote}
-                        positions={techniquePositions[technique.id] ?? ""}
-                        onPositionsChange={(v) => setTechniquePositions((prev) => ({ ...prev, [technique.id]: v }))}
+                        positions={activePositionLabels}
                         sizeCm={techniqueSizeCm[technique.id] ?? { largo: "", alto: "" }}
                         onSizeCmChange={(patch) =>
                           setTechniqueSizeCm((prev) => ({

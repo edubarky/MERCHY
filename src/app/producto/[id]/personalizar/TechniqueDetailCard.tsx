@@ -65,6 +65,33 @@ function TechniqueIconBadge({ name, size = 44 }: { name: string; size?: number }
   );
 }
 
+// "Posiciones" ya no se escribe a mano -- son los ejes reales
+// (Frente/Reverso/Izquierda/Derecha) donde el cliente ya colocó algún
+// elemento en el canvas (ver activePositionLabels en PersonalizerClient),
+// mostrados como chips de solo lectura en vez de un <input>. Sin
+// elementos colocados todavía, muestra "—" en vez de una caja vacía.
+function PositionsField({ positions }: { positions: string[] }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-[11px] font-medium text-ui-gray">Posiciones</span>
+      <div className="flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-xl border border-ui-border bg-white px-3 py-2">
+        {positions.length === 0 ? (
+          <span className="text-xs text-ui-gray">—</span>
+        ) : (
+          positions.map((label) => (
+            <span
+              key={label}
+              className="whitespace-nowrap rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary-dark"
+            >
+              Posición {label}
+            </span>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Field({
   label,
   value,
@@ -100,7 +127,6 @@ export default function TechniqueDetailCard({
   unitPrice,
   needsQuote,
   positions,
-  onPositionsChange,
   sizeCm,
   onSizeCmChange,
   tintas,
@@ -110,8 +136,7 @@ export default function TechniqueDetailCard({
   technique: PrintTechnique;
   unitPrice: number | null;
   needsQuote: boolean;
-  positions: string;
-  onPositionsChange: (v: string) => void;
+  positions: string[];
   sizeCm: { largo: string; alto: string };
   onSizeCmChange: (patch: Partial<{ largo: string; alto: string }>) => void;
   tintas: string;
@@ -147,12 +172,12 @@ export default function TechniqueDetailCard({
           técnicas por número de tintas -- Serigrafía, Tampografía. */}
       {technique.pricing_type === "by_tintas" ? (
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Posiciones" value={positions} onChange={onPositionsChange} />
+          <PositionsField positions={positions} />
           <Field label="Tintas" value={tintas} onChange={onTintasChange} />
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-3">
-          <Field label="Posiciones" value={positions} onChange={onPositionsChange} />
+          <PositionsField positions={positions} />
           <Field label="Largo (cm)" value={sizeCm.largo} onChange={(v) => onSizeCmChange({ largo: v })} />
           <Field label="Alto (cm)" value={sizeCm.alto} onChange={(v) => onSizeCmChange({ alto: v })} />
         </div>
