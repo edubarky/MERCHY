@@ -70,6 +70,14 @@ interface Props {
   // colores -- nunca los 6. null (Multicolor apagado, o solo un color
   // elegido) significa "sin barra", igual que el comportamiento de antes.
   multicolorVariantIds: string[] | null;
+  // La cantidad que el cliente ya eligió en "2. Selecciona Cantidad" de la
+  // ficha del producto (ver ProductDetail.tsx / page.tsx ?qty=). El
+  // Personalizador arranca con esa misma cantidad -- antes siempre volvía
+  // a 1, lo que además dejaba el precio por tramos de cada técnica
+  // desincronizado del que el cliente ya había visto. null (link viejo/sin
+  // el query param, o un valor inválido) -> 1, mismo comportamiento de
+  // siempre.
+  initialQuantity: number | null;
 }
 
 function uid() {
@@ -126,6 +134,7 @@ export default function PersonalizerClient({
   resolvedAssets,
   initialVariantId,
   multicolorVariantIds,
+  initialQuantity,
 }: Props) {
   const [activeView, setActiveView] = useState<ViewName>("frente");
   const [filesTabView, setFilesTabView] = useState<ViewName>("frente");
@@ -162,15 +171,18 @@ export default function PersonalizerClient({
   // de esta cantidad real de PRENDAS del pedido (confirmado explícitamente
   // con el usuario), no del número de logos -- sin un control editable
   // aquí, esos tramos nunca pueden bajar de precio, que es justo el bug
-  // reportado ("si el usuario agrega más piezas el costo baja").
-  const [quantity, setQuantity] = useState(1);
+  // reportado ("si el usuario agrega más piezas el costo baja"). Arranca
+  // en `initialQuantity` (la cantidad que el cliente ya eligió en la ficha
+  // del producto) en vez de siempre en 1 -- así el precio por tramos
+  // coincide desde el inicio con lo que ya vio ahí.
+  const [quantity, setQuantity] = useState(initialQuantity ?? 1);
   // Input SIEMPRE visible y editable (no click-to-edit, se reportó como
   // "muy complicado") -- un cuadro de texto normal entre los botones -/+,
   // igual que cualquier campo de cantidad estándar. qtyDraft es el texto
   // crudo que se ve mientras se escribe (para poder borrar y volver a
   // teclear sin que se resetee a cada tecla); se confirma a `quantity` en
   // cada cambio válido y también al perder el foco (por si queda vacío).
-  const [qtyDraft, setQtyDraft] = useState("1");
+  const [qtyDraft, setQtyDraft] = useState(String(initialQuantity ?? 1));
   const [zCounter, setZCounter] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   // Drives the discreet "fuera de la superficie del producto" notice — no

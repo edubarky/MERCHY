@@ -25,7 +25,13 @@ export default async function PersonalizarPage({
   // ?colors=<id1>,<id2>,... -- solo presente cuando el usuario activó
   // "Multicolor" y eligió más de un color; habilita la barra acotada de
   // colores dentro del Personalizador (ver PersonalizerClient).
-  searchParams: { variant?: string; colors?: string };
+  // ?qty=<n> -- la cantidad de piezas que el cliente ya eligió en "2.
+  // Selecciona Cantidad" de la ficha del producto; el Personalizador
+  // arranca con esa misma cantidad en vez de resetear a 1, para que el
+  // precio por tramos (ver PersonalizerClient) coincida desde el inicio
+  // con lo que el cliente ya veía. Ausente/inválido -> 1, igual que
+  // siempre.
+  searchParams: { variant?: string; colors?: string; qty?: string };
 }) {
   const supabase = createClient();
 
@@ -67,6 +73,11 @@ export default async function PersonalizarPage({
   const validColorIds = rawColorIds.filter((id) => safeProduct.variants.some((v) => v.id === id));
   const multicolorVariantIds = validColorIds.length > 1 ? validColorIds : null;
 
+  // Mismo criterio de "nunca confiar ciegamente en la URL": un entero
+  // positivo real, si no -> null (PersonalizerClient ya sabe caer a 1).
+  const parsedQty = parseInt(searchParams.qty ?? "", 10);
+  const initialQuantity = Number.isFinite(parsedQty) && parsedQty > 0 ? parsedQty : null;
+
   const assignedTechniqueIds = (productTechniqueLinks ?? []).map((r) => r.technique_id);
   const { data: techniques } =
     assignedTechniqueIds.length > 0
@@ -88,6 +99,7 @@ export default async function PersonalizarPage({
         resolvedAssets={resolvedAssets}
         initialVariantId={initialVariantId}
         multicolorVariantIds={multicolorVariantIds}
+        initialQuantity={initialQuantity}
       />
     </div>
   );

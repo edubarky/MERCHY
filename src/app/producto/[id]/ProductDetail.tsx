@@ -996,6 +996,10 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const personalizarParams = new URLSearchParams();
   if (personalizarVariantId) personalizarParams.set("variant", personalizarVariantId);
   if (multicolorIds) personalizarParams.set("colors", multicolorIds.join(","));
+  // La cantidad ya elegida en "2. Selecciona Cantidad" pasa también, para
+  // que el Personalizador arranque con ella en vez de resetear a 1 --
+  // confirmado explícitamente con el usuario.
+  personalizarParams.set("qty", String(quantity));
   const personalizarQuery = personalizarParams.toString();
   const personalizarHref = `/producto/${product.id}/personalizar${personalizarQuery ? `?${personalizarQuery}` : ""}`;
 
