@@ -766,14 +766,63 @@ function SizeCounter({ qty, onChange }: { qty: number; onChange: (next: number) 
 }
 
 // Tarjeta cuadrada premium con el total de piezas seleccionadas para un color.
-function TotalPzasCard({ total }: { total: number }) {
+// `onChange` opcional: cuando el producto tiene una sola talla ("Único"),
+// esta tarjeta ES el único control de cantidad para ese color (ver el
+// render más abajo -- ya no dibuja el chip "Único" con su propio +/-,
+// redundante al ser la única talla). Mismo patrón de click-para-editar
+// que SizeCounter (número real, no solo +/-, para escribir un número
+// grande de un tirón). Sin `onChange` (multi-talla real) sigue siendo
+// solo el total de lectura de siempre, sin nada que editar aquí.
+function TotalPzasCard({ total, onChange }: { total: number; onChange?: (next: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(total));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!editing) setDraft(String(total));
+  }, [total, editing]);
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  function commit() {
+    if (!onChange) return;
+    const parsed = parseInt(draft, 10);
+    onChange(Number.isNaN(parsed) ? total : Math.max(0, parsed));
+    setEditing(false);
+  }
+
   return (
     <div
       className="ml-[22px] w-16 h-16 shrink-0 flex flex-col items-center justify-center bg-white border-2 border-primary rounded-[16px] shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-all duration-[180ms] hover:shadow-[0_6px_20px_rgba(0,0,0,0.1)] hover:-translate-y-0.5"
     >
-      <span key={total} className="font-display font-bold text-[26px] leading-none text-primary animate-total-pulse">
-        {total}
-      </span>
+      {editing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, ""))}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") setEditing(false);
+          }}
+          className="w-11 text-center font-display font-bold text-[20px] leading-none text-primary bg-transparent outline-none"
+        />
+      ) : (
+        <span
+          key={total}
+          onClick={onChange ? () => setEditing(true) : undefined}
+          className={`font-display font-bold text-[26px] leading-none text-primary animate-total-pulse ${onChange ? "cursor-text" : ""}`}
+        >
+          {total}
+        </span>
+      )}
       <span className="font-display font-medium text-[10px] uppercase tracking-wide text-foreground mt-1">
         Piezas
       </span>
@@ -1306,19 +1355,33 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                   >
                     <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
                     <div className="flex items-center gap-3 flex-nowrap">
-                      {sizes.map((size) => (
-                        <div
-                          key={size}
-                          className="flex flex-col items-center justify-center w-[58px] h-[58px] shrink-0 rounded-[16px] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05),0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 ease-out hover:shadow-[0_14px_34px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:-translate-y-[3px]"
-                        >
-                          <span className="font-display font-bold text-[15px] text-primary text-center">{size}</span>
-                          <SizeCounter
-                            qty={getSizeQty(s.variant, size)}
-                            onChange={(next) => setSizeQty(s.variant, size, next)}
-                          />
-                        </div>
-                      ))}
-                      <TotalPzasCard total={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)} />
+                      {/* Con una sola talla real ("Único"), el chip +/- de
+                          abajo sería el mismo número que la tarjeta de total
+                          de al lado -- redundante, y encima ninguno de los
+                          dos dejaba escribir la cantidad directamente. Se
+                          salta el chip por completo y la tarjeta de total
+                          pasa a ser el único control, editable con un clic
+                          (ver TotalPzasCard) -- pedido explícito: "que el
+                          usuario pueda agregar manualmente la cantidad". Con
+                          2+ tallas reales, el chip por talla sigue igual de
+                          siempre (sí hace falta repartir entre tallas). */}
+                      {sizes.length > 1 &&
+                        sizes.map((size) => (
+                          <div
+                            key={size}
+                            className="flex flex-col items-center justify-center w-[58px] h-[58px] shrink-0 rounded-[16px] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05),0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 ease-out hover:shadow-[0_14px_34px_rgba(15,23,42,0.08),0_4px_12px_rgba(15,23,42,0.05)] hover:-translate-y-[3px]"
+                          >
+                            <span className="font-display font-bold text-[15px] text-primary text-center">{size}</span>
+                            <SizeCounter
+                              qty={getSizeQty(s.variant, size)}
+                              onChange={(next) => setSizeQty(s.variant, size, next)}
+                            />
+                          </div>
+                        ))}
+                      <TotalPzasCard
+                        total={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)}
+                        onChange={sizes.length === 1 ? (next) => setSizeQty(s.variant, sizes[0], next) : undefined}
+                      />
                     </div>
                   </AnimatedSizeSection>
                 ))}
