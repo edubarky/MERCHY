@@ -1,22 +1,28 @@
-// "funda" es un eje aparte de los 4 costados de una prenda: la superficie
-// imprimible de un ACCESORIO que trae el propio producto (ej. la funda
-// transportadora del Tapete de Yoga Minsk) -- no todos los productos lo
-// tienen. Qué ejes de esta lista se muestran REALMENTE para un producto
-// dado (nunca los 5 a la fuerza) lo decide getApplicableViews en
+// "fundaHorizontal"/"fundaVertical" son ejes aparte de los 4 costados de
+// una prenda: la superficie imprimible de un ACCESORIO que trae el propio
+// producto (ej. la funda transportadora del Tapete de Yoga Minsk) -- no
+// todos los productos lo tienen. Van como dos ejes independientes (no uno
+// solo "funda") porque el accesorio tiene fotos reales en las dos
+// orientaciones y el cliente debe poder ELEGIR con cuál personalizar
+// (pedido explícito) -- cada orientación es una foto/print-area/lienzo
+// propio, igual que cualquier otro eje, no una vista compartida con un
+// selector encima. Qué ejes de esta lista se muestran REALMENTE para un
+// producto dado (nunca los 6 a la fuerza) lo decide getApplicableViews en
 // printAreas.ts, no este archivo -- aquí solo vive la forma completa que
 // puede tomar el estado (ver emptyViewElements/emptyResolvedAssets abajo),
-// para que un producto sin "funda" simplemente nunca tenga nada en ese
-// eje, en vez de necesitar un tipo distinto.
-export type ViewName = "frente" | "reverso" | "izquierda" | "derecha" | "funda";
+// para que un producto sin funda simplemente nunca tenga nada en esos
+// ejes, en vez de necesitar un tipo distinto.
+export type ViewName = "frente" | "reverso" | "izquierda" | "derecha" | "fundaHorizontal" | "fundaVertical";
 
-export const VIEW_ORDER: ViewName[] = ["frente", "reverso", "izquierda", "derecha", "funda"];
+export const VIEW_ORDER: ViewName[] = ["frente", "reverso", "izquierda", "derecha", "fundaHorizontal", "fundaVertical"];
 
 export const VIEW_LABELS: Record<ViewName, string> = {
   frente: "Frente",
   reverso: "Reverso",
   izquierda: "Izquierda",
   derecha: "Derecha",
-  funda: "Funda",
+  fundaHorizontal: "Funda Horizontal",
+  fundaVertical: "Funda Vertical",
 };
 
 export type LogoFileType = "svg" | "png" | "pdf" | "ai";
@@ -72,7 +78,7 @@ export interface DesignElement {
 export type ViewElements = Record<ViewName, DesignElement[]>;
 
 export function emptyViewElements(): ViewElements {
-  return { frente: [], reverso: [], izquierda: [], derecha: [], funda: [] };
+  return { frente: [], reverso: [], izquierda: [], derecha: [], fundaHorizontal: [], fundaVertical: [] };
 }
 
 // ---- Per-product real photography (blanco/negro + per-product extra colors) ----
@@ -124,6 +130,7 @@ export function emptyResolvedAssets(): ResolvedProductAssets {
     reverso: emptyResolvedViewAsset(),
     izquierda: emptyResolvedViewAsset(),
     derecha: emptyResolvedViewAsset(),
-    funda: emptyResolvedViewAsset(),
+    fundaHorizontal: emptyResolvedViewAsset(),
+    fundaVertical: emptyResolvedViewAsset(),
   };
 }

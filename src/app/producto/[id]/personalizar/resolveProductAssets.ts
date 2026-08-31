@@ -96,7 +96,14 @@ const VIEW_STEMS: [ViewName, string[]][] = [
   ["reverso", ["REVERS", "ATRAS", "ESPALDA", "BACK"]],
   ["izquierda", ["IZQUIERD", "LEFT"]], // matches both izquierda/izquierdo
   ["derecha", ["DERECH", "RIGHT"]], // matches both derecha/derecho
-  ["funda", ["FUNDA", "BOLSA", "CASE"]],
+  // Dos ejes, no uno -- "FUNDA HORIZONTAL.png"/"FUNDA VERTICAL.png" son
+  // fotos reales distintas de la misma funda en cada orientación (ver
+  // ViewName), así que se distinguen por esa palabra, no solo por
+  // "FUNDA" (que ambos nombres de archivo comparten). Revisados ANTES de
+  // cualquier stem que pudiera contener "FUNDA" a secas, para que nunca
+  // dependa del orden de VIEW_STEMS.
+  ["fundaHorizontal", ["HORIZONTAL"]],
+  ["fundaVertical", ["VERTICAL"]],
 ];
 
 function stripAccents(value: string): string {

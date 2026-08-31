@@ -46,16 +46,22 @@ export const VIEW_ASSETS: Record<ViewName, ViewAsset> = {
       heightPct: (29 / 578) * 100,
     },
   },
-  // "funda" (ver ViewName): sin mockup genérico propio -- src/printArea de
-  // aquí nunca se renderizan de todos modos (ver la nota de PersonalizerClient
-  // sobre asset.src/asset.printArea), así que reutilizan el SVG de frente
-  // solo para no dejar el campo vacío. `aspect` es lo único real que se usa
-  // (el alto/ancho del recuadro del canvas mientras no hay foto real de la
-  // funda todavía) -- placeholder razonable de bolsa/funda en vertical,
-  // pendiente de ajustar con la foto real cuando llegue.
-  funda: {
+  // "fundaHorizontal"/"fundaVertical" (ver ViewName): sin mockup genérico
+  // propio -- src/printArea de aquí nunca se renderizan de todos modos
+  // (ver la nota de PersonalizerClient sobre asset.src/asset.printArea),
+  // así que reutilizan el SVG de frente solo para no dejar el campo
+  // vacío. `aspect` sí es real -- tomado directo de las fotos reales de
+  // la funda del Tapete de Yoga Minsk (848×335 horizontal, 335×848
+  // vertical, la misma funda rotada 90°), único producto que usa estos
+  // dos ejes hoy.
+  fundaHorizontal: {
     src: "/Home/PERSONALIZADOR/Group 1161.svg",
-    aspect: 3 / 4,
-    printArea: { xPct: 25, yPct: 25, widthPct: 50, heightPct: 50 },
+    aspect: 848 / 335,
+    printArea: { xPct: 20, yPct: 25, widthPct: 60, heightPct: 50 },
+  },
+  fundaVertical: {
+    src: "/Home/PERSONALIZADOR/Group 1161.svg",
+    aspect: 335 / 848,
+    printArea: { xPct: 25, yPct: 20, widthPct: 50, heightPct: 60 },
   },
 };

@@ -62,21 +62,23 @@ import {
 // (para el catálogo de ropa, pedido explícito -- "en lo de prendas...
 // iconos referentes a ellas") y uno de orientación genérico (para
 // cualquier otro producto, ej. Tapete de Yoga Minsk, donde una silueta de
-// playera no tiene sentido). "Funda" es igual en los dos -- nunca es un
-// costado de prenda, así que su ícono de bolsa no cambia.
+// playera no tiene sentido). Los ejes de funda son iguales en los dos --
+// nunca son un costado de prenda, así que su ícono de bolsa no cambia.
 const VIEW_TAB_ICON: Record<ViewName, typeof FrenteTabIcon> = {
   frente: FrenteTabIcon,
   reverso: ReversoTabIcon,
   izquierda: IzquierdaTabIcon,
   derecha: DerechaTabIcon,
-  funda: FundaTabIcon,
+  fundaHorizontal: FundaTabIcon,
+  fundaVertical: FundaTabIcon,
 };
 const VIEW_TAB_ICON_GARMENT: Record<ViewName, typeof FrenteTabIcon> = {
   frente: FrentePrendaTabIcon,
   reverso: ReversoPrendaTabIcon,
   izquierda: IzquierdaPrendaTabIcon,
   derecha: DerechaPrendaTabIcon,
-  funda: FundaTabIcon,
+  fundaHorizontal: FundaTabIcon,
+  fundaVertical: FundaTabIcon,
 };
 
 interface Props {
@@ -1012,7 +1014,15 @@ export default function PersonalizerClient({
             <div
               ref={canvasRef}
               className="relative"
-              style={{ height: "min(75vh, 720px)", aspectRatio: asset.aspect }}
+              // maxWidth acota el lienzo dentro de la tarjeta -- sin esto, un
+              // aspect ratio ancho (ej. fundaHorizontal, 848/335 ≈ 2.5, la
+              // funda real fotografiada tendida) calcula su ancho como
+              // altura×aspect SIN tope, desbordándose de la tarjeta entera
+              // (bug real, confirmado al agregar este eje: el lienzo se veía
+              // cortado por los bordes del navegador). El navegador reduce
+              // altura y ancho juntos manteniendo el aspect ratio al toparse
+              // con maxWidth, igual que un <img> con solo un lado fijado.
+              style={{ height: "min(75vh, 720px)", aspectRatio: asset.aspect, maxWidth: "100%" }}
               onMouseDown={(e) => {
                 // react-moveable's own resize/rotate handles live inside this
                 // same canvas div (DesignElementView renders <Moveable> as a

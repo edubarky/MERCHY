@@ -33,7 +33,8 @@ const DEFAULT_PRINT_AREAS: ProductPrintAreas = {
   reverso: { ...VIEW_ASSETS.reverso.printArea },
   izquierda: { ...VIEW_ASSETS.izquierda.printArea },
   derecha: { ...VIEW_ASSETS.derecha.printArea },
-  funda: { ...VIEW_ASSETS.funda.printArea },
+  fundaHorizontal: { ...VIEW_ASSETS.fundaHorizontal.printArea },
+  fundaVertical: { ...VIEW_ASSETS.fundaVertical.printArea },
 };
 
 export function normalizeProductKey(value: string): string {
@@ -66,11 +67,12 @@ const HOODIE_PRINT_AREAS: ProductPrintAreas = {
   reverso: { xPct: 25, yPct: 32, widthPct: 50, heightPct: 48 },
   izquierda: { xPct: 20, yPct: 23, widthPct: 58, heightPct: 55 },
   derecha: { xPct: 22, yPct: 23, widthPct: 58, heightPct: 55 },
-  // Ninguna sudadera ofrece la pestaña "Funda" (getApplicableViews las deja
-  // en los 4 costados de siempre) -- este valor nunca se lee en la
-  // práctica, solo existe para que ProductPrintAreas (Record<ViewName, ...>)
+  // Ninguna sudadera ofrece pestañas de funda (getApplicableViews las deja
+  // en los 4 costados de siempre) -- estos valores nunca se leen en la
+  // práctica, solo existen para que ProductPrintAreas (Record<ViewName, ...>)
   // quede completo.
-  funda: { ...DEFAULT_PRINT_AREAS.funda },
+  fundaHorizontal: { ...DEFAULT_PRINT_AREAS.fundaHorizontal },
+  fundaVertical: { ...DEFAULT_PRINT_AREAS.fundaVertical },
 };
 
 // Category default matchers, checked in order — the first whose keyword
@@ -108,30 +110,34 @@ export function getPrintArea(productName: string, view: ViewName): PrintAreaConf
 
 // Los 4 costados clásicos de una prenda -- el default de getApplicableViews
 // para todo el catálogo excepto los productos agregados a mano abajo.
-// Deliberadamente NO es VIEW_ORDER completo: VIEW_ORDER incluye "funda"
-// porque el TIPO de estado (ViewElements/ResolvedProductAssets) siempre
-// tiene que poder representarlo, pero "funda" nunca debe aparecer por
+// Deliberadamente NO es VIEW_ORDER completo: VIEW_ORDER incluye los ejes
+// de funda porque el TIPO de estado (ViewElements/ResolvedProductAssets)
+// siempre tiene que poder representarlos, pero nunca deben aparecer por
 // default en una prenda de vestir -- solo cuando un producto se agrega
 // aquí explícitamente pidiéndolo.
-const DEFAULT_APPLICABLE_VIEWS: ViewName[] = VIEW_ORDER.filter((v) => v !== "funda");
+const DEFAULT_APPLICABLE_VIEWS: ViewName[] = VIEW_ORDER.filter(
+  (v) => v !== "fundaHorizontal" && v !== "fundaVertical"
+);
 
 // Qué ejes ofrece REALMENTE cada producto -- no todo el catálogo es una
 // prenda con cuatro costados. Por defecto (el resto del catálogo, toda
 // prenda de vestir) los cuatro de siempre (DEFAULT_APPLICABLE_VIEWS); un
 // producto agregado aquí a mano -- por su nombre exacto, mismo criterio
 // tolerante que PRODUCT_PRINT_AREAS -- puede acotar a un subconjunto (ej.
-// un tapete plano no tiene izquierda/derecha que imprimir) y/o sumar
-// "funda" cuando el producto en sí incluye un accesorio con su propia
-// superficie imprimible. Nunca se infiere automáticamente de la
+// un tapete plano no tiene izquierda/derecha que imprimir) y/o sumar los
+// ejes de funda cuando el producto en sí incluye un accesorio con su
+// propia superficie imprimible. Nunca se infiere automáticamente de la
 // categoría/nombre del producto -- se agrega uno por uno según lo
 // confirme el usuario, igual que PRODUCT_PRINT_AREAS.
 //
 // Tapete de Yoga Minsk: producto plano (sin costados que imprimir) que
 // además incluye de fábrica una "funda transportadora de poliéster con
 // asa para hombro" (ver su descripción real en Supabase) -- de ahí Frente
-// + Reverso + Funda, pedido explícito del usuario.
+// + Reverso + Funda Horizontal + Funda Vertical. Dos ejes de funda, no
+// uno, porque hay foto real de la funda en las dos orientaciones y el
+// cliente debe poder elegir con cuál personalizar (pedido explícito).
 const PRODUCT_APPLICABLE_VIEWS: Record<string, ViewName[]> = {
-  "tapete de yoga minsk": ["frente", "reverso", "funda"],
+  "tapete de yoga minsk": ["frente", "reverso", "fundaHorizontal", "fundaVertical"],
 };
 
 export function getApplicableViews(productName: string): ViewName[] {
@@ -141,12 +147,12 @@ export function getApplicableViews(productName: string): ViewName[] {
 
 // Es "prenda de vestir" (para elegir el set de íconos de las pestañas de
 // eje, ver PersonalizerClient.tsx) exactamente cuando este producto usa
-// los 4 costados clásicos de siempre, sin acotar ni sumar "funda" -- se
+// los 4 costados clásicos de siempre, sin acotar ni sumar funda -- se
 // deriva de getApplicableViews en vez de mantener una segunda lista
 // aparte: un producto que necesitó su propio PRODUCT_APPLICABLE_VIEWS
 // (como Tapete de Yoga Minsk) ya dejó de comportarse como una prenda
 // estándar, así que tampoco debe verse como una en los íconos.
 export function isGarmentProduct(productName: string): boolean {
   const views = getApplicableViews(productName);
-  return views.length === 4 && !views.includes("funda");
+  return views.length === 4 && !views.includes("fundaHorizontal") && !views.includes("fundaVertical");
 }
