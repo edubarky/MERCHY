@@ -1196,6 +1196,11 @@ export default function PersonalizerClient({
                             },
                           }))
                         }
+                        selectedElementId={selectedId}
+                        onSelectLogo={(view, elementId) => {
+                          setActiveView(view);
+                          setSelectedId(elementId);
+                        }}
                         tintas={techniqueTintas[technique.id] ?? ""}
                         onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [technique.id]: v }))}
                         onRemove={() => toggleTechnique(technique.id)}

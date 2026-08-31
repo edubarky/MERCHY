@@ -91,6 +91,34 @@ function Field({
   );
 }
 
+// Miniatura real del arte (o una insignia ".AI"/".PDF" con la extensión
+// cuando el elemento no tiene `src` rasterizable -- mismo criterio que ya
+// usa DesignElementView en el canvas) -- para que "Logo 1"/"Logo 2" no
+// sean solo números cuando dos logos son el mismo archivo/arte repetido.
+// También es el botón que selecciona ese logo en el canvas (ver
+// onSelectLogo abajo), así el usuario puede confirmar cuál es cuál
+// viéndolo resaltado ahí en vez de adivinar por el número.
+function LogoThumb({ logo }: { logo: DesignElement }) {
+  if (logo.src) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src={logo.src}
+        alt={logo.fileName ?? "logo"}
+        className="h-8 w-8 shrink-0 rounded-lg border border-ui-border bg-white object-contain"
+        draggable={false}
+      />
+    );
+  }
+  return (
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-dashed border-ui-border bg-white">
+      <span className="text-[8px] font-semibold uppercase text-ui-gray">
+        .{(logo.fileType ?? logo.fileName?.split(".").pop() ?? "?").slice(0, 3)}
+      </span>
+    </div>
+  );
+}
+
 // "Posiciones" ya no se escribe a mano -- es un bloque por cada eje real
 // (Frente/Reverso/Izquierda/Derecha) donde el cliente ya colocó algún
 // logo (ver logosByView en PersonalizerClient), con el conteo de logos
@@ -98,19 +126,28 @@ function Field({
 // agregó 2 logos en la parte de enfrente, ahí va 2"). Cuando la técnica
 // sí cobra por tamaño (todo menos "by_tintas"), cada logo de ese eje trae
 // su propio panel de Largo/Alto (cm) -- ya no una sola medida compartida
-// por técnica, porque dos logos del mismo eje pueden medir distinto.
+// por técnica, porque dos logos del mismo eje pueden medir distinto. Cada
+// panel arranca con la miniatura real del logo (ver LogoThumb) y es
+// clicable -- selecciona ese elemento en el canvas (cambiando de vista si
+// hace falta) para desambiguar cuando dos logos son el mismo arte.
 function PositionGroup({
+  view,
   viewLabel,
   logos,
   showSizeFields,
   logoSizeCm,
   onLogoSizeCmChange,
+  selectedElementId,
+  onSelectLogo,
 }: {
+  view: ViewName;
   viewLabel: string;
   logos: DesignElement[];
   showSizeFields: boolean;
   logoSizeCm: Record<string, { largo: string; alto: string }>;
   onLogoSizeCmChange: (elementId: string, patch: Partial<{ largo: string; alto: string }>) => void;
+  selectedElementId: string | null;
+  onSelectLogo: (view: ViewName, elementId: string) => void;
 }) {
   return (
     <div>
@@ -120,22 +157,36 @@ function PositionGroup({
           {logos.length} {logos.length === 1 ? "logo" : "logos"}
         </span>
       </div>
-      {showSizeFields && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {logos.map((logo, i) => {
-            const dims = logoSizeCm[logo.id] ?? { largo: "", alto: "" };
-            return (
-              <div key={logo.id} className="min-w-[150px] flex-1 rounded-xl border border-ui-border bg-gray-50/60 p-2.5">
-                <p className="mb-2 truncate text-[10px] font-semibold text-ui-gray">Logo {i + 1}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {logos.map((logo, i) => {
+          const dims = logoSizeCm[logo.id] ?? { largo: "", alto: "" };
+          const isSelected = selectedElementId === logo.id;
+          return (
+            <div
+              key={logo.id}
+              className={`min-w-[150px] flex-1 rounded-xl border p-2.5 transition-colors duration-150 ease-out ${
+                isSelected ? "border-primary bg-primary/5" : "border-ui-border bg-gray-50/60"
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => onSelectLogo(view, logo.id)}
+                title="Ver este logo en el lienzo"
+                className="mb-2 flex w-full items-center gap-2 rounded-lg text-left"
+              >
+                <LogoThumb logo={logo} />
+                <span className="min-w-0 flex-1 truncate text-[10px] font-semibold text-ui-gray">Logo {i + 1}</span>
+              </button>
+              {showSizeFields && (
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Largo (cm)" value={dims.largo} onChange={(v) => onLogoSizeCmChange(logo.id, { largo: v })} />
                   <Field label="Alto (cm)" value={dims.alto} onChange={(v) => onLogoSizeCmChange(logo.id, { alto: v })} />
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -147,6 +198,8 @@ export default function TechniqueDetailCard({
   logosByView,
   logoSizeCm,
   onLogoSizeCmChange,
+  selectedElementId,
+  onSelectLogo,
   tintas,
   onTintasChange,
   onRemove,
@@ -157,6 +210,12 @@ export default function TechniqueDetailCard({
   logosByView: { view: ViewName; viewLabel: string; logos: DesignElement[] }[];
   logoSizeCm: Record<string, { largo: string; alto: string }>;
   onLogoSizeCmChange: (elementId: string, patch: Partial<{ largo: string; alto: string }>) => void;
+  // Qué elemento está seleccionado ahora mismo en el canvas -- resalta su
+  // panel aquí (ver PositionGroup) cuando coincide, para que el resaltado
+  // funcione en los dos sentidos: clic en el panel selecciona en el
+  // canvas, y clic en el canvas resalta el panel correcto.
+  selectedElementId: string | null;
+  onSelectLogo: (view: ViewName, elementId: string) => void;
   tintas: string;
   onTintasChange: (v: string) => void;
   onRemove: () => void;
@@ -196,11 +255,14 @@ export default function TechniqueDetailCard({
           {logosByView.map((g) => (
             <PositionGroup
               key={g.view}
+              view={g.view}
               viewLabel={g.viewLabel}
               logos={g.logos}
               showSizeFields={showSizeFields}
               logoSizeCm={logoSizeCm}
               onLogoSizeCmChange={onLogoSizeCmChange}
+              selectedElementId={selectedElementId}
+              onSelectLogo={onSelectLogo}
             />
           ))}
         </div>
