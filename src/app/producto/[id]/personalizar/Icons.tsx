@@ -74,6 +74,63 @@ export function GarmentTabIcon({ className = "" }: { className?: string }) {
   );
 }
 
+// Iconos de las pestañas de eje (Frente/Reverso/Izquierda/Derecha/Funda,
+// ver ViewName en types.ts) -- antes las 5 reusaban GarmentTabIcon (una
+// prenda), que no tenía sentido para "Funda" ni para ejes de un producto
+// que no es ropa (ej. Tapete de Yoga Minsk) -- pedido explícito: un ícono
+// propio por eje. Como "frente"/"reverso" de un producto cualquiera (no
+// solo prendas) son visualmente casi imposibles de distinguir como
+// silueta (un rectángulo se ve igual de frente que de reverso), el
+// lenguaje aquí es de ORIENTACIÓN, no de silueta de prenda -- mismo
+// criterio que ya usan configuradores de producto reales: un plano visto
+// de frente, ese mismo plano con una flecha de giro (reverso), un perfil
+// angosto con flecha lateral (izquierda/derecha), y una bolsa con asa
+// para "funda" (forma completamente distinta, nunca un plano).
+export function FrenteTabIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round">
+      <rect x="5" y="4" width="14" height="16" rx="2.5" />
+    </svg>
+  );
+}
+
+export function ReversoTabIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round" strokeLinecap="round">
+      <rect x="4" y="4" width="13" height="16" rx="2.5" />
+      <path d="M17.5 7.3a4.5 4.5 0 1 1-1 5" />
+      <path d="M20.5 5.5v3.2h-3.2" />
+    </svg>
+  );
+}
+
+export function IzquierdaTabIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round" strokeLinecap="round">
+      <rect x="10" y="4" width="8" height="16" rx="2.2" />
+      <path d="M6.5 9 3.5 12l3 3" />
+    </svg>
+  );
+}
+
+export function DerechaTabIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round" strokeLinecap="round">
+      <rect x="6" y="4" width="8" height="16" rx="2.2" />
+      <path d="M17.5 9l3 3-3 3" />
+    </svg>
+  );
+}
+
+export function FundaTabIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round" strokeLinecap="round">
+      <path d="M8.5 9.5V8a3.5 3.5 0 0 1 7 0v1.5" />
+      <rect x="5" y="9.5" width="14" height="10.5" rx="3" />
+    </svg>
+  );
+}
+
 export function CartIcon({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">

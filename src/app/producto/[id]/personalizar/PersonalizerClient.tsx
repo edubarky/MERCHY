@@ -44,10 +44,25 @@ import {
   UndoIcon,
   RedoIcon,
   ArrowRightIcon,
-  GarmentTabIcon,
+  FrenteTabIcon,
+  ReversoTabIcon,
+  IzquierdaTabIcon,
+  DerechaTabIcon,
+  FundaTabIcon,
   EyeIcon,
   SparkleIcon,
 } from "./Icons";
+
+// Qué ícono le toca a cada pestaña de eje -- ver el comentario junto a
+// estos componentes en Icons.tsx (por qué ya no reusan un solo ícono de
+// prenda genérico para las 5).
+const VIEW_TAB_ICON: Record<ViewName, typeof FrenteTabIcon> = {
+  frente: FrenteTabIcon,
+  reverso: ReversoTabIcon,
+  izquierda: IzquierdaTabIcon,
+  derecha: DerechaTabIcon,
+  funda: FundaTabIcon,
+};
 
 interface Props {
   product: Product & { variants: ProductVariant[] };
@@ -877,6 +892,7 @@ export default function PersonalizerClient({
             <div className="flex items-center gap-8">
               {applicableViews.map((v) => {
                 const active = activeView === v;
+                const TabIcon = VIEW_TAB_ICON[v];
                 return (
                   <button
                     key={v}
@@ -890,7 +906,7 @@ export default function PersonalizerClient({
                       active ? "border-primary" : "border-transparent"
                     }`}
                   >
-                    <GarmentTabIcon className={`h-4 w-4 transition-colors duration-200 ${active ? "text-primary" : "text-ui-gray"}`} />
+                    <TabIcon className={`h-4 w-4 transition-colors duration-200 ${active ? "text-primary" : "text-ui-gray"}`} />
                     <span className={`text-sm font-semibold transition-colors duration-200 ${active ? "text-foreground" : "text-ui-gray"}`}>
                       {VIEW_LABELS[v]}
                     </span>
