@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { Product, ProductVariant, PriceTier } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 import { VIEW_ORDER, normalizeGarmentColorName, type ResolvedProductAssets, type GarmentColor } from "./personalizar/types";
-import { normalizeProductKey, isGarmentProduct } from "./personalizar/printAreas";
+import { normalizeProductKey } from "./personalizar/printAreas";
 
 interface Props {
   product: Product & { variants: ProductVariant[] };
@@ -57,6 +57,13 @@ const PRODUCT_SIZE_GUIDES: Record<string, string> = {
   // funda -- el Tapete de Yoga Minsk no la tenía porque esa medida no se
   // había dado todavía).
   "tapete century": "/Home/PAG 3/GUÍA DE TALLAS - TAPETE CENTURY.svg",
+  // Set de ejercicio Bor: no es una sola superficie plana (banda +
+  // cuerda + bolso), así que en vez del diagrama con callouts A/B es una
+  // tabla simple, un renglón por artículo real -- 30×5 cm la banda
+  // elástica, 3 m la cuerda (ambas medidas de la descripción real del
+  // producto). El bolso de malla no trae medida propia dada -- se
+  // menciona solo como nota, nunca se inventa un número para él.
+  "set de ejercicio bor": "/Home/PAG 3/MEDIDAS - SET DE EJERCICIO BOR.svg",
 };
 const DEFAULT_SIZE_GUIDE = "/Home/PAG 3/GUÍA DE TALLAS.svg";
 
@@ -880,12 +887,17 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // printAreas.ts: se agrega aquí a mano cuando el usuario confirma que la
   // galería real es la que debe ganar.
   const preferRealGallery = PRODUCTS_PREFERRING_REAL_GALLERY.has(normalizeProductKey(product.name));
-  const sizeGuideSrc = PRODUCT_SIZE_GUIDES[normalizeProductKey(product.name)] ?? DEFAULT_SIZE_GUIDE;
+  const customSizeGuide = PRODUCT_SIZE_GUIDES[normalizeProductKey(product.name)];
+  const sizeGuideSrc = customSizeGuide ?? DEFAULT_SIZE_GUIDE;
   // "Guía de Tallas" solo tiene sentido cuando hay tallas reales entre
-  // las que elegir (ropa) -- un tapete no tiene "talla", tiene medidas.
-  // Reusa isGarmentProduct (misma fuente de verdad que ya decide íconos
-  // de eje en el Personalizador) en vez de otra lista aparte.
-  const sizeGuideLabel = isGarmentProduct(product.name) ? "Guía de Tallas" : "Medidas";
+  // las que elegir (ropa) -- un producto sin talla (un tapete, un set de
+  // ejercicio) tiene medidas, no tallas. Se deriva de si este producto
+  // tiene su propio editable en PRODUCT_SIZE_GUIDES -- no de
+  // isGarmentProduct (esa decide los ejes/íconos del Personalizador, un
+  // criterio aparte: un producto puede necesitar "Medidas" aquí sin que
+  // todavía se le haya definido nada en el Personalizador, como Set de
+  // ejercicio Bor por ahora).
+  const sizeGuideLabel = customSizeGuide ? "Medidas" : "Guía de Tallas";
   const selectedColorKey = selectedVariant ? normalizeGarmentColorName(selectedVariant.color_name) : null;
   const ejesForColor =
     selectedColorKey && !preferRealGallery

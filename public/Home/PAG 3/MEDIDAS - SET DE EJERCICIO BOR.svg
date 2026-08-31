@@ -1,0 +1,23 @@
+<svg width="423" height="360" viewBox="0 0 423 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="423" height="360" rx="33" fill="#F8F7F9"/>
+
+  <text x="211.5" y="54" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="26" font-weight="700" fill="#1A1A1A">Medidas</text>
+  <text x="211.5" y="78" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#868686">Set de ejercicio Bor</text>
+
+  <!-- Tabla: un renglón por artículo real del set -->
+  <rect x="45" y="110" width="333" height="150" rx="16" fill="#FFFFFF" stroke="#E4E4E4"/>
+  <text x="71" y="139" text-anchor="start" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#868686">ARTÍCULO</text>
+  <text x="295" y="139" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#868686">MEDIDA</text>
+  <line x1="61" y1="154" x2="362" y2="154" stroke="#E4E4E4"/>
+
+  <text x="71" y="184" text-anchor="start" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#1A1A1A">Banda elástica</text>
+  <text x="295" y="184" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#57E0D9">30 × 5 cm</text>
+
+  <line x1="71" y1="204" x2="352" y2="204" stroke="#F0EFF1"/>
+
+  <text x="71" y="234" text-anchor="start" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#1A1A1A">Cuerda</text>
+  <text x="295" y="234" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#57E0D9">3 m</text>
+
+  <text x="211.5" y="290" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="12" fill="#868686">Incluye bolso de malla con cordón</text>
+  <text x="211.5" y="308" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="12" fill="#868686">y broche de seguridad</text>
+</svg>
