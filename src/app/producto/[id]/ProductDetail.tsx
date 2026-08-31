@@ -37,6 +37,17 @@ interface Review {
 // mano solo cuando el usuario confirma que la galería real es mejor.
 const PRODUCTS_PREFERRING_REAL_GALLERY = new Set(["tapete de yoga minsk"]);
 
+// "Guía de Tallas" por defecto es la tabla de prenda (Ancho/Largo/Manga,
+// XS-XXXL) -- no aplica a un producto que no es ropa. Un producto agregado
+// aquí a mano (mismo criterio explícito de siempre, nunca inferido de la
+// categoría) usa su propio editable en vez de esa tabla genérica. Tapete
+// de Yoga Minsk: mismo lenguaje visual (tarjeta redondeada, callouts A/B),
+// pero con las medidas reales del tapete extendido en vez de una talla.
+const PRODUCT_SIZE_GUIDES: Record<string, string> = {
+  "tapete de yoga minsk": "/Home/PAG 3/GUÍA DE TALLAS - TAPETE.svg",
+};
+const DEFAULT_SIZE_GUIDE = "/Home/PAG 3/GUÍA DE TALLAS.svg";
+
 // Reseñas de muestra — no persisten en base de datos; viven en estado del cliente.
 const REVIEWS_SEED: Review[] = [
   { id: "seed-1", name: "Juan Pérez", rating: 5, comment: "Excelente producto. Muy buena calidad y envío rápido.", date: new Date("2026-06-10") },
@@ -808,6 +819,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // printAreas.ts: se agrega aquí a mano cuando el usuario confirma que la
   // galería real es la que debe ganar.
   const preferRealGallery = PRODUCTS_PREFERRING_REAL_GALLERY.has(normalizeProductKey(product.name));
+  const sizeGuideSrc = PRODUCT_SIZE_GUIDES[normalizeProductKey(product.name)] ?? DEFAULT_SIZE_GUIDE;
   const selectedColorKey = selectedVariant ? normalizeGarmentColorName(selectedVariant.color_name) : null;
   const ejesForColor =
     selectedColorKey && !preferRealGallery
@@ -893,9 +905,17 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers);
   const totalPrice = unitPrice * quantity;
   // 1 pieza ya es una cantidad válida y completa por sí sola: la sección
-  // de tallas se muestra siempre que el producto maneje tallas y
-  // Personalizar está disponible desde el primer render.
-  const showSizes = sizes.length > 0;
+  // de tallas se muestra siempre que el producto maneje MÁS DE UNA talla
+  // real entre las que elegir -- un producto con una sola talla ("Único",
+  // ej. Tapete de Yoga Minsk) no tiene nada que distribuir (repartir 1
+  // pieza entre 1 sola talla es siempre la misma pieza), así que la
+  // sección completa se oculta. El stepper de "2. Selecciona Cantidad"
+  // arriba sigue funcionando exactamente igual sin esta sección --
+  // incrementMainQuantity/decrementMainQuantity/setMainQuantity ya
+  // escriben directamente en sizes[0] (la única talla), que es la misma
+  // fuente de verdad (sizeQuantities) de siempre. Personalizar está
+  // disponible desde el primer render.
+  const showSizes = sizes.length > 1;
   const canPersonalize = true;
   // Talla que absorbe los +/- del selector superior de cantidad: la
   // primera talla de la primera sección visible. Al bajar, se descuenta
@@ -1157,7 +1177,13 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                 <p className="text-sm font-semibold text-foreground">
                   1. Selecciona Color: <span className="font-normal text-ui-gray">{selectedVariant?.color_name}</span>
                 </p>
-                <MulticolorSwitch checked={multicolor} pulse={colorPulse} onToggle={toggleMulticolor} />
+                {/* Un producto de un solo color no tiene nada que combinar --
+                    el switch "Multicolor" (elegir varios colores a la vez
+                    para personalizar cada uno por separado) no tiene sentido
+                    sin al menos una segunda opción. */}
+                {activeVariants.length > 1 && (
+                  <MulticolorSwitch checked={multicolor} pulse={colorPulse} onToggle={toggleMulticolor} />
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 {activeVariants.map((v, i) => {
@@ -1425,7 +1451,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
       <InfoModal
         open={sizeGuideOpen}
         onClose={() => setSizeGuideOpen(false)}
-        imgSrc="/Home/PAG 3/GUÍA DE TALLAS.svg"
+        imgSrc={sizeGuideSrc}
         alt="Guía de tallas"
       />
       <PriceRangeModal
