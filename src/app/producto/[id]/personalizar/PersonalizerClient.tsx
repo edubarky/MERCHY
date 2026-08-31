@@ -170,6 +170,13 @@ export default function PersonalizerClient({
 }: Props) {
   const [activeView, setActiveView] = useState<ViewName>("frente");
   const [filesTabView, setFilesTabView] = useState<ViewName>("frente");
+  // Qué orientación de la funda usar cuando se hace clic en la pestaña
+  // agrupada "Funda" (ver tabGroups abajo) -- pedido explícito: la
+  // pestaña de arriba vuelve a ser una sola "Funda" (como antes de
+  // separarla en dos), y Horizontal/Vertical se elige con un control
+  // aparte, sutil, debajo. Recuerda la última orientación elegida en vez
+  // de resetear siempre a la misma.
+  const [fundaOrientation, setFundaOrientation] = useState<ViewName>("fundaHorizontal");
   const [elements, setElements] = useState<ViewElements>(emptyViewElements());
   const [history, setHistory] = useState<ViewElements[]>([emptyViewElements()]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -313,6 +320,28 @@ export default function PersonalizerClient({
   // catálogo sigue viendo los 4 de siempre, sin cambio de comportamiento.
   const applicableViews = getApplicableViews(product.name);
   const tabIconMap = isGarmentProduct(product.name) ? VIEW_TAB_ICON_GARMENT : VIEW_TAB_ICON;
+
+  // Las pestañas que se MUESTRAN agrupan fundaHorizontal/fundaVertical en
+  // una sola "Funda" -- pedido explícito ("solo quiero la parte de Funda
+  // como estaba antes"). Cada eje que no es de funda sigue siendo su
+  // propia pestaña de siempre, sin cambio (esto no afecta a ningún
+  // producto que no tenga ejes de funda). El eje real que le toca a esa
+  // pestaña agrupada lo decide fundaOrientation (ver el toggle Horizontal/
+  // Vertical debajo del canvas).
+  const tabGroups: { key: string; label: string; icon: typeof FrenteTabIcon; views: ViewName[] }[] = [];
+  for (const v of applicableViews) {
+    if (v === "fundaHorizontal" || v === "fundaVertical") {
+      let group = tabGroups.find((g) => g.key === "funda");
+      if (!group) {
+        group = { key: "funda", label: "Funda", icon: tabIconMap.fundaHorizontal, views: [] };
+        tabGroups.push(group);
+      }
+      group.views.push(v);
+    } else {
+      tabGroups.push({ key: v, label: VIEW_LABELS[v], icon: tabIconMap[v], views: [v] });
+    }
+  }
+  const isFundaViewActive = activeView === "fundaHorizontal" || activeView === "fundaVertical";
 
   const asset = VIEW_ASSETS[activeView];
   // Único eje que este Personalizador carga para la vista activa: el del
@@ -908,16 +937,22 @@ export default function PersonalizerClient({
         <div className="relative rounded-[24px] bg-white p-8 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
           <div className="mb-8 flex items-center justify-between">
             <div className="flex items-center gap-8">
-              {applicableViews.map((v) => {
-                const active = activeView === v;
-                const TabIcon = tabIconMap[v];
+              {tabGroups.map((group) => {
+                const active = group.views.includes(activeView);
+                const TabIcon = group.icon;
+                // Pestaña de un solo eje: activa ese eje directo, igual
+                // que siempre. Pestaña agrupada ("Funda", 2 ejes):
+                // activa la orientación recordada en fundaOrientation --
+                // el Horizontal/Vertical real se elige con el toggle
+                // debajo del canvas, no aquí arriba.
+                const target = group.views.length > 1 ? fundaOrientation : group.views[0];
                 return (
                   <button
-                    key={v}
+                    key={group.key}
                     type="button"
                     onClick={() => {
-                      setActiveView(v);
-                      setFilesTabView(v);
+                      setActiveView(target);
+                      setFilesTabView(target);
                       setSelectedId(null);
                     }}
                     className={`flex items-center gap-2 border-b-[3px] pb-3 transition-all duration-200 ease-out ${
@@ -926,7 +961,7 @@ export default function PersonalizerClient({
                   >
                     <TabIcon className={`h-4 w-4 transition-colors duration-200 ${active ? "text-primary" : "text-ui-gray"}`} />
                     <span className={`text-sm font-semibold transition-colors duration-200 ${active ? "text-foreground" : "text-ui-gray"}`}>
-                      {VIEW_LABELS[v]}
+                      {group.label}
                     </span>
                   </button>
                 );
@@ -951,6 +986,36 @@ export default function PersonalizerClient({
               </button>
             </div>
           </div>
+
+          {/* Toggle Horizontal/Vertical -- SOLO aparece con la pestaña
+              agrupada "Funda" activa (ver tabGroups arriba). Sutil (texto
+              pequeño, fondo gris claro) pero entendible (etiquetas
+              explícitas, no solo íconos) -- pedido explícito: la elección
+              de orientación ya no vive arriba como una pestaña más, vive
+              aquí debajo. Cambiar de orientación NUNCA toca `elements` de
+              la otra orientación -- cada una es su propio eje con su
+              propio diseño, exactamente como cambiar de Frente a Reverso. */}
+          {isFundaViewActive && (
+            <div className="mb-5 inline-flex items-center gap-1 rounded-full bg-gray-50 p-1">
+              {(["fundaHorizontal", "fundaVertical"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => {
+                    setFundaOrientation(v);
+                    setActiveView(v);
+                    setFilesTabView(v);
+                    setSelectedId(null);
+                  }}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 ease-out ${
+                    activeView === v ? "bg-white text-foreground shadow-sm" : "text-ui-gray hover:text-foreground"
+                  }`}
+                >
+                  {v === "fundaHorizontal" ? "Horizontal" : "Vertical"}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Barra de colores — SOLO aparece cuando el usuario activó
               "Multicolor" en la página del producto Y eligió más de un
@@ -1022,7 +1087,26 @@ export default function PersonalizerClient({
               // cortado por los bordes del navegador). El navegador reduce
               // altura y ancho juntos manteniendo el aspect ratio al toparse
               // con maxWidth, igual que un <img> con solo un lado fijado.
-              style={{ height: "min(75vh, 720px)", aspectRatio: asset.aspect, maxWidth: "100%" }}
+              //
+              // Un aspect ratio ancho (> 1, hoy solo fundaHorizontal) además
+              // se topa con un segundo tope, más chico (600px en vez de
+              // 100%): con el de arriba solo, el lienzo seguía casi tan
+              // ancho como la tarjeta completa, y como sigue centrado con
+              // flex justify-center, dejaba casi sin margen izquierdo -- ahí
+              // es exactamente donde flota la barra de herramientas
+              // (Texto/Imagen/Capas, ver ToolDockButton arriba), que
+              // terminaba encima de la propia foto en vez de a un lado
+              // (reportado explícitamente: "sin que tenga iconos que
+              // bloqueen"). Con el lienzo más angosto y centrado, le queda
+              // margen real de sobra en ambos lados. Nunca afecta a un eje
+              // con aspect <= 1 (todos los demás, incluida fundaVertical):
+              // esos ya son más angostos que 600px por sí solos, así que
+              // este tope extra nunca llega a aplicar.
+              style={{
+                height: "min(75vh, 720px)",
+                aspectRatio: asset.aspect,
+                maxWidth: asset.aspect > 1 ? "min(100%, 600px)" : "100%",
+              }}
               onMouseDown={(e) => {
                 // react-moveable's own resize/rotate handles live inside this
                 // same canvas div (DesignElementView renders <Moveable> as a
@@ -1204,18 +1288,22 @@ export default function PersonalizerClient({
 
             <div className="mt-5">
               <div className="mb-3 flex gap-6 text-sm">
-                {applicableViews.map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setFilesTabView(v)}
-                    className={`border-b-2 pb-1.5 transition-all duration-200 ease-out ${
-                      filesTabView === v ? "border-primary font-semibold text-foreground" : "border-transparent text-ui-gray hover:text-foreground"
-                    }`}
-                  >
-                    {VIEW_LABELS[v]}
-                  </button>
-                ))}
+                {tabGroups.map((group) => {
+                  const active = group.views.includes(filesTabView);
+                  const target = group.views.length > 1 ? fundaOrientation : group.views[0];
+                  return (
+                    <button
+                      key={group.key}
+                      type="button"
+                      onClick={() => setFilesTabView(target)}
+                      className={`border-b-2 pb-1.5 transition-all duration-200 ease-out ${
+                        active ? "border-primary font-semibold text-foreground" : "border-transparent text-ui-gray hover:text-foreground"
+                      }`}
+                    >
+                      {group.label}
+                    </button>
+                  );
+                })}
               </div>
               {elements[filesTabView].length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-ui-border px-6 py-8 text-center">
