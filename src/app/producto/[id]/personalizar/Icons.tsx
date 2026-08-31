@@ -131,6 +131,63 @@ export function FundaTabIcon({ className = "" }: { className?: string }) {
   );
 }
 
+// Variantes de Frente/Reverso/Izquierda/Derecha PARA PRENDAS -- pedido
+// explícito ("en lo de prendas... iconos referentes a ellas"): en vez del
+// lenguaje de orientación genérico de arriba (plano/flecha de giro/perfil),
+// una prenda de vestir sí tiene una silueta reconocible propia (la misma
+// playera de GarmentTabIcon, ya aprobada) -- usada como base en las 4,
+// diferenciadas de forma real, no decorativa:
+//  - Frente: la silueta con su cuello/escote (la abertura solo se ve por
+//    el frente de una prenda real).
+//  - Reverso: la MISMA silueta pero con el cuello cerrado/liso -- por la
+//    espalda no hay abertura de cuello que dibujar, es la diferencia real
+//    entre frente y espalda de cualquier playera.
+//  - Izquierda/Derecha: la silueta de frente + una flecha lateral pequeña
+//    (mismo lenguaje que IzquierdaTabIcon/DerechaTabIcon) para marcar el
+//    costado sin inventar una silueta de perfil nueva.
+// Escalada al 80% y recentrada (antes ocupaba casi todo el viewBox) para
+// dejarle aire a las flechas de Izquierda/Derecha en la esquina.
+const GARMENT_FRONT_PATH = "M9 4 6 6l-3 3 2.5 2.5L7 10v10h10V10l1.5 1.5L21 9l-3-3-3-2-1 2h-4l-1-2Z";
+const GARMENT_BACK_PATH = "M9 4 6 6l-3 3 2.5 2.5L7 10v10h10V10l1.5 1.5L21 9l-3-3-3-2-6 0Z";
+
+export function FrentePrendaTabIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round">
+      <path d={GARMENT_FRONT_PATH} />
+    </svg>
+  );
+}
+
+export function ReversoPrendaTabIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round">
+      <path d={GARMENT_BACK_PATH} />
+    </svg>
+  );
+}
+
+export function IzquierdaPrendaTabIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round">
+      <g transform="translate(2.4 2.4) scale(0.8)">
+        <path d={GARMENT_FRONT_PATH} />
+      </g>
+      <path d="M4 10.5 1.6 12.7 4 15" strokeWidth={1.5} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function DerechaPrendaTabIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round">
+      <g transform="translate(2.4 2.4) scale(0.8)">
+        <path d={GARMENT_FRONT_PATH} />
+      </g>
+      <path d="M20 10.5l2.4 2.2L20 15" strokeWidth={1.5} strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function CartIcon({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">

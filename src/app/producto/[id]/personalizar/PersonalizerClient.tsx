@@ -27,7 +27,7 @@ import {
   type ResolvedProductAssets,
 } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
-import { getPrintArea, getApplicableViews } from "./printAreas";
+import { getPrintArea, getApplicableViews, isGarmentProduct } from "./printAreas";
 import DesignElementView, { DEFAULT_FONT_SIZE_PX, FONT_SIZE_MIN_PX, FONT_SIZE_MAX_PX } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
 
@@ -49,18 +49,33 @@ import {
   IzquierdaTabIcon,
   DerechaTabIcon,
   FundaTabIcon,
+  FrentePrendaTabIcon,
+  ReversoPrendaTabIcon,
+  IzquierdaPrendaTabIcon,
+  DerechaPrendaTabIcon,
   EyeIcon,
   SparkleIcon,
 } from "./Icons";
 
 // Qué ícono le toca a cada pestaña de eje -- ver el comentario junto a
-// estos componentes en Icons.tsx (por qué ya no reusan un solo ícono de
-// prenda genérico para las 5).
+// estos componentes en Icons.tsx. Dos sets: uno de silueta de prenda real
+// (para el catálogo de ropa, pedido explícito -- "en lo de prendas...
+// iconos referentes a ellas") y uno de orientación genérico (para
+// cualquier otro producto, ej. Tapete de Yoga Minsk, donde una silueta de
+// playera no tiene sentido). "Funda" es igual en los dos -- nunca es un
+// costado de prenda, así que su ícono de bolsa no cambia.
 const VIEW_TAB_ICON: Record<ViewName, typeof FrenteTabIcon> = {
   frente: FrenteTabIcon,
   reverso: ReversoTabIcon,
   izquierda: IzquierdaTabIcon,
   derecha: DerechaTabIcon,
+  funda: FundaTabIcon,
+};
+const VIEW_TAB_ICON_GARMENT: Record<ViewName, typeof FrenteTabIcon> = {
+  frente: FrentePrendaTabIcon,
+  reverso: ReversoPrendaTabIcon,
+  izquierda: IzquierdaPrendaTabIcon,
+  derecha: DerechaPrendaTabIcon,
   funda: FundaTabIcon,
 };
 
@@ -295,6 +310,7 @@ export default function PersonalizerClient({
   // prenda con cuatro costados (ver getApplicableViews). El resto del
   // catálogo sigue viendo los 4 de siempre, sin cambio de comportamiento.
   const applicableViews = getApplicableViews(product.name);
+  const tabIconMap = isGarmentProduct(product.name) ? VIEW_TAB_ICON_GARMENT : VIEW_TAB_ICON;
 
   const asset = VIEW_ASSETS[activeView];
   // Único eje que este Personalizador carga para la vista activa: el del
@@ -892,7 +908,7 @@ export default function PersonalizerClient({
             <div className="flex items-center gap-8">
               {applicableViews.map((v) => {
                 const active = activeView === v;
-                const TabIcon = VIEW_TAB_ICON[v];
+                const TabIcon = tabIconMap[v];
                 return (
                   <button
                     key={v}

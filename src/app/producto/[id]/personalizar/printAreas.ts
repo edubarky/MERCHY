@@ -138,3 +138,15 @@ export function getApplicableViews(productName: string): ViewName[] {
   const key = normalizeProductKey(productName);
   return PRODUCT_APPLICABLE_VIEWS[key] ?? DEFAULT_APPLICABLE_VIEWS;
 }
+
+// Es "prenda de vestir" (para elegir el set de íconos de las pestañas de
+// eje, ver PersonalizerClient.tsx) exactamente cuando este producto usa
+// los 4 costados clásicos de siempre, sin acotar ni sumar "funda" -- se
+// deriva de getApplicableViews en vez de mantener una segunda lista
+// aparte: un producto que necesitó su propio PRODUCT_APPLICABLE_VIEWS
+// (como Tapete de Yoga Minsk) ya dejó de comportarse como una prenda
+// estándar, así que tampoco debe verse como una en los íconos.
+export function isGarmentProduct(productName: string): boolean {
+  const views = getApplicableViews(productName);
+  return views.length === 4 && !views.includes("funda");
+}
