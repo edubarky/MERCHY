@@ -140,15 +140,15 @@ const PRODUCT_APPLICABLE_VIEWS: Record<string, ViewName[]> = {
   "tapete de yoga minsk": ["frente", "reverso", "fundaHorizontal", "fundaVertical"],
   // Tapete Century: mismo criterio que el Tapete de Yoga Minsk (producto
   // plano, sin costados que imprimir) -- también incluye "funda con
-  // cordón para cierre de jareta y correa" según su descripción real,
-  // pero hoy solo hay foto de Frente (ni Reverso ni Funda todavía, pedido
-  // explícito: arrancar solo con lo que ya existe). Reverso se deja
-  // igual -- sin foto muestra el mismo estado vacío de siempre, listo
-  // para cuando llegue -- pero funda NO se agrega aún: sin ninguna foto
-  // ni confirmación de cómo se va a estructurar (una sola vista u
-  // horizontal/vertical como el otro tapete), agregarla ahora sería
-  // adivinar.
-  "tapete century": ["frente", "reverso"],
+  // cordón para cierre de jareta y correa" según su descripción real.
+  // Ya con las 3 fotos reales (Frente/Reverso/Funda, cada una en Azul,
+  // Negro y Rosa) -- pero a diferencia del otro tapete, aquí solo hay UNA
+  // foto de funda por color (sin horizontal/vertical), así que usa nada
+  // más fundaVertical, sin su par fundaHorizontal -- eso es justo lo que
+  // hace que PersonalizerClient nunca muestre el toggle Horizontal/
+  // Vertical para este producto (ver isFundaViewActive: solo aparece
+  // cuando el producto ofrece las DOS orientaciones).
+  "tapete century": ["frente", "reverso", "fundaVertical"],
 };
 
 export function getApplicableViews(productName: string): ViewName[] {

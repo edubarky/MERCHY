@@ -341,7 +341,15 @@ export default function PersonalizerClient({
       tabGroups.push({ key: v, label: VIEW_LABELS[v], icon: tabIconMap[v], views: [v] });
     }
   }
-  const isFundaViewActive = activeView === "fundaHorizontal" || activeView === "fundaVertical";
+  // El toggle Horizontal/Vertical (ver más abajo) solo tiene sentido
+  // cuando el producto de verdad ofrece las DOS orientaciones -- un
+  // producto con una sola foto de funda (ej. Tapete Century, solo
+  // "fundaVertical") nunca debe mostrar un toggle ofreciendo una segunda
+  // opción que no existe. `isFundaViewActive` ya no basta por sí solo
+  // (activeView podría ser "fundaVertical" igual con una sola orientación
+  // disponible).
+  const hasBothFundaOrientations = applicableViews.includes("fundaHorizontal") && applicableViews.includes("fundaVertical");
+  const isFundaViewActive = hasBothFundaOrientations && (activeView === "fundaHorizontal" || activeView === "fundaVertical");
 
   const asset = VIEW_ASSETS[activeView];
   // Único eje que este Personalizador carga para la vista activa: el del
