@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { Product, ProductVariant, PriceTier } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 import { VIEW_ORDER, normalizeGarmentColorName, type ResolvedProductAssets, type GarmentColor } from "./personalizar/types";
-import { normalizeProductKey } from "./personalizar/printAreas";
+import { normalizeProductKey, isGarmentProduct } from "./personalizar/printAreas";
 
 interface Props {
   product: Product & { variants: ProductVariant[] };
@@ -832,6 +832,11 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // galería real es la que debe ganar.
   const preferRealGallery = PRODUCTS_PREFERRING_REAL_GALLERY.has(normalizeProductKey(product.name));
   const sizeGuideSrc = PRODUCT_SIZE_GUIDES[normalizeProductKey(product.name)] ?? DEFAULT_SIZE_GUIDE;
+  // "Guía de Tallas" solo tiene sentido cuando hay tallas reales entre
+  // las que elegir (ropa) -- un tapete no tiene "talla", tiene medidas.
+  // Reusa isGarmentProduct (misma fuente de verdad que ya decide íconos
+  // de eje en el Personalizador) en vez de otra lista aparte.
+  const sizeGuideLabel = isGarmentProduct(product.name) ? "Guía de Tallas" : "Medidas";
   const selectedColorKey = selectedVariant ? normalizeGarmentColorName(selectedVariant.color_name) : null;
   const ejesForColor =
     selectedColorKey && !preferRealGallery
@@ -1171,7 +1176,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
             </div>
             <div className="flex-1 flex flex-col gap-3">
               <InfoLink icon={<DocIcon />} label="Ficha técnica" />
-              <InfoLink icon={<RulerIcon />} label="Guía de Tallas" onClick={() => setSizeGuideOpen(true)} />
+              <InfoLink icon={<RulerIcon />} label={sizeGuideLabel} onClick={() => setSizeGuideOpen(true)} />
               <InfoLink
                 icon={<TagIcon />}
                 label="Rango de precios"
@@ -1464,7 +1469,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         open={sizeGuideOpen}
         onClose={() => setSizeGuideOpen(false)}
         imgSrc={sizeGuideSrc}
-        alt="Guía de tallas"
+        alt={sizeGuideLabel}
       />
       <PriceRangeModal
         open={quantityDiscountOpen}
