@@ -84,18 +84,22 @@ export function emptyViewElements(): ViewElements {
 // ---- Per-product real photography (blanco/negro + per-product extra colors) ----
 
 // "blanco"/"negro" are resolved generically for EVERY product (see
-// resolveProductAssets.ts's flat-file scan). The 4 extra colors are
-// currently only ever resolved for Sudadera Ocean specifically (see that
-// same file's Sudadera-Ocean-only subfolder scan) — for every other
-// product they simply stay null, same as blanco/negro would if that
-// product had no matching photos. Widening this type does not change
-// behavior for any other product: GarmentColor is only ever the color the
+// resolveProductAssets.ts's flat-file scan). "royal"/"marino"/"rojo"/
+// "gris" are currently only ever resolved for Sudadera Ocean
+// specifically (see that same file's Sudadera-Ocean-only subfolder
+// scan); "azul"/"rosa" were added for Tapete Century (its real variant
+// colors — see detectColor in resolveProductAssets.ts, which needed its
+// own explicit AZUL/ROSA check the same way it already had BLANCO/NEGRO,
+// since neither is inferred automatically). For every other product any
+// of these simply stay null, same as blanco/negro would if that product
+// had no matching photos. Widening this type does not change behavior
+// for any other product: GarmentColor is only ever the color the
 // customer already picked on the product page (see
 // normalizeGarmentColorName below) — there is no selector inside the
 // Personalizador itself.
-export type GarmentColor = "blanco" | "negro" | "royal" | "marino" | "rojo" | "gris";
+export type GarmentColor = "blanco" | "negro" | "royal" | "marino" | "rojo" | "gris" | "azul" | "rosa";
 
-export const GARMENT_COLORS: GarmentColor[] = ["blanco", "negro", "royal", "marino", "rojo", "gris"];
+export const GARMENT_COLORS: GarmentColor[] = ["blanco", "negro", "royal", "marino", "rojo", "gris", "azul", "rosa"];
 
 // Maps a real product_variants.color_name (Supabase — "Blanco", "Negro",
 // "Royal", "Marino", "Rojo " [note: has a trailing space in the real row],
@@ -121,7 +125,7 @@ export type ResolvedViewAsset = Record<GarmentColor, string | null>;
 export type ResolvedProductAssets = Record<ViewName, ResolvedViewAsset>;
 
 function emptyResolvedViewAsset(): ResolvedViewAsset {
-  return { blanco: null, negro: null, royal: null, marino: null, rojo: null, gris: null };
+  return { blanco: null, negro: null, royal: null, marino: null, rojo: null, gris: null, azul: null, rosa: null };
 }
 
 export function emptyResolvedAssets(): ResolvedProductAssets {

@@ -35,7 +35,14 @@ interface Review {
 // Nombre exacto del producto (mismo normalizeProductKey tolerante que
 // PRODUCT_PRINT_AREAS/getApplicableViews en printAreas.ts), agregado a
 // mano solo cuando el usuario confirma que la galería real es mejor.
-const PRODUCTS_PREFERRING_REAL_GALLERY = new Set(["tapete de yoga minsk"]);
+// Tapete Century: mismo caso que el Tapete de Yoga Minsk -- sus "ejes"
+// hoy son solo 1 foto de Frente por color (fondo del Personalizador),
+// mientras que product_variants.images ya trae 2 fotos reales por color
+// (Azul/Rosa/Negro). Sin este override, arreglar el reconocimiento de
+// esos dos colores (ver detectColor en resolveProductAssets.ts) haría
+// que la ficha sustituyera esas 2 fotos reales por la única de Frente --
+// la misma regresión ya detectada y corregida una vez con el otro tapete.
+const PRODUCTS_PREFERRING_REAL_GALLERY = new Set(["tapete de yoga minsk", "tapete century"]);
 
 // "Guía de Tallas" por defecto es la tabla de prenda (Ancho/Largo/Manga,
 // XS-XXXL) -- no aplica a un producto que no es ropa. Un producto agregado

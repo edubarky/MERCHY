@@ -146,6 +146,14 @@ function detectView(nameUpper: string): ViewName | null {
 function detectColor(baseNoExtUpper: string): GarmentColor | null {
   if (baseNoExtUpper.includes("BLANCO") || baseNoExtUpper.includes("WHITE")) return "blanco";
   if (baseNoExtUpper.includes("NEGRO") || baseNoExtUpper.includes("BLACK")) return "negro";
+  // AZUL/ROSA: agregados para Tapete Century (sus 3 archivos reales son
+  // "FRENTE AZUL.png"/"FRENTE NEGRO.png"/"FRENTE ROSA_.png" -- sin esto,
+  // AZUL/ROSA no calzaban con ningún caso de arriba ni con el fallback de
+  // B/N de abajo, así que se trataban como "sin color" y el catch-all de
+  // colorless (ver el loop principal) le asignaba a "rosa" la MISMA foto
+  // que a "azul" -- un bug real, confirmado antes de escribir esto.
+  if (baseNoExtUpper.includes("AZUL") || baseNoExtUpper.includes("BLUE")) return "azul";
+  if (baseNoExtUpper.includes("ROSA") || baseNoExtUpper.includes("PINK")) return "rosa";
   const tokens = baseNoExtUpper.split(/[\s_-]+/).filter(Boolean);
   const last = tokens[tokens.length - 1];
   if (last === "B") return "blanco";

@@ -138,6 +138,17 @@ const DEFAULT_APPLICABLE_VIEWS: ViewName[] = VIEW_ORDER.filter(
 // cliente debe poder elegir con cuál personalizar (pedido explícito).
 const PRODUCT_APPLICABLE_VIEWS: Record<string, ViewName[]> = {
   "tapete de yoga minsk": ["frente", "reverso", "fundaHorizontal", "fundaVertical"],
+  // Tapete Century: mismo criterio que el Tapete de Yoga Minsk (producto
+  // plano, sin costados que imprimir) -- también incluye "funda con
+  // cordón para cierre de jareta y correa" según su descripción real,
+  // pero hoy solo hay foto de Frente (ni Reverso ni Funda todavía, pedido
+  // explícito: arrancar solo con lo que ya existe). Reverso se deja
+  // igual -- sin foto muestra el mismo estado vacío de siempre, listo
+  // para cuando llegue -- pero funda NO se agrega aún: sin ninguna foto
+  // ni confirmación de cómo se va a estructurar (una sola vista u
+  // horizontal/vertical como el otro tapete), agregarla ahora sería
+  // adivinar.
+  "tapete century": ["frente", "reverso"],
 };
 
 export function getApplicableViews(productName: string): ViewName[] {
