@@ -118,6 +118,17 @@ const VIEW_GROUP_DEFS: { key: string; label: string; views: ViewName[]; subLabel
   },
 ];
 
+// Regla general vigente (pedido explícito): solo se puede elegir UNA
+// técnica de impresión por cotización a la vez. La lógica de selección
+// MÚLTIPLE se deja completa y funcionando debajo de esta bandera --
+// selectedTechniqueIds sigue siendo un arreglo, techniqueResults/
+// logosByView/el resumen del carrito ya saben sumar varias técnicas a la
+// vez, TechniqueDetailCard ya sabe mostrar varias tarjetas apiladas --
+// nada de eso se tocó ni se borró. Reactivar el multi-select más
+// adelante ("por si nos llegan a solicitar ese cambio") es cambiar este
+// único valor a `true`, no reconstruir la selección múltiple desde cero.
+const ALLOW_MULTIPLE_TECHNIQUES = false;
+
 interface Props {
   product: Product & { variants: ProductVariant[] };
   priceTiers: PriceTier[];
@@ -776,7 +787,18 @@ export default function PersonalizerClient({
   }
 
   function toggleTechnique(id: string) {
-    setSelectedTechniqueIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSelectedTechniqueIds((prev) => {
+      // Quitar la técnica ya elegida (el botón "quitar" de su propia
+      // tarjeta, o volver a hacer clic en su card) se comporta exactamente
+      // igual con o sin ALLOW_MULTIPLE_TECHNIQUES -- deja la selección
+      // vacía, nunca "la anterior a esta".
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      // Elegir una técnica nueva: con la regla de una sola técnica
+      // (default hoy) reemplaza cualquier selección previa en vez de
+      // sumarse a ella -- clic en Serigrafía con DTF UV ya elegido acaba
+      // en [Serigrafía], no en [DTF UV, Serigrafía].
+      return ALLOW_MULTIPLE_TECHNIQUES ? [...prev, id] : [id];
+    });
   }
 
   // Único punto que cambia la cantidad real -- lo usan tanto los botones
