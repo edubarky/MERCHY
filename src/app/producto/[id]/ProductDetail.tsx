@@ -52,6 +52,11 @@ const PRODUCTS_PREFERRING_REAL_GALLERY = new Set(["tapete de yoga minsk", "tapet
 // pero con las medidas reales del tapete extendido en vez de una talla.
 const PRODUCT_SIZE_GUIDES: Record<string, string> = {
   "tapete de yoga minsk": "/Home/PAG 3/GUÍA DE TALLAS - TAPETE.svg",
+  // Tapete Century: mismo tratamiento, más una segunda tabla para las
+  // medidas reales de su funda (184×62×0.8 cm el tapete, 84×14 cm la
+  // funda -- el Tapete de Yoga Minsk no la tenía porque esa medida no se
+  // había dado todavía).
+  "tapete century": "/Home/PAG 3/GUÍA DE TALLAS - TAPETE CENTURY.svg",
 };
 const DEFAULT_SIZE_GUIDE = "/Home/PAG 3/GUÍA DE TALLAS.svg";
 
