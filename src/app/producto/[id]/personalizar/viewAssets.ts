@@ -46,4 +46,16 @@ export const VIEW_ASSETS: Record<ViewName, ViewAsset> = {
       heightPct: (29 / 578) * 100,
     },
   },
+  // "funda" (ver ViewName): sin mockup genérico propio -- src/printArea de
+  // aquí nunca se renderizan de todos modos (ver la nota de PersonalizerClient
+  // sobre asset.src/asset.printArea), así que reutilizan el SVG de frente
+  // solo para no dejar el campo vacío. `aspect` es lo único real que se usa
+  // (el alto/ancho del recuadro del canvas mientras no hay foto real de la
+  // funda todavía) -- placeholder razonable de bolsa/funda en vertical,
+  // pendiente de ajustar con la foto real cuando llegue.
+  funda: {
+    src: "/Home/PERSONALIZADOR/Group 1161.svg",
+    aspect: 3 / 4,
+    printArea: { xPct: 25, yPct: 25, widthPct: 50, heightPct: 50 },
+  },
 };

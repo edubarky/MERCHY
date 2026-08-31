@@ -69,14 +69,18 @@ function findColorSubdir(productDir: string, color: GarmentColor): string | null
 // separated by a space), which is different from the "frente-blanco.png"
 // convention assumed in an earlier pass. A file counts as belonging to a
 // view if its name *contains* that view's keyword (frente/front,
-// reverso/espalda/back, izquierd*/left, derech*/right — matching both
-// masculine and feminine Spanish endings), and its color is whichever of
-// blanco/negro (or b/n as the last whitespace-separated token, or
-// white/black) is present — if none, the file is used for both colors
-// (single-version product, auto color-switch has no visible effect).
-// A product/view with no matching file resolves to null and the
-// Personalizador shows an empty state — there's no generic mockup
-// fallback (removed on purpose, see PersonalizerClient.tsx).
+// reverso/espalda/back, izquierd*/left, derech*/right, funda/bolsa/case),
+// and its color is whichever of blanco/negro (or b/n as the last
+// whitespace-separated token, or white/black) is present — if none, the
+// file is used for EVERY color this product actually has (a real bug,
+// confirmed live on Tapete de Yoga Minsk: its only file is a colorless
+// "FRENTE.png", but the variant is "Gris" — an earlier version of this
+// loop only ever filled the colorless fallback into the blanco/negro
+// slots, so a product whose real color isn't blanco/negro saw "Fotografías
+// no disponibles aún" even though a perfectly good photo existed). A
+// product/view with no matching file at all (colored or colorless)
+// resolves to null and the Personalizador shows an empty state — there's
+// no generic mockup fallback (removed on purpose, see PersonalizerClient.tsx).
 
 const EXTENSIONS = ["png", "webp", "jpg", "jpeg", "svg"];
 const PRODUCTS_ROOT_NAME = "VISTA DE PRODUCTOS";
@@ -92,6 +96,7 @@ const VIEW_STEMS: [ViewName, string[]][] = [
   ["reverso", ["REVERS", "ATRAS", "ESPALDA", "BACK"]],
   ["izquierda", ["IZQUIERD", "LEFT"]], // matches both izquierda/izquierdo
   ["derecha", ["DERECH", "RIGHT"]], // matches both derecha/derecho
+  ["funda", ["FUNDA", "BOLSA", "CASE"]],
 ];
 
 function stripAccents(value: string): string {
@@ -208,14 +213,18 @@ export function resolveProductViewAssets(product: Pick<Product, "id" | "name">):
     log("Vista solicitada:", view);
     const viewMatches = matches.filter((m) => m.view === view);
     const colorless = viewMatches.find((m) => m.color === null);
-    const blanco = viewMatches.find((m) => m.color === "blanco") ?? colorless;
-    const negro = viewMatches.find((m) => m.color === "negro") ?? colorless;
-
-    result[view].blanco = blanco ? toPublicUrl(path.join(baseDir, blanco.file), publicRoot) : null;
-    result[view].negro = negro ? toPublicUrl(path.join(baseDir, negro.file), publicRoot) : null;
-
-    log(`  Imagen cargada — ${view} (blanco):`, blanco ? blanco.file : "no encontrada");
-    log(`  Imagen cargada — ${view} (negro):`, negro ? negro.file : "no encontrada");
+    // Antes esto solo llenaba blanco/negro (ver nota arriba) -- ahora se
+    // resuelve para los 6 colores reales: detectColor solo detecta blanco/
+    // negro desde el propio nombre de archivo, así que para cualquier otro
+    // color (gris, royal, marino, rojo) "explicit" siempre es undefined y
+    // cae directo al colorless, exactamente el comportamiento que ya
+    // describía este mismo comentario ("se usa para todos los colores").
+    for (const color of GARMENT_COLORS) {
+      const explicit = viewMatches.find((m) => m.color === color);
+      const resolved = explicit ?? colorless;
+      result[view][color] = resolved ? toPublicUrl(path.join(baseDir, resolved.file), publicRoot) : null;
+      log(`  Imagen cargada — ${view} (${color}):`, resolved ? resolved.file : "no encontrada");
+    }
   }
 
   // Per-color subfolders, if this product has them (see findColorSubdir

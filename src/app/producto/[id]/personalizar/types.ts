@@ -1,12 +1,22 @@
-export type ViewName = "frente" | "reverso" | "izquierda" | "derecha";
+// "funda" es un eje aparte de los 4 costados de una prenda: la superficie
+// imprimible de un ACCESORIO que trae el propio producto (ej. la funda
+// transportadora del Tapete de Yoga Minsk) -- no todos los productos lo
+// tienen. Qué ejes de esta lista se muestran REALMENTE para un producto
+// dado (nunca los 5 a la fuerza) lo decide getApplicableViews en
+// printAreas.ts, no este archivo -- aquí solo vive la forma completa que
+// puede tomar el estado (ver emptyViewElements/emptyResolvedAssets abajo),
+// para que un producto sin "funda" simplemente nunca tenga nada en ese
+// eje, en vez de necesitar un tipo distinto.
+export type ViewName = "frente" | "reverso" | "izquierda" | "derecha" | "funda";
 
-export const VIEW_ORDER: ViewName[] = ["frente", "reverso", "izquierda", "derecha"];
+export const VIEW_ORDER: ViewName[] = ["frente", "reverso", "izquierda", "derecha", "funda"];
 
 export const VIEW_LABELS: Record<ViewName, string> = {
   frente: "Frente",
   reverso: "Reverso",
   izquierda: "Izquierda",
   derecha: "Derecha",
+  funda: "Funda",
 };
 
 export type LogoFileType = "svg" | "png" | "pdf" | "ai";
@@ -62,7 +72,7 @@ export interface DesignElement {
 export type ViewElements = Record<ViewName, DesignElement[]>;
 
 export function emptyViewElements(): ViewElements {
-  return { frente: [], reverso: [], izquierda: [], derecha: [] };
+  return { frente: [], reverso: [], izquierda: [], derecha: [], funda: [] };
 }
 
 // ---- Per-product real photography (blanco/negro + per-product extra colors) ----
@@ -114,5 +124,6 @@ export function emptyResolvedAssets(): ResolvedProductAssets {
     reverso: emptyResolvedViewAsset(),
     izquierda: emptyResolvedViewAsset(),
     derecha: emptyResolvedViewAsset(),
+    funda: emptyResolvedViewAsset(),
   };
 }

@@ -1,5 +1,5 @@
 import { VIEW_ASSETS } from "./viewAssets";
-import type { ViewName } from "./types";
+import { VIEW_ORDER, type ViewName } from "./types";
 
 // Per-product, per-view print-area configuration. Each product/view gets
 // its OWN area — this is not a single shared rectangle. Position/size are
@@ -33,6 +33,7 @@ const DEFAULT_PRINT_AREAS: ProductPrintAreas = {
   reverso: { ...VIEW_ASSETS.reverso.printArea },
   izquierda: { ...VIEW_ASSETS.izquierda.printArea },
   derecha: { ...VIEW_ASSETS.derecha.printArea },
+  funda: { ...VIEW_ASSETS.funda.printArea },
 };
 
 function normalizeProductKey(value: string): string {
@@ -65,6 +66,11 @@ const HOODIE_PRINT_AREAS: ProductPrintAreas = {
   reverso: { xPct: 25, yPct: 32, widthPct: 50, heightPct: 48 },
   izquierda: { xPct: 20, yPct: 23, widthPct: 58, heightPct: 55 },
   derecha: { xPct: 22, yPct: 23, widthPct: 58, heightPct: 55 },
+  // Ninguna sudadera ofrece la pestaña "Funda" (getApplicableViews las deja
+  // en los 4 costados de siempre) -- este valor nunca se lee en la
+  // práctica, solo existe para que ProductPrintAreas (Record<ViewName, ...>)
+  // quede completo.
+  funda: { ...DEFAULT_PRINT_AREAS.funda },
 };
 
 // Category default matchers, checked in order — the first whose keyword
@@ -98,4 +104,37 @@ export function getPrintArea(productName: string, view: ViewName): PrintAreaConf
   if (category) return category.areas[view];
 
   return DEFAULT_PRINT_AREAS[view];
+}
+
+// Los 4 costados clásicos de una prenda -- el default de getApplicableViews
+// para todo el catálogo excepto los productos agregados a mano abajo.
+// Deliberadamente NO es VIEW_ORDER completo: VIEW_ORDER incluye "funda"
+// porque el TIPO de estado (ViewElements/ResolvedProductAssets) siempre
+// tiene que poder representarlo, pero "funda" nunca debe aparecer por
+// default en una prenda de vestir -- solo cuando un producto se agrega
+// aquí explícitamente pidiéndolo.
+const DEFAULT_APPLICABLE_VIEWS: ViewName[] = VIEW_ORDER.filter((v) => v !== "funda");
+
+// Qué ejes ofrece REALMENTE cada producto -- no todo el catálogo es una
+// prenda con cuatro costados. Por defecto (el resto del catálogo, toda
+// prenda de vestir) los cuatro de siempre (DEFAULT_APPLICABLE_VIEWS); un
+// producto agregado aquí a mano -- por su nombre exacto, mismo criterio
+// tolerante que PRODUCT_PRINT_AREAS -- puede acotar a un subconjunto (ej.
+// un tapete plano no tiene izquierda/derecha que imprimir) y/o sumar
+// "funda" cuando el producto en sí incluye un accesorio con su propia
+// superficie imprimible. Nunca se infiere automáticamente de la
+// categoría/nombre del producto -- se agrega uno por uno según lo
+// confirme el usuario, igual que PRODUCT_PRINT_AREAS.
+//
+// Tapete de Yoga Minsk: producto plano (sin costados que imprimir) que
+// además incluye de fábrica una "funda transportadora de poliéster con
+// asa para hombro" (ver su descripción real en Supabase) -- de ahí Frente
+// + Reverso + Funda, pedido explícito del usuario.
+const PRODUCT_APPLICABLE_VIEWS: Record<string, ViewName[]> = {
+  "tapete de yoga minsk": ["frente", "reverso", "funda"],
+};
+
+export function getApplicableViews(productName: string): ViewName[] {
+  const key = normalizeProductKey(productName);
+  return PRODUCT_APPLICABLE_VIEWS[key] ?? DEFAULT_APPLICABLE_VIEWS;
 }

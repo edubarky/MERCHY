@@ -27,7 +27,7 @@ import {
   type ResolvedProductAssets,
 } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
-import { getPrintArea } from "./printAreas";
+import { getPrintArea, getApplicableViews } from "./printAreas";
 import DesignElementView, { DEFAULT_FONT_SIZE_PX, FONT_SIZE_MIN_PX, FONT_SIZE_MAX_PX } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
 
@@ -275,6 +275,11 @@ export default function PersonalizerClient({
   function getViewSrc(view: ViewName, color: GarmentColor): string | null {
     return resolvedAssets[view][color];
   }
+
+  // Qué pestañas de eje mostrar en el canvas -- no todo el catálogo es una
+  // prenda con cuatro costados (ver getApplicableViews). El resto del
+  // catálogo sigue viendo los 4 de siempre, sin cambio de comportamiento.
+  const applicableViews = getApplicableViews(product.name);
 
   const asset = VIEW_ASSETS[activeView];
   // Único eje que este Personalizador carga para la vista activa: el del
@@ -701,8 +706,8 @@ export default function PersonalizerClient({
   }
 
   const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers);
-  const numElements = VIEW_ORDER.reduce((sum, v) => sum + elements[v].length, 0);
-  const allLogoElements = VIEW_ORDER.flatMap((v) => elements[v].filter((e) => e.type === "logo"));
+  const numElements = applicableViews.reduce((sum, v) => sum + elements[v].length, 0);
+  const allLogoElements = applicableViews.flatMap((v) => elements[v].filter((e) => e.type === "logo"));
   const numLogoElements = allLogoElements.length;
   // "Posiciones" (tarjeta de detalle de cada técnica): los ejes reales
   // donde el cliente ya colocó algún LOGO en el canvas, agrupados con
@@ -711,7 +716,7 @@ export default function PersonalizerClient({
   // usan en las pestañas Frente/Reverso/Izquierda/Derecha de arriba. Es
   // el mismo para las 4 vistas sin importar cuál esté activa ahora mismo,
   // porque la técnica aplica al diseño completo, no a una vista.
-  const logosByView = VIEW_ORDER.map((v) => ({
+  const logosByView = applicableViews.map((v) => ({
     view: v,
     viewLabel: VIEW_LABELS[v],
     logos: elements[v].filter((e) => e.type === "logo"),
@@ -870,7 +875,7 @@ export default function PersonalizerClient({
         <div className="relative rounded-[24px] bg-white p-8 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
           <div className="mb-8 flex items-center justify-between">
             <div className="flex items-center gap-8">
-              {VIEW_ORDER.map((v) => {
+              {applicableViews.map((v) => {
                 const active = activeView === v;
                 return (
                   <button
@@ -1157,7 +1162,7 @@ export default function PersonalizerClient({
 
             <div className="mt-5">
               <div className="mb-3 flex gap-6 text-sm">
-                {VIEW_ORDER.map((v) => (
+                {applicableViews.map((v) => (
                   <button
                     key={v}
                     type="button"
