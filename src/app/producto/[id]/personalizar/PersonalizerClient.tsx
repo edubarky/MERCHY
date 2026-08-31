@@ -164,7 +164,15 @@ export default function PersonalizerClient({
   // activePositionLabels más abajo), así que no necesita su propio estado.
   const [selectedTechniqueIds, setSelectedTechniqueIds] = useState<string[]>([]);
   const [techniqueTintas, setTechniqueTintas] = useState<Record<string, string>>({});
-  const [techniqueSizeCm, setTechniqueSizeCm] = useState<Record<string, { largo: string; alto: string }>>({});
+  // Medida por LOGO, no una sola compartida por técnica: técnica -> id de
+  // elemento -> {largo, alto}. Se agrupan visualmente por posición
+  // (Frente/Reverso/Izquierda/Derecha) en la tarjeta, con un panel propio
+  // por cada logo de esa posición -- pedido explícito: "si el usuario
+  // agregó 2 logos en la parte de enfrente, ahí va 2 y se desglosan 2
+  // paneles donde se va a especificar las medidas de largo y ancho".
+  const [techniqueLogoSizeCm, setTechniqueLogoSizeCm] = useState<Record<string, Record<string, { largo: string; alto: string }>>>(
+    {}
+  );
   // El stepper se había quitado de "Resumen del pedido" por pedido
   // explícito -- pero regresa aquí: los tramos de precio por cantidad de
   // la tabla de cada técnica (ej. DTF Textil: 1-9/10-49/50-99/...) dependen
@@ -206,6 +214,15 @@ export default function PersonalizerClient({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef({ history, historyIndex });
   historyRef.current = { history, historyIndex };
+  // Mismo patrón que historyRef -- addElement/updateElement/etc. leen esto
+  // (nunca el `elements` cerrado en el render) para no perder un elemento.
+  // Bug real confirmado: dos subidas rápidas seguidas a la MISMA vista (ej.
+  // 2 logos en Frente) son asíncronas (addAsset sube a Supabase antes de
+  // poder colocarse) -- si la segunda `addElement` corría con el `elements`
+  // capturado en un render viejo (antes de que la primera terminara de
+  // re-renderizar), pisaba el arreglo y el primer logo desaparecía.
+  const elementsRef = useRef(elements);
+  elementsRef.current = elements;
 
   // El/los color(es) de la prenda YA se eligieron en la página del producto
   // (ver ProductDetail.tsx's "1. Selecciona Color" + el switch Multicolor)
@@ -433,7 +450,8 @@ export default function PersonalizerClient({
   }, [activeView, zCounter]);
 
   function addElement(el: DesignElement) {
-    const next = { ...elements, [el.view]: [...elements[el.view], el] };
+    const current = elementsRef.current;
+    const next = { ...current, [el.view]: [...current[el.view], el] };
     commit(next);
     setSelectedId(el.id);
   }
@@ -448,12 +466,13 @@ export default function PersonalizerClient({
   }
 
   function updateElement(id: string, patch: Partial<DesignElement>) {
-    const next = { ...elements, [activeView]: elements[activeView].map((e) => (e.id === id ? { ...e, ...patch } : e)) };
+    const current = elementsRef.current;
+    const next = { ...current, [activeView]: current[activeView].map((e) => (e.id === id ? { ...e, ...patch } : e)) };
     commit(next);
   }
 
   function duplicateElement(id: string) {
-    const el = elements[activeView].find((e) => e.id === id);
+    const el = elementsRef.current[activeView].find((e) => e.id === id);
     if (!el) return;
     const z = zCounter + 1;
     setZCounter(z);
@@ -473,7 +492,7 @@ export default function PersonalizerClient({
   }
 
   function sendToBack(id: string) {
-    const minZ = Math.min(0, ...elements[activeView].map((e) => e.zIndex));
+    const minZ = Math.min(0, ...elementsRef.current[activeView].map((e) => e.zIndex));
     updateElement(id, { zIndex: minZ - 1 });
   }
 
@@ -608,16 +627,16 @@ export default function PersonalizerClient({
     if (!qtyDraft || parseInt(qtyDraft, 10) <= 0) setQtyDraft(String(quantity));
   }
 
-  // Tamaño (ej. "10x10") a usar para calcular el precio "by_size" de una
-  // técnica: el cliente escribe Largo/Alto (cm) directo en la tarjeta de
-  // esa técnica (una sola medida por técnica, no por logo) y se redondea
-  // siempre hacia el tamaño configurado inmediato superior de esa técnica,
-  // nunca hacia abajo -- nunca se inventa un tamaño que no exista en la
-  // tabla de precios (si el logo excede el tamaño configurado más grande,
-  // o el campo sigue vacío, regresa null y el llamador lo trata como
-  // "requiere cotización").
-  function resolveTechniqueSize(technique: PrintTechnique): string | null {
-    const dims = techniqueSizeCm[technique.id];
+  // Tamaño (ej. "10x10") a usar para calcular el precio "by_size" de UN
+  // logo en particular (ya no una sola medida compartida por técnica --
+  // cada logo tiene la suya). Se redondea siempre hacia el tamaño
+  // configurado inmediato superior de esa técnica, nunca hacia abajo --
+  // nunca se inventa un tamaño que no exista en la tabla de precios (si
+  // el logo excede el tamaño configurado más grande, o el campo sigue
+  // vacío, regresa null y el llamador lo trata como "requiere cotización"
+  // para ese logo).
+  function resolveLogoSize(technique: PrintTechnique, elementId: string): string | null {
+    const dims = techniqueLogoSizeCm[technique.id]?.[elementId];
     const largo = parseFloat(dims?.largo ?? "");
     const alto = parseFloat(dims?.alto ?? "");
     if (!Number.isFinite(largo) || !Number.isFinite(alto) || largo <= 0 || alto <= 0) return null;
@@ -627,14 +646,21 @@ export default function PersonalizerClient({
 
   const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers);
   const numElements = VIEW_ORDER.reduce((sum, v) => sum + elements[v].length, 0);
-  const numLogoElements = VIEW_ORDER.reduce((sum, v) => sum + elements[v].filter((e) => e.type === "logo").length, 0);
+  const allLogoElements = VIEW_ORDER.flatMap((v) => elements[v].filter((e) => e.type === "logo"));
+  const numLogoElements = allLogoElements.length;
   // "Posiciones" (tarjeta de detalle de cada técnica): los ejes reales
-  // donde el cliente ya colocó algún elemento (logo o texto) en el
-  // canvas, no un número que se escriba a mano -- mismos VIEW_LABELS que
-  // ya se usan en las pestañas Frente/Reverso/Izquierda/Derecha de arriba.
-  // Es el mismo para las 4 vistas, sin importar cuál esté activa ahora
-  // mismo, porque la técnica aplica al diseño completo, no a una vista.
-  const activePositionLabels = VIEW_ORDER.filter((v) => elements[v].length > 0).map((v) => VIEW_LABELS[v]);
+  // donde el cliente ya colocó algún LOGO en el canvas, agrupados con
+  // cuántos logos hay en cada uno -- ya no un número que se escriba a
+  // mano, ni una sola medida compartida. Mismos VIEW_LABELS que ya se
+  // usan en las pestañas Frente/Reverso/Izquierda/Derecha de arriba. Es
+  // el mismo para las 4 vistas sin importar cuál esté activa ahora mismo,
+  // porque la técnica aplica al diseño completo, no a una vista.
+  const logosByView = VIEW_ORDER.map((v) => ({
+    view: v,
+    viewLabel: VIEW_LABELS[v],
+    logos: elements[v].filter((e) => e.type === "logo"),
+  })).filter((g) => g.logos.length > 0);
+  const activePositionLabels = logosByView.map((g) => g.viewLabel);
 
   // Cada técnica calcula su propio precio según su pricing_type (ver
   // types/index.ts) y se suma al total — nunca se inventa un precio: si
@@ -662,10 +688,20 @@ export default function PersonalizerClient({
         return price === null ? { technique, unitPrice: null, needsQuote: true } : { technique, unitPrice: price * numElements, needsQuote: false };
       }
       if (technique.pricing_type === "by_size") {
-        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false };
-        const size = resolveTechniqueSize(technique);
-        const price = size ? findSizePrice(technique, size, quantity) : null;
-        return price === null ? { technique, unitPrice: null, needsQuote: true } : { technique, unitPrice: price * numElements, needsQuote: false };
+        // Suma el precio de cada logo por separado -- cada uno puede tener
+        // su propia medida (ver resolveLogoSize), a diferencia de
+        // by_qty/by_tintas donde un solo precio se multiplica por el total
+        // de elementos.
+        if (allLogoElements.length === 0) return { technique, unitPrice: 0, needsQuote: false };
+        let sum = 0;
+        let needsQuote = false;
+        for (const el of allLogoElements) {
+          const size = resolveLogoSize(technique, el.id);
+          const price = size ? findSizePrice(technique, size, quantity) : null;
+          if (price === null) needsQuote = true;
+          else sum += price;
+        }
+        return { technique, unitPrice: needsQuote ? null : sum, needsQuote };
       }
       // pricing_type null -> sin datos suficientes configurados todavía.
       return { technique, unitPrice: null, needsQuote: true };
@@ -734,15 +770,23 @@ export default function PersonalizerClient({
                 applied_to: "all",
                 selected_techniques: techniqueResults.map((r) => {
                   const tintasRaw = parseInt(techniqueTintas[r.technique.id] ?? "", 10);
-                  const dims = techniqueSizeCm[r.technique.id];
-                  const largo = parseFloat(dims?.largo ?? "");
-                  const alto = parseFloat(dims?.alto ?? "");
+                  const logoSizes: Record<string, string> = {};
+                  const sizeCmByElement: Record<string, { largo: number; alto: number }> = {};
+                  for (const el of allLogoElements) {
+                    const dims = techniqueLogoSizeCm[r.technique.id]?.[el.id];
+                    const largo = parseFloat(dims?.largo ?? "");
+                    const alto = parseFloat(dims?.alto ?? "");
+                    if (largo > 0 && alto > 0) sizeCmByElement[el.id] = { largo, alto };
+                    const resolved = resolveLogoSize(r.technique, el.id);
+                    if (resolved) logoSizes[el.id] = resolved;
+                  }
                   return {
                     technique_id: r.technique.id,
                     technique_name: r.technique.name,
                     tintas: Number.isFinite(tintasRaw) && tintasRaw > 0 ? tintasRaw : undefined,
                     positions: activePositionLabels.length > 0 ? activePositionLabels : undefined,
-                    size_cm: largo > 0 && alto > 0 ? { largo, alto } : undefined,
+                    logo_sizes: Object.keys(logoSizes).length > 0 ? logoSizes : undefined,
+                    size_cm: Object.keys(sizeCmByElement).length > 0 ? sizeCmByElement : undefined,
                     unit_price: r.unitPrice,
                     needs_quote: r.needsQuote,
                   };
@@ -1122,15 +1166,17 @@ export default function PersonalizerClient({
                   <PrintTechniqueCards techniques={techniques} selectedIds={selectedTechniqueIds} onToggle={toggleTechnique} />
                 </div>
                 {/* Cada técnica seleccionada se desglosa en su propia
-                    tarjeta con "Posiciones" (los ejes reales donde ya hay
-                    algo colocado -- activePositionLabels, siempre
-                    informativo, nunca afecta el precio) + Largo/Alto en cm
-                    (DTF Textil, DTF UV, DTG, Bordado, Grabado en Láser) o
-                    Tintas (Serigrafía, Tampografía) según su pricing_type
-                    -- ver resolveTechniqueSize/techniqueResults arriba. El
-                    botón de basura quita esa técnica de la selección
-                    (mismo toggleTechnique que su tarjeta en el selector de
-                    arriba). */}
+                    tarjeta: "Posiciones" se agrupa por eje
+                    (Frente/Reverso/Izquierda/Derecha, ver logosByView),
+                    cada eje muestra cuántos logos tiene y un panel de
+                    Largo/Alto (cm) POR LOGO -- pedido explícito ("si el
+                    usuario agregó 2 logos en la parte de enfrente, ahí va
+                    2 y se desglosan 2 paneles"). Serigrafía/Tampografía
+                    (by_tintas) no tienen medida por tamaño -- ahí
+                    "Posiciones" solo muestra el conteo, junto al campo de
+                    Tintas de siempre. El botón de basura quita esa
+                    técnica de la selección (mismo toggleTechnique que su
+                    tarjeta en el selector de arriba). */}
                 {techniqueResults.length > 0 && (
                   <div className="mt-5 flex flex-col gap-3">
                     {techniqueResults.map(({ technique, unitPrice, needsQuote }) => (
@@ -1139,12 +1185,15 @@ export default function PersonalizerClient({
                         technique={technique}
                         unitPrice={unitPrice}
                         needsQuote={needsQuote}
-                        positions={activePositionLabels}
-                        sizeCm={techniqueSizeCm[technique.id] ?? { largo: "", alto: "" }}
-                        onSizeCmChange={(patch) =>
-                          setTechniqueSizeCm((prev) => ({
+                        logosByView={logosByView}
+                        logoSizeCm={techniqueLogoSizeCm[technique.id] ?? {}}
+                        onLogoSizeCmChange={(elementId, patch) =>
+                          setTechniqueLogoSizeCm((prev) => ({
                             ...prev,
-                            [technique.id]: { ...(prev[technique.id] ?? { largo: "", alto: "" }), ...patch },
+                            [technique.id]: {
+                              ...(prev[technique.id] ?? {}),
+                              [elementId]: { ...(prev[technique.id]?.[elementId] ?? { largo: "", alto: "" }), ...patch },
+                            },
                           }))
                         }
                         tintas={techniqueTintas[technique.id] ?? ""}

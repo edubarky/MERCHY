@@ -111,19 +111,20 @@ export interface SelectedTechniqueDetail {
   technique_id: string;
   technique_name: string;
   tintas?: number;
-  logo_sizes?: Record<string, string>; // elementId -> "5x5" | "10x10" | "20x20" (solo pricing_type "by_size")
-  // Nuevo: capturados directamente en la tarjeta de detalle de la técnica
-  // (una vez por técnica seleccionada, no por logo). "positions" ya NO se
-  // escribe a mano -- son los ejes (Frente/Reverso/Izquierda/Derecha, ver
-  // VIEW_LABELS) donde el cliente realmente colocó algún elemento en el
-  // canvas, derivado en vivo de `elements` -- nunca inventado ni tecleado.
-  // Puramente informativo para producción, nunca multiplica el precio.
-  // "size_cm" es lo que el cliente escribe a mano; para pricing_type
-  // "by_size" alimenta el redondeo a un tamaño configurado (ver
-  // roundUpToConfiguredSize en pricing.ts) -- para el resto de técnicas
-  // (by_qty / null) es informativo igual que positions.
+  logo_sizes?: Record<string, string>; // elementId -> "5x5" | "10x10" | "20x20" ya redondeado (solo pricing_type "by_size")
+  // "positions" ya NO se escribe a mano -- son los ejes
+  // (Frente/Reverso/Izquierda/Derecha, ver VIEW_LABELS) donde el cliente
+  // realmente colocó algún LOGO en el canvas, derivado en vivo de
+  // `elements`. Puramente informativo para producción, nunca multiplica
+  // el precio.
   positions?: string[];
-  size_cm?: { largo: number; alto: number };
+  // Medida en cm que el cliente escribió, por logo (elementId -> {largo,
+  // alto}) -- ya no una sola compartida por técnica. Para pricing_type
+  // "by_size" alimenta el redondeo a un tamaño configurado por logo (ver
+  // roundUpToConfiguredSize/resolveLogoSize en PersonalizerClient), cuyo
+  // resultado ya redondeado queda en `logo_sizes` arriba; para el resto de
+  // técnicas (by_qty / null) es informativo igual que positions.
+  size_cm?: Record<string, { largo: number; alto: number }>;
   unit_price: number | null; // null cuando needs_quote es true
   needs_quote: boolean;
 }

@@ -2,6 +2,7 @@
 
 import type { PrintTechnique } from "@/types";
 import { formatMXN } from "@/lib/pricing";
+import type { DesignElement, ViewName } from "./types";
 
 // Editables reales (carpeta "POSICIONES, TAMAÑOS Y TINTAS"): cada archivo
 // es la tarjeta de referencia completa que el usuario compartió (fondo +
@@ -65,60 +66,77 @@ function TechniqueIconBadge({ name, size = 44 }: { name: string; size?: number }
   );
 }
 
-// "Posiciones" ya no se escribe a mano -- son los ejes reales
-// (Frente/Reverso/Izquierda/Derecha) donde el cliente ya colocó algún
-// elemento en el canvas (ver activePositionLabels en PersonalizerClient),
-// mostrados como chips de solo lectura en vez de un <input>. Sin
-// elementos colocados todavía, muestra "—" en vez de una caja vacía.
-function PositionsField({ positions }: { positions: string[] }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1.5">
-      <span className="text-[11px] font-medium text-ui-gray">Posiciones</span>
-      <div className="flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-xl border border-ui-border bg-white px-3 py-2">
-        {positions.length === 0 ? (
-          <span className="text-xs text-ui-gray">—</span>
-        ) : (
-          positions.map((label) => (
-            <span
-              key={label}
-              className="whitespace-nowrap rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary-dark"
-            >
-              Posición {label}
-            </span>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
 function Field({
   label,
   value,
   onChange,
-  suffix,
+  className = "",
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  suffix?: string;
+  className?: string;
 }) {
   return (
-    <label className="flex min-w-0 flex-col gap-1.5">
+    <label className={`flex min-w-0 flex-col gap-1.5 ${className}`}>
       <span className="text-[11px] font-medium text-ui-gray">{label}</span>
-      <span className="relative">
-        <input
-          type="text"
-          inputMode="decimal"
-          value={value}
-          onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ""))}
-          className="w-full rounded-xl border border-ui-border bg-white px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary"
-        />
-        {suffix && value && (
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ui-gray">{suffix}</span>
-        )}
-      </span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ""))}
+        className="w-full rounded-xl border border-ui-border bg-white px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary"
+      />
     </label>
+  );
+}
+
+// "Posiciones" ya no se escribe a mano -- es un bloque por cada eje real
+// (Frente/Reverso/Izquierda/Derecha) donde el cliente ya colocó algún
+// logo (ver logosByView en PersonalizerClient), con el conteo de logos
+// de ese eje justo debajo del título -- pedido explícito ("si el usuario
+// agregó 2 logos en la parte de enfrente, ahí va 2"). Cuando la técnica
+// sí cobra por tamaño (todo menos "by_tintas"), cada logo de ese eje trae
+// su propio panel de Largo/Alto (cm) -- ya no una sola medida compartida
+// por técnica, porque dos logos del mismo eje pueden medir distinto.
+function PositionGroup({
+  viewLabel,
+  logos,
+  showSizeFields,
+  logoSizeCm,
+  onLogoSizeCmChange,
+}: {
+  viewLabel: string;
+  logos: DesignElement[];
+  showSizeFields: boolean;
+  logoSizeCm: Record<string, { largo: string; alto: string }>;
+  onLogoSizeCmChange: (elementId: string, patch: Partial<{ largo: string; alto: string }>) => void;
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-xs font-bold text-primary-dark">Posición {viewLabel}</p>
+        <span className="whitespace-nowrap text-[11px] text-ui-gray">
+          {logos.length} {logos.length === 1 ? "logo" : "logos"}
+        </span>
+      </div>
+      {showSizeFields && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {logos.map((logo, i) => {
+            const dims = logoSizeCm[logo.id] ?? { largo: "", alto: "" };
+            return (
+              <div key={logo.id} className="min-w-[150px] flex-1 rounded-xl border border-ui-border bg-gray-50/60 p-2.5">
+                <p className="mb-2 truncate text-[10px] font-semibold text-ui-gray">Logo {i + 1}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Largo (cm)" value={dims.largo} onChange={(v) => onLogoSizeCmChange(logo.id, { largo: v })} />
+                  <Field label="Alto (cm)" value={dims.alto} onChange={(v) => onLogoSizeCmChange(logo.id, { alto: v })} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -126,9 +144,9 @@ export default function TechniqueDetailCard({
   technique,
   unitPrice,
   needsQuote,
-  positions,
-  sizeCm,
-  onSizeCmChange,
+  logosByView,
+  logoSizeCm,
+  onLogoSizeCmChange,
   tintas,
   onTintasChange,
   onRemove,
@@ -136,13 +154,14 @@ export default function TechniqueDetailCard({
   technique: PrintTechnique;
   unitPrice: number | null;
   needsQuote: boolean;
-  positions: string[];
-  sizeCm: { largo: string; alto: string };
-  onSizeCmChange: (patch: Partial<{ largo: string; alto: string }>) => void;
+  logosByView: { view: ViewName; viewLabel: string; logos: DesignElement[] }[];
+  logoSizeCm: Record<string, { largo: string; alto: string }>;
+  onLogoSizeCmChange: (elementId: string, patch: Partial<{ largo: string; alto: string }>) => void;
   tintas: string;
   onTintasChange: (v: string) => void;
   onRemove: () => void;
 }) {
+  const showSizeFields = technique.pricing_type !== "by_tintas";
   return (
     <div className="rounded-2xl border border-ui-border bg-white p-5">
       <div className="flex items-center justify-between gap-3">
@@ -164,23 +183,31 @@ export default function TechniqueDetailCard({
 
       <div className="my-4 h-px bg-ui-border" />
 
-      {/* "Posiciones" es siempre el mismo campo informativo (no cambia el
-          precio) para cualquier técnica. Lo que cambia según pricing_type
-          es el segundo grupo: Largo/Alto (cm) para las técnicas por tamaño
-          -- DTF Textil, DTF UV, Bordado, Grabado en Láser -- y también para
-          DTG/null aunque ahí sea solo dato de producción; Tintas para las
-          técnicas por número de tintas -- Serigrafía, Tampografía. */}
-      {technique.pricing_type === "by_tintas" ? (
-        <div className="grid grid-cols-2 gap-3">
-          <PositionsField positions={positions} />
-          <Field label="Tintas" value={tintas} onChange={onTintasChange} />
-        </div>
+      {/* Un bloque "Posición X" por cada eje con logos, cada uno con su
+          conteo y (salvo Serigrafía/Tampografía) un panel de Largo/Alto
+          por logo -- ver PositionGroup arriba. Tintas es aparte, siempre
+          el mismo campo compartido por técnica (no depende del eje). */}
+      {logosByView.length === 0 ? (
+        <p className="text-xs text-ui-gray">
+          Agrega un logo para especificar sus posiciones{showSizeFields ? " y medidas" : ""}.
+        </p>
       ) : (
-        <div className="grid grid-cols-3 gap-3">
-          <PositionsField positions={positions} />
-          <Field label="Largo (cm)" value={sizeCm.largo} onChange={(v) => onSizeCmChange({ largo: v })} />
-          <Field label="Alto (cm)" value={sizeCm.alto} onChange={(v) => onSizeCmChange({ alto: v })} />
+        <div className="flex flex-col gap-4">
+          {logosByView.map((g) => (
+            <PositionGroup
+              key={g.view}
+              viewLabel={g.viewLabel}
+              logos={g.logos}
+              showSizeFields={showSizeFields}
+              logoSizeCm={logoSizeCm}
+              onLogoSizeCmChange={onLogoSizeCmChange}
+            />
+          ))}
         </div>
+      )}
+
+      {!showSizeFields && (
+        <Field label="Tintas" value={tintas} onChange={onTintasChange} className="mt-3 max-w-[140px]" />
       )}
 
       <div className="mt-4 flex items-center justify-between gap-3">
