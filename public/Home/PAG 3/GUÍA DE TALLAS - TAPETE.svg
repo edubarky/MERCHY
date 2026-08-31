@@ -14,7 +14,6 @@
   <line x1="90" y1="124" x2="370" y2="124" stroke="#1A1A1A" stroke-width="1.5"/>
   <circle cx="230" cy="98" r="11" fill="#1A1A1A"/>
   <text x="230" y="102.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">B</text>
-  <text x="230" y="114" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1A1A1A">183 cm</text>
 
   <!-- Cota izquierda: Ancho (A) -->
   <line x1="70" y1="140" x2="78" y2="140" stroke="#1A1A1A" stroke-width="1.5"/>
@@ -22,20 +21,17 @@
   <line x1="74" y1="140" x2="74" y2="234" stroke="#1A1A1A" stroke-width="1.5"/>
   <circle cx="40" cy="187" r="11" fill="#1A1A1A"/>
   <text x="40" y="191.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">A</text>
-  <text x="40" y="187" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A" transform="rotate(-90 40 214)">61 cm</text>
 
   <!-- Leyenda A/B -->
   <g>
     <circle cx="112" cy="272" r="13" fill="#1A1A1A"/>
     <text x="112" y="276.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">A</text>
-    <text x="134" y="269" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A">Ancho</text>
-    <text x="134" y="284" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="11" fill="#868686">Medir de orilla a orilla</text>
+    <text x="134" y="272" text-anchor="start" dominant-baseline="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A">Ancho</text>
   </g>
   <g>
     <circle cx="112" cy="316" r="13" fill="#1A1A1A"/>
     <text x="112" y="320.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">B</text>
-    <text x="134" y="313" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A">Largo</text>
-    <text x="134" y="328" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="11" fill="#868686">Tapete extendido, de punta a punta</text>
+    <text x="134" y="316" text-anchor="start" dominant-baseline="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A">Largo</text>
   </g>
 
   <!-- Tabla: talla única -->
