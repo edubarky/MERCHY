@@ -8,6 +8,7 @@ const STORAGE_KEY = "merchy_cart_v1";
 interface CartContextValue {
   items: CartItem[];
   addItem: (item: CartItem) => void;
+  upsertItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
   totalItems: number;
@@ -48,6 +49,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setJustAdded(false), 400);
   }
 
+  // Reemplaza el renglón existente con ese mismo id, o lo agrega si no
+  // había uno todavía -- usado por el Personalizador para mantener
+  // sincronizado en el carrito el renglón "en curso" de un diseño que el
+  // cliente sigue editando (ver PersonalizerClient's draftCartItemId), sin
+  // duplicar un renglón nuevo cada vez que cambia algo. El pulso "recién
+  // agregado" (justAdded) solo se dispara la primera vez que ese id
+  // aparece -- una edición posterior del mismo renglón no debe repetir la
+  // animación cada 400ms mientras el cliente sigue trabajando.
+  function upsertItem(item: CartItem) {
+    setItems((prev) => {
+      const idx = prev.findIndex((i) => i.id === item.id);
+      if (idx === -1) {
+        setJustAdded(true);
+        setTimeout(() => setJustAdded(false), 400);
+        return [...prev, item];
+      }
+      const next = [...prev];
+      next[idx] = item;
+      return next;
+    });
+  }
+
   function removeItem(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
@@ -61,7 +84,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const total = subtotal;
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, clearCart, totalItems, subtotal, total, justAdded }}>
+    <CartContext.Provider value={{ items, addItem, upsertItem, removeItem, clearCart, totalItems, subtotal, total, justAdded }}>
       {children}
     </CartContext.Provider>
   );

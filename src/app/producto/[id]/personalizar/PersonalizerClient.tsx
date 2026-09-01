@@ -367,7 +367,16 @@ export default function PersonalizerClient({
   // page.tsx), que ya usa este mismo CartContext, así que el conteo/pulso
   // sigue siendo el carrito real de la plataforma, no uno nuevo. `addItem`
   // es lo único que este componente todavía necesita del contexto.
-  const { addItem } = useCart();
+  const { addItem, upsertItem, removeItem } = useCart();
+  // Id fijo (no uid() aleatorio) para el renglón "en curso" de ESTE
+  // producto -- así cada sincronización con el carrito (ver el efecto
+  // junto a buildCartItem más abajo) actualiza el MISMO renglón en vez de
+  // duplicar uno nuevo cada vez que el cliente cambia algo. Nunca choca
+  // con el id de un renglón ya confirmado (ver handleAddToCart, que usa
+  // uid() para ese) -- si el cliente vuelve a personalizar este mismo
+  // producto después de haber confirmado un diseño, el nuevo renglón "en
+  // curso" es independiente del ya confirmado.
+  const draftCartItemId = `personalizador-draft:${product.id}`;
   const { assets: artAssets, loading: artLibraryLoading, addAsset, removeAsset } = useArtLibrary();
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -1022,6 +1031,115 @@ export default function PersonalizerClient({
   // muestre todavía.
   const primaryTechnique = techniqueResults[0]?.technique ?? null;
 
+  // Arma el CartItem con el estado ACTUAL del diseño -- compartido por dos
+  // caminos: handleAddToCart (cuando el cliente da "Siguiente", con su
+  // propio id nuevo y una captura real del canvas) y el efecto de abajo,
+  // que mantiene sincronizado un renglón "en curso" en el carrito mismo
+  // mientras el cliente sigue editando (mismo `id` fijo cada vez, ver
+  // draftCartItemId) -- pedido explícito: "también se debe de agregar al
+  // carrito de compras", para que si el cliente sale sin terminar el
+  // producto YA esté ahí, no solo recuperable al volver a entrar al
+  // Personalizador (ver el autoguardado local, arriba).
+  function buildCartItem(id: string, canvasDataUrl: string): CartItem {
+    // El color agregado al carrito es el color ACTIVO en este momento
+    // (`activeVariant`, derivado arriba) -- el que ya se eligió en la
+    // página del producto, o el que se esté mostrando en la barra
+    // Multicolor si el usuario cambió entre colores -- nunca "la primera
+    // variante activa" a secas, para que el carrito siempre coincida con
+    // la prenda que realmente se vio y personalizó.
+    const variant = activeVariant ?? product.variants.find((v) => v.active) ?? product.variants[0];
+    const logos: CustomizationElement[] = [];
+    const texts: CustomizationElement[] = [];
+    VIEW_ORDER.forEach((v) => {
+      elements[v].forEach((el) => {
+        const shared = { x: el.xPct, y: el.yPct, width: el.widthPct, height: el.heightPct, rotation: el.rotation };
+        if (el.type === "logo") logos.push({ type: "logo", url: el.src, ...shared });
+        else texts.push({ type: "text", text: el.text, ...shared });
+      });
+    });
+
+    return {
+      id,
+      product,
+      variants: variant
+        ? [{ variant_id: variant.id, color_name: variant.color_name, color_hex: variant.color_hex, qty: quantity, sizes_breakdown: {} }]
+        : [],
+      total_quantity: quantity,
+      technique_id: primaryTechnique?.id ?? null,
+      technique: primaryTechnique ?? undefined,
+      num_elements: numElements,
+      customization_snapshot:
+        numElements > 0
+          ? {
+              canvas_data_url: canvasDataUrl,
+              logos,
+              texts,
+              applied_to: "all",
+              selected_techniques: techniqueResults.map((r) => {
+                const tintasRaw = parseInt(techniqueTintas[r.technique.id] ?? "", 10);
+                const logoSizes: Record<string, string> = {};
+                const sizeCmByElement: Record<string, { largo: number; alto: number }> = {};
+                for (const el of allLogoElements) {
+                  const dims = techniqueLogoSizeCm[r.technique.id]?.[el.id];
+                  const largo = parseFloat(dims?.largo ?? "");
+                  const alto = parseFloat(dims?.alto ?? "");
+                  if (largo > 0 && alto > 0) sizeCmByElement[el.id] = { largo, alto };
+                  const resolved = resolveLogoSize(r.technique, el.id);
+                  if (resolved) logoSizes[el.id] = resolved;
+                }
+                return {
+                  technique_id: r.technique.id,
+                  technique_name: r.technique.name,
+                  tintas: Number.isFinite(tintasRaw) && tintasRaw > 0 ? tintasRaw : undefined,
+                  positions: activePositionLabels.length > 0 ? activePositionLabels : undefined,
+                  logo_sizes: Object.keys(logoSizes).length > 0 ? logoSizes : undefined,
+                  size_cm: Object.keys(sizeCmByElement).length > 0 ? sizeCmByElement : undefined,
+                  unit_price: r.unitPrice,
+                  needs_quote: r.needsQuote,
+                };
+              }),
+            }
+          : null,
+      unit_price: unitPrice,
+      total_price: total,
+    };
+  }
+
+  // Mantiene el renglón "en curso" del carrito sincronizado con el diseño
+  // (debounced 400ms, mismo criterio/gate `draftReady` que el autoguardado
+  // local de arriba -- para no disparar en el primer render con el estado
+  // vacío inicial antes de que ese efecto tenga oportunidad de restaurar).
+  // Sin captura de canvas aquí (queda "" -- el carrito ya cae a la foto
+  // normal del producto como miniatura, ver /carrito): generar el PNG real
+  // en cada cambio sería costoso: la captura real solo se hace una vez, al
+  // confirmar (ver handleAddToCart). Sin nada colocado ni técnica elegida,
+  // quita el renglón en vez de dejar uno vacío en el carrito.
+  useEffect(() => {
+    if (!draftReady) return;
+    const timer = setTimeout(() => {
+      const hasContent = numElements > 0 || selectedTechniqueIds.length > 0;
+      if (hasContent) {
+        upsertItem(buildCartItem(draftCartItemId, ""));
+      } else {
+        removeItem(draftCartItemId);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    draftReady,
+    draftCartItemId,
+    numElements,
+    elements,
+    selectedTechniqueIds,
+    techniqueTintas,
+    techniqueLogoSizeCm,
+    quantity,
+    activeVariantId,
+    unitPrice,
+    total,
+  ]);
+
   async function handleAddToCart() {
     if (addingToCart) return;
     setAddingToCart(true);
@@ -1035,77 +1153,16 @@ export default function PersonalizerClient({
         }
       }
 
-      // El color agregado al carrito es el color ACTIVO en este momento
-      // (`activeVariant`, derivado arriba) -- el que ya se eligió en la
-      // página del producto, o el que se esté mostrando en la barra
-      // Multicolor si el usuario cambió entre colores -- nunca "la primera
-      // variante activa" a secas, para que el carrito siempre coincida con
-      // la prenda que realmente se vio y personalizó.
-      const variant = activeVariant ?? product.variants.find((v) => v.active) ?? product.variants[0];
-      const logos: CustomizationElement[] = [];
-      const texts: CustomizationElement[] = [];
-      VIEW_ORDER.forEach((v) => {
-        elements[v].forEach((el) => {
-          const shared = { x: el.xPct, y: el.yPct, width: el.widthPct, height: el.heightPct, rotation: el.rotation };
-          if (el.type === "logo") logos.push({ type: "logo", url: el.src, ...shared });
-          else texts.push({ type: "text", text: el.text, ...shared });
-        });
-      });
-
-      const newItem: CartItem = {
-        id: uid(),
-        product,
-        variants: variant
-          ? [{ variant_id: variant.id, color_name: variant.color_name, color_hex: variant.color_hex, qty: quantity, sizes_breakdown: {} }]
-          : [],
-        total_quantity: quantity,
-        technique_id: primaryTechnique?.id ?? null,
-        technique: primaryTechnique ?? undefined,
-        num_elements: numElements,
-        customization_snapshot:
-          numElements > 0
-            ? {
-                canvas_data_url: canvasDataUrl,
-                logos,
-                texts,
-                applied_to: "all",
-                selected_techniques: techniqueResults.map((r) => {
-                  const tintasRaw = parseInt(techniqueTintas[r.technique.id] ?? "", 10);
-                  const logoSizes: Record<string, string> = {};
-                  const sizeCmByElement: Record<string, { largo: number; alto: number }> = {};
-                  for (const el of allLogoElements) {
-                    const dims = techniqueLogoSizeCm[r.technique.id]?.[el.id];
-                    const largo = parseFloat(dims?.largo ?? "");
-                    const alto = parseFloat(dims?.alto ?? "");
-                    if (largo > 0 && alto > 0) sizeCmByElement[el.id] = { largo, alto };
-                    const resolved = resolveLogoSize(r.technique, el.id);
-                    if (resolved) logoSizes[el.id] = resolved;
-                  }
-                  return {
-                    technique_id: r.technique.id,
-                    technique_name: r.technique.name,
-                    tintas: Number.isFinite(tintasRaw) && tintasRaw > 0 ? tintasRaw : undefined,
-                    positions: activePositionLabels.length > 0 ? activePositionLabels : undefined,
-                    logo_sizes: Object.keys(logoSizes).length > 0 ? logoSizes : undefined,
-                    size_cm: Object.keys(sizeCmByElement).length > 0 ? sizeCmByElement : undefined,
-                    unit_price: r.unitPrice,
-                    needs_quote: r.needsQuote,
-                  };
-                }),
-              }
-            : null,
-        unit_price: unitPrice,
-        total_price: total,
-      };
-
       // Ya no se abre ningún popover local -- el badge/pulso del carrito en
       // PublicHeader (barra superior) es la única confirmación visual, y
       // ya reacciona solo porque comparte el mismo CartContext.
-      addItem(newItem);
+      addItem(buildCartItem(uid(), canvasDataUrl));
       setSelectedId(null);
-      // Ya quedó guardado en el carrito -- deja de ser un borrador
-      // pendiente que proteger, así que no debe reaparecer si el cliente
-      // vuelve a personalizar este mismo producto después.
+      // Ya quedó como su propio renglón confirmado (id nuevo) -- el
+      // renglón "en curso" (id fijo, ver draftCartItemId) y el borrador
+      // local dejan de tener sentido, así que no deben reaparecer si el
+      // cliente vuelve a personalizar este mismo producto después.
+      removeItem(draftCartItemId);
       clearDraft(product.id);
     } finally {
       setAddingToCart(false);
