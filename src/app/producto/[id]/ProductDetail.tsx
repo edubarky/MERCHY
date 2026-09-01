@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { Product, ProductVariant, PriceTier } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 import { VIEW_ORDER, normalizeGarmentColorName, type ResolvedProductAssets, type GarmentColor } from "./personalizar/types";
-import { normalizeProductKey } from "./personalizar/printAreas";
+import { normalizeProductKey, isGarmentProduct } from "./personalizar/printAreas";
 
 interface Props {
   product: Product & { variants: ProductVariant[] };
@@ -69,6 +69,13 @@ const PRODUCT_SIZE_GUIDES: Record<string, string> = {
   // producto). El bolso de malla no trae medida propia dada -- se
   // menciona solo como nota, nunca se inventa un número para él.
   "set de ejercicio bor": "/Home/PAG 3/MEDIDAS - SET DE EJERCICIO BOR.svg",
+  // Sudadera Ocean: sigue siendo una prenda con tallas reales (por eso el
+  // label de abajo NO cambia a "Medidas") -- pero la tabla genérica de
+  // playera (Ancho/Largo/Manga, XS-XXXL) no son las medidas reales de
+  // ESTA sudadera. Reemplaza esa tabla por una propia (Ancho/Largo nada
+  // más, sin Manga -- el usuario no dio esa medida para la sudadera) con
+  // los valores reales que dio el usuario, XS-3XL.
+  "sudadera ocean": "/Home/PAG 3/GUÍA DE TALLAS - SUDADERA OCEAN.svg",
 };
 const DEFAULT_SIZE_GUIDE = "/Home/PAG 3/GUÍA DE TALLAS.svg";
 
@@ -892,17 +899,18 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // printAreas.ts: se agrega aquí a mano cuando el usuario confirma que la
   // galería real es la que debe ganar.
   const preferRealGallery = PRODUCTS_PREFERRING_REAL_GALLERY.has(normalizeProductKey(product.name));
-  const customSizeGuide = PRODUCT_SIZE_GUIDES[normalizeProductKey(product.name)];
-  const sizeGuideSrc = customSizeGuide ?? DEFAULT_SIZE_GUIDE;
-  // "Guía de Tallas" solo tiene sentido cuando hay tallas reales entre
-  // las que elegir (ropa) -- un producto sin talla (un tapete, un set de
-  // ejercicio) tiene medidas, no tallas. Se deriva de si este producto
-  // tiene su propio editable en PRODUCT_SIZE_GUIDES -- no de
-  // isGarmentProduct (esa decide los ejes/íconos del Personalizador, un
-  // criterio aparte: un producto puede necesitar "Medidas" aquí sin que
-  // todavía se le haya definido nada en el Personalizador, como Set de
-  // ejercicio Bor por ahora).
-  const sizeGuideLabel = customSizeGuide ? "Medidas" : "Guía de Tallas";
+  // El editable a mostrar y la ETIQUETA del link son dos preguntas
+  // distintas -- se deshacen de un solo `customSizeGuide` compartido a
+  // propósito, después de que Sudadera Ocean expuso el hueco: un
+  // producto puede tener su propio editable en PRODUCT_SIZE_GUIDES SIN
+  // dejar de ser una prenda (Sudadera Ocean sigue teniendo tallas reales
+  // XS-3XL, solo que con sus medidas reales de sudadera en vez de la
+  // tabla genérica de playera) -- "Medidas" en vez de "Guía de Tallas"
+  // debe seguir dependiendo únicamente de isGarmentProduct (misma fuente
+  // de verdad que ya decide los ejes/íconos del Personalizador), nunca de
+  // si existe un editable custom.
+  const sizeGuideSrc = PRODUCT_SIZE_GUIDES[normalizeProductKey(product.name)] ?? DEFAULT_SIZE_GUIDE;
+  const sizeGuideLabel = isGarmentProduct(product.name) ? "Guía de Tallas" : "Medidas";
   const selectedColorKey = selectedVariant ? normalizeGarmentColorName(selectedVariant.color_name) : null;
   const ejesForColor =
     selectedColorKey && !preferRealGallery
