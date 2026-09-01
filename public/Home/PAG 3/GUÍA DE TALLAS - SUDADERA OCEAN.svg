@@ -4,40 +4,50 @@
   <text x="211.5" y="54" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="26" font-weight="700" fill="#1A1A1A">Guía de tallas</text>
   <text x="211.5" y="78" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#868686">Sudadera Ocean</text>
 
-  <!-- Diagrama: sudadera con capucha, vista de frente -->
-  <g fill="none" stroke="#1A1A1A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
-    <!-- capucha -->
-    <path d="M172 118c0-22 17.5-40 39.5-40s39.5 18 39.5 40" />
-    <!-- cuerpo + mangas, un solo contorno -->
-    <path d="M172 118l-38 22-24 34 26 20 12-10v96a10 10 0 0 0 10 10h107a10 10 0 0 0 10-10v-96l12 10 26-20-24-34-38-22" />
-    <!-- bolsillo canguro -->
-    <path d="M178 218a34 22 0 0 0 67 0" stroke="#C9C8CC" stroke-width="1.6" />
-  </g>
+  <!-- Todo el diagrama (prenda + cotas A/B + leyenda) va en un solo grupo
+       trasladado: la prenda por sí sola ya queda centrada en x=211.5,
+       pero la cota B (una barra vertical solo del lado derecho, sin nada
+       que la balancee del lado izquierdo) corre el centro visual de todo
+       el conjunto hacia la derecha, reportado explícitamente ("que
+       todo quede bien centrado"). -25 en x recentra el conjunto completo
+       (prenda + ambas cotas) dentro de la tarjeta en vez de solo la
+       prenda sola. -->
+  <g transform="translate(-25 0)">
+    <!-- Diagrama: sudadera con capucha, vista de frente -->
+    <g fill="none" stroke="#1A1A1A" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+      <!-- capucha -->
+      <path d="M172 118c0-22 17.5-40 39.5-40s39.5 18 39.5 40" />
+      <!-- cuerpo + mangas, un solo contorno -->
+      <path d="M172 118l-38 22-24 34 26 20 12-10v96a10 10 0 0 0 10 10h107a10 10 0 0 0 10-10v-96l12 10 26-20-24-34-38-22" />
+      <!-- bolsillo canguro -->
+      <path d="M178 218a34 22 0 0 0 67 0" stroke="#C9C8CC" stroke-width="1.6" />
+    </g>
 
-  <!-- Cota A: Ancho (horizontal, a la altura del pecho) -->
-  <line x1="122" y1="196" x2="122" y2="204" stroke="#1A1A1A" stroke-width="1.5"/>
-  <line x1="301" y1="196" x2="301" y2="204" stroke="#1A1A1A" stroke-width="1.5"/>
-  <line x1="122" y1="200" x2="301" y2="200" stroke="#1A1A1A" stroke-width="1.5"/>
-  <circle cx="211.5" cy="182" r="11" fill="#1A1A1A"/>
-  <text x="211.5" y="186.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">A</text>
+    <!-- Cota A: Ancho (horizontal, a la altura del pecho) -->
+    <line x1="122" y1="196" x2="122" y2="204" stroke="#1A1A1A" stroke-width="1.5"/>
+    <line x1="301" y1="196" x2="301" y2="204" stroke="#1A1A1A" stroke-width="1.5"/>
+    <line x1="122" y1="200" x2="301" y2="200" stroke="#1A1A1A" stroke-width="1.5"/>
+    <circle cx="211.5" cy="182" r="11" fill="#1A1A1A"/>
+    <text x="211.5" y="186.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">A</text>
 
-  <!-- Cota B: Largo (vertical, del cuello al borde) -->
-  <line x1="322" y1="98" x2="330" y2="98" stroke="#1A1A1A" stroke-width="1.5"/>
-  <line x1="322" y1="298" x2="330" y2="298" stroke="#1A1A1A" stroke-width="1.5"/>
-  <line x1="326" y1="98" x2="326" y2="298" stroke="#1A1A1A" stroke-width="1.5"/>
-  <circle cx="352" cy="198" r="11" fill="#1A1A1A"/>
-  <text x="352" y="202.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">B</text>
+    <!-- Cota B: Largo (vertical, del cuello al borde) -->
+    <line x1="322" y1="98" x2="330" y2="98" stroke="#1A1A1A" stroke-width="1.5"/>
+    <line x1="322" y1="298" x2="330" y2="298" stroke="#1A1A1A" stroke-width="1.5"/>
+    <line x1="326" y1="98" x2="326" y2="298" stroke="#1A1A1A" stroke-width="1.5"/>
+    <circle cx="352" cy="198" r="11" fill="#1A1A1A"/>
+    <text x="352" y="202.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">B</text>
 
-  <!-- Leyenda A/B: una sola fila, dos columnas justificadas igual -->
-  <g>
-    <circle cx="141.5" cy="346" r="13" fill="#1A1A1A"/>
-    <text x="141.5" y="350.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">A</text>
-    <text x="163.5" y="346" text-anchor="start" dominant-baseline="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A">Ancho</text>
-  </g>
-  <g>
-    <circle cx="281.5" cy="346" r="13" fill="#1A1A1A"/>
-    <text x="281.5" y="350.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">B</text>
-    <text x="303.5" y="346" text-anchor="start" dominant-baseline="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A">Largo</text>
+    <!-- Leyenda A/B: una sola fila, dos columnas justificadas igual -->
+    <g>
+      <circle cx="141.5" cy="346" r="13" fill="#1A1A1A"/>
+      <text x="141.5" y="350.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">A</text>
+      <text x="163.5" y="346" text-anchor="start" dominant-baseline="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A">Ancho</text>
+    </g>
+    <g>
+      <circle cx="281.5" cy="346" r="13" fill="#1A1A1A"/>
+      <text x="281.5" y="350.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">B</text>
+      <text x="303.5" y="346" text-anchor="start" dominant-baseline="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#1A1A1A">Largo</text>
+    </g>
   </g>
 
   <!-- Tabla: 7 tallas reales -->
