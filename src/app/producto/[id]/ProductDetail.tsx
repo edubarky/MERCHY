@@ -3,8 +3,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { Product, ProductVariant, PriceTier } from "@/types";
+import type { Product, ProductVariant, PriceTier, CartItem } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
+import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
 import { VIEW_ORDER, normalizeGarmentColorName, type ResolvedProductAssets, type GarmentColor } from "./personalizar/types";
 import { normalizeProductKey, isGarmentProduct } from "./personalizar/printAreas";
 
@@ -850,6 +851,7 @@ function TotalPzasCard({ total, onChange }: { total: number; onChange?: (next: n
 }
 
 export default function ProductDetail({ product, priceTiers, resolvedGallery, modelShots }: Props) {
+  const { upsertItem, removeItem } = useCart();
   const activeVariants = product.variants.filter((v) => v.active);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -923,14 +925,30 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
       : selectedVariant?.images ?? [];
   const sizes = product.sizes_available;
 
+  // Con Multicolor apagado solo hay UN color en juego a la vez -- cambiar
+  // de color ahí es solo "prefiero este otro color para el mismo pedido",
+  // nunca un pedido nuevo, así que la cantidad/reparto por talla no debe
+  // depender de CUÁL color esté seleccionado en ese momento (bug real
+  // reportado: "agregué 10 piezas de negro pero cambié a otro color, se
+  // deben quedar las 10 piezas"): con la clave siendo variant.id, cambiar
+  // de color mostraba el reparto (vacío) de la nueva variante, ocultando
+  // lo ya tecleado en la anterior. Con Multicolor ENCENDIDO cada color SÍ
+  // necesita su propio reparto independiente (pedido explícito, ya
+  // implementado) -- ahí sigue usando variant.id como siempre.
+  const SINGLE_COLOR_QTY_KEY = "__single__";
+  function sizeQtyKey(variant: ProductVariant) {
+    return multicolor ? variant.id : SINGLE_COLOR_QTY_KEY;
+  }
+
   function getSizeQty(variant: ProductVariant, size: string) {
-    return sizeQuantities[variant.id]?.[size] ?? 0;
+    return sizeQuantities[sizeQtyKey(variant)]?.[size] ?? 0;
   }
 
   function setSizeQty(variant: ProductVariant, size: string, value: number) {
+    const key = sizeQtyKey(variant);
     setSizeQuantities((prev) => ({
       ...prev,
-      [variant.id]: { ...prev[variant.id], [size]: Math.max(0, value) },
+      [key]: { ...prev[key], [size]: Math.max(0, value) },
     }));
   }
 
@@ -1001,6 +1019,50 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // y tallas en orden), para no dejar nunca un número negativo ni tocar
   // una talla vacía.
   const activeSections = sections.filter((s) => !s.leaving);
+
+  // Mantiene sincronizado en el carrito el renglón "en curso" de este
+  // producto (debounced 400ms) en cuanto el cliente ya asignó alguna
+  // pieza real (cantidad/color/talla) -- pedido explícito: "también se
+  // debe de guardar y agregar al carrito cuando ya seleccionó la
+  // cantidad, color, talla de la prenda". Mismo id fijo que sigue usando
+  // el Personalizador después (ver productDraftCartItemId) -- si el
+  // cliente entra a personalizar, ese componente sigue actualizando este
+  // MISMO renglón en vez de duplicarlo; si nunca llega a personalizar y
+  // solo se va, el producto ya queda en el carrito con lo que eligió
+  // aquí. Sin ninguna pieza asignada todavía (sizeSum === 0, antes de
+  // tocar nada), no hay nada que guardar -- quita el renglón en vez de
+  // dejar uno vacío.
+  useEffect(() => {
+    const id = productDraftCartItemId(product.id);
+    const timer = setTimeout(() => {
+      if (sizeSum <= 0) {
+        removeItem(id);
+        return;
+      }
+      const item: CartItem = {
+        id,
+        product,
+        variants: activeSections.map((s) => ({
+          variant_id: s.variant.id,
+          color_name: s.variant.color_name,
+          color_hex: s.variant.color_hex,
+          qty: sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0),
+          sizes_breakdown: Object.fromEntries(sizes.map((size) => [size, getSizeQty(s.variant, size)])),
+        })),
+        total_quantity: quantity,
+        technique_id: null,
+        technique: undefined,
+        num_elements: 0,
+        customization_snapshot: null,
+        unit_price: unitPrice,
+        total_price: totalPrice,
+      };
+      upsertItem(item);
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id, sizeSum, sizeQuantities, multicolor, quantity, unitPrice, totalPrice, sections]);
+
   // 1 pieza ya es una cantidad válida y completa por sí sola: la sección
   // de tallas se muestra cuando hay algo real que repartir -- MÁS DE UNA
   // talla entre las que elegir (como siempre), O MÁS DE UN color activo

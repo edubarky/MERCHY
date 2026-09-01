@@ -12,7 +12,7 @@ import {
   roundUpToConfiguredSize,
   formatMXN,
 } from "@/lib/pricing";
-import { useCart } from "@/lib/cart/CartContext";
+import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
 import { useArtLibrary, type ArtAsset } from "@/lib/artLibrary/ArtLibraryContext";
 import {
   VIEW_ORDER,
@@ -368,15 +368,13 @@ export default function PersonalizerClient({
   // sigue siendo el carrito real de la plataforma, no uno nuevo. `addItem`
   // es lo único que este componente todavía necesita del contexto.
   const { addItem, upsertItem, removeItem } = useCart();
-  // Id fijo (no uid() aleatorio) para el renglón "en curso" de ESTE
-  // producto -- así cada sincronización con el carrito (ver el efecto
-  // junto a buildCartItem más abajo) actualiza el MISMO renglón en vez de
-  // duplicar uno nuevo cada vez que el cliente cambia algo. Nunca choca
-  // con el id de un renglón ya confirmado (ver handleAddToCart, que usa
-  // uid() para ese) -- si el cliente vuelve a personalizar este mismo
-  // producto después de haber confirmado un diseño, el nuevo renglón "en
-  // curso" es independiente del ya confirmado.
-  const draftCartItemId = `personalizador-draft:${product.id}`;
+  // Mismo id que ya viene usando ProductDetail (ver productDraftCartItemId)
+  // desde que el cliente eligió cantidad/color/talla en la ficha -- este
+  // Personalizador sigue actualizando ESE MISMO renglón (nunca uno nuevo)
+  // a medida que agrega diseño, así que nunca aparece duplicado en el
+  // carrito. Nunca choca con el id de un renglón ya confirmado (ver
+  // handleAddToCart, que usa uid() para ese).
+  const draftCartItemId = productDraftCartItemId(product.id);
   const { assets: artAssets, loading: artLibraryLoading, addAsset, removeAsset } = useArtLibrary();
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -1112,17 +1110,21 @@ export default function PersonalizerClient({
   // Sin captura de canvas aquí (queda "" -- el carrito ya cae a la foto
   // normal del producto como miniatura, ver /carrito): generar el PNG real
   // en cada cambio sería costoso: la captura real solo se hace una vez, al
-  // confirmar (ver handleAddToCart). Sin nada colocado ni técnica elegida,
-  // quita el renglón en vez de dejar uno vacío en el carrito.
+  // confirmar (ver handleAddToCart).
+  //
+  // A diferencia del autoguardado local de arriba, este SIEMPRE actualiza
+  // (nunca quita el renglón por falta de diseño): llegar a esta página ya
+  // implica una cantidad/color/talla reales elegidos (ver
+  // productDraftCartItemId -- el mismo renglón que ProductDetail ya venía
+  // sincronizando desde la ficha, o los valores por defecto de un link
+  // directo), así que el producto sigue siendo una selección válida
+  // aunque todavía no tenga ningún logo/texto colocado -- quitarlo aquí
+  // borraría justo lo que ProductDetail acaba de guardar. Solo
+  // handleAddToCart (al confirmar) reemplaza este renglón.
   useEffect(() => {
     if (!draftReady) return;
     const timer = setTimeout(() => {
-      const hasContent = numElements > 0 || selectedTechniqueIds.length > 0;
-      if (hasContent) {
-        upsertItem(buildCartItem(draftCartItemId, ""));
-      } else {
-        removeItem(draftCartItemId);
-      }
+      upsertItem(buildCartItem(draftCartItemId, ""));
     }, 400);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -95,3 +95,17 @@ export function useCart() {
   if (!ctx) throw new Error("useCart must be used within a CartProvider");
   return ctx;
 }
+
+// Id fijo (no uid() aleatorio) para el renglón "en curso" de un producto --
+// usado tanto por la ficha del producto (ProductDetail, en cuanto el
+// cliente elige cantidad/color/talla) como por el Personalizador (en
+// cuanto agrega algo de diseño), para que compartan el MISMO renglón en
+// vez de mostrar dos filas duplicadas del mismo producto: el cliente elige
+// su cantidad/color/talla en la ficha (se sincroniza aquí), entra a
+// personalizar (el Personalizador sigue actualizando este mismo id), y al
+// confirmar el diseño ese renglón se reemplaza por uno YA confirmado con
+// su propio id nuevo (ver handleAddToCart en PersonalizerClient). Nunca
+// choca con el id de un renglón confirmado, que siempre usa uid().
+export function productDraftCartItemId(productId: string) {
+  return `producto-en-progreso:${productId}`;
+}
