@@ -23,14 +23,20 @@
       <path d="M178 218a34 22 0 0 0 67 0" stroke="#C9C8CC" stroke-width="1.6" />
     </g>
 
-    <!-- Cota A: Ancho (horizontal, a la altura del pecho). El círculo va
-         bien arriba de la línea (18px de margen real hasta las marcas de
-         las puntas, no solo hasta la línea central): antes casi la
-         tocaba (3px), se veían encimados uno sobre otro en el render
-         real, reportado explícitamente ("sin encimar elementos"). -->
-    <line x1="122" y1="196" x2="122" y2="204" stroke="#1A1A1A" stroke-width="1.5"/>
-    <line x1="301" y1="196" x2="301" y2="204" stroke="#1A1A1A" stroke-width="1.5"/>
-    <line x1="122" y1="200" x2="301" y2="200" stroke="#1A1A1A" stroke-width="1.5"/>
+    <!-- Cota A: Ancho (horizontal, a la altura del pecho). Encontrado al
+         revisar de cerca: las puntas de esta línea (antes en x=122/301,
+         más ancha que el propio torso) caían FUERA del panel recto de la
+         prenda, justo sobre la muesca diagonal de la axila: la línea
+         cruzaba encima del contorno de la prenda ahí, un cruce/encimado
+         real confirmado con una captura recortada de esa zona. Ahora sus
+         puntas (x=148/275) coinciden exactamente con los lados rectos
+         del torso (donde el contorno ya es una simple línea vertical, sin
+         ninguna diagonal ni muesca que cruzar), y a esta altura (y=200)
+         tampoco toca el arco gris del bolsillo (empieza en y=218). El
+         círculo sigue con su margen de 18px hacia arriba de siempre. -->
+    <line x1="148" y1="196" x2="148" y2="204" stroke="#1A1A1A" stroke-width="1.5"/>
+    <line x1="275" y1="196" x2="275" y2="204" stroke="#1A1A1A" stroke-width="1.5"/>
+    <line x1="148" y1="200" x2="275" y2="200" stroke="#1A1A1A" stroke-width="1.5"/>
     <circle cx="211.5" cy="167" r="11" fill="#1A1A1A"/>
     <text x="211.5" y="171.5" text-anchor="middle" font-family="DM Sans, -apple-system, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">A</text>
 
