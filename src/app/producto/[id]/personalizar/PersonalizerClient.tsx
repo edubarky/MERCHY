@@ -164,6 +164,67 @@ function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// Autoguardado del diseño en curso -- pedido explícito: si el cliente sale
+// de esta página (botón atrás, cierra la pestaña, navega a otra parte del
+// sitio) sin llegar a "Confirmar diseño", antes todo lo que llevaba
+// colocado se perdía para siempre. Se guarda por PRODUCTO (no por color:
+// `elements` ya es una sola cosa compartida entre colores, ver
+// activeVariantId en el componente) en localStorage -- nunca en el
+// carrito ni en Supabase, esto es solo un borrador en el propio navegador.
+// `quantity`/`activeVariantId` a propósito NO se guardan aquí: esos ya
+// llegan de la ficha del producto vía props (initialQuantity/
+// initialVariantId, ver Props) cada vez que se entra, y esa sigue siendo
+// la fuente de verdad -- este autoguardado protege el TRABAJO (logos/
+// texto/técnica elegida), no la selección de color/cantidad.
+const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 días -- más viejo que
+// esto se descarta en vez de restaurar algo potencialmente obsoleto (ej.
+// un logo ya borrado de "Mis diseños" desde entonces).
+
+interface PersonalizerDraft {
+  savedAt: number;
+  elements: ViewElements;
+  selectedTechniqueIds: string[];
+  techniqueTintas: Record<string, string>;
+  techniqueLogoSizeCm: Record<string, Record<string, { largo: string; alto: string }>>;
+  groupOrientation: Partial<Record<string, ViewName>>;
+}
+
+function draftStorageKey(productId: string) {
+  return `merchy:personalizador-draft:${productId}`;
+}
+
+function loadDraft(productId: string): PersonalizerDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(draftStorageKey(productId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersonalizerDraft;
+    if (!parsed || typeof parsed.savedAt !== "number" || Date.now() - parsed.savedAt > DRAFT_TTL_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(productId: string, draft: Omit<PersonalizerDraft, "savedAt">) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(draftStorageKey(productId), JSON.stringify({ ...draft, savedAt: Date.now() }));
+  } catch {
+    // localStorage lleno/bloqueado (modo privado, cuotas, etc.) -- el
+    // autoguardado es una mejora, nunca debe romper el editor.
+  }
+}
+
+function clearDraft(productId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(draftStorageKey(productId));
+  } catch {
+    // ver saveDraft
+  }
+}
+
 // Reads an image's real natural pixel dimensions — the source of truth for
 // sizing a newly-placed logo's box to its own actual aspect ratio (see
 // placeAsset). Object URLs (what every renderable asset's `src` is) decode
@@ -294,6 +355,12 @@ export default function PersonalizerClient({
   // something is selected.
   const [interactionInBounds, setInteractionInBounds] = useState(true);
   const [artLibraryOpen, setArtLibraryOpen] = useState(false);
+  // Se pone en true recién después de que el efecto de restaurar el
+  // borrador (ver más abajo) ya corrió una vez -- el efecto de GUARDAR usa
+  // esto para no disparar en el primer render con los valores todavía
+  // vacíos de siempre y sobreescribir/borrar un borrador real que apenas
+  // se acaba de leer de localStorage.
+  const [draftReady, setDraftReady] = useState(false);
 
   // El botón/popover de carrito interno de este panel se eliminó -- el
   // carrito ahora vive únicamente en PublicHeader (barra superior, ver
@@ -840,8 +907,46 @@ export default function PersonalizerClient({
     return roundUpToConfiguredSize(largo, alto, sizeOptions);
   }
 
+  // Restaura el borrador guardado de ESTE producto (si hay uno vigente) al
+  // entrar -- una sola vez, al montar. `setHistory([draft.elements])` deja
+  // el punto restaurado como nuevo inicio del undo (nunca "deshacer" hacia
+  // un vacío que el cliente ni siquiera vio en esta sesión).
+  useEffect(() => {
+    const draft = loadDraft(product.id);
+    if (draft) {
+      setElements(draft.elements);
+      setHistory([draft.elements]);
+      setHistoryIndex(0);
+      setSelectedTechniqueIds(draft.selectedTechniqueIds ?? []);
+      setTechniqueTintas(draft.techniqueTintas ?? {});
+      setTechniqueLogoSizeCm(draft.techniqueLogoSizeCm ?? {});
+      setGroupOrientation(draft.groupOrientation ?? {});
+    }
+    setDraftReady(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+
   const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers);
   const numElements = applicableViews.reduce((sum, v) => sum + elements[v].length, 0);
+
+  // Guarda el borrador (debounced, 400ms) cada vez que algo del diseño
+  // cambia -- solo después de que el efecto de arriba ya haya tenido
+  // oportunidad de restaurar (ver draftReady), para no pisar un borrador
+  // real con el estado vacío inicial del primer render. Sin nada colocado
+  // ni técnica elegida, borra el borrador en vez de guardar uno vacío --
+  // si el cliente quitó todo a propósito y se fue, no debe reaparecer.
+  useEffect(() => {
+    if (!draftReady) return;
+    const timer = setTimeout(() => {
+      const hasContent = numElements > 0 || selectedTechniqueIds.length > 0;
+      if (hasContent) {
+        saveDraft(product.id, { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation });
+      } else {
+        clearDraft(product.id);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [draftReady, product.id, elements, numElements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation]);
   const allLogoElements = applicableViews.flatMap((v) => elements[v].filter((e) => e.type === "logo"));
   const numLogoElements = allLogoElements.length;
   // "Posiciones" (tarjeta de detalle de cada técnica): los ejes reales
@@ -998,6 +1103,10 @@ export default function PersonalizerClient({
       // ya reacciona solo porque comparte el mismo CartContext.
       addItem(newItem);
       setSelectedId(null);
+      // Ya quedó guardado en el carrito -- deja de ser un borrador
+      // pendiente que proteger, así que no debe reaparecer si el cliente
+      // vuelve a personalizar este mismo producto después.
+      clearDraft(product.id);
     } finally {
       setAddingToCart(false);
     }
