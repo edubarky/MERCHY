@@ -1189,7 +1189,14 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
           </div>
 
           {images.length > 1 && (
-            <div className="flex gap-3">
+            // flex-wrap (no overflow-x-auto): antes las miniaturas se
+            // desbordaban del contenedor -- sin overflow-x-auto propio,
+            // ese desborde terminaba corriendo el scroll HORIZONTAL de
+            // toda la página para poder verlas, algo que el usuario ni
+            // siquiera notaba que podía hacer ("se tiene que deslizar...
+            // es un poco complicado"). Envolver a una segunda fila
+            // elimina la necesidad de deslizar nada.
+            <div className="flex flex-wrap gap-3">
               {images.map((url, i) => (
                 <button
                   key={url}
