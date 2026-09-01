@@ -1657,13 +1657,20 @@ export default function PersonalizerClient({
               `quantity`, sin tocar esa lógica. */}
           {/* Todo en una sola fila (flex-nowrap, no flex-wrap) -- cada
               sección lleva shrink-0 para que ninguna se comprima de forma
-              rara; overflow-x-auto es solo una red de seguridad para un
-              caso extremo (ej. un total de 6+ cifras + la nota de
-              "técnica por cotizar" al mismo tiempo), nunca visible en el
-              uso normal. Alturas/paddings/tamaños de fuente reducidos a
-              propósito frente a la versión anterior para que quepa
-              cómodo en el ancho real del panel (~35% del viewport). */}
-          <div className="scrollbar-none flex flex-nowrap items-center gap-[13.8px] overflow-x-auto rounded-full border border-white bg-white/[0.05] px-[42.4px] py-[18px] shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-[42.4px]">
+              rara. Antes llevaba overflow-x-auto como "red de seguridad"
+              para un caso extremo (ej. un total de 6+ cifras + la nota de
+              "técnica por cotizar" al mismo tiempo) -- pero aunque la
+              barra de scroll se ocultaba visualmente (.scrollbar-none), el
+              contenido seguía siendo deslizable con touch/trackpad, y
+              esta píldora ya se había acordado como de tamaño FIJO, sin
+              poder deslizarse bajo ningún caso (pedido explícito). Ahora
+              overflow-hidden: nunca se desliza: un caso extremo se
+              recortaría en vez de scrollear, pero a los precios reales del
+              catálogo esto nunca ocurre en el uso normal. Alturas/
+              paddings/tamaños de fuente reducidos a propósito frente a la
+              versión anterior para que quepa cómodo en el ancho real del
+              panel (~35% del viewport). */}
+          <div className="flex flex-nowrap items-center gap-[13.8px] overflow-hidden rounded-full border border-white bg-white/[0.05] px-[42.4px] py-[18px] shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-[42.4px]">
             {/* Cantidad -- compacta, botones circulares chicos, turquesa. */}
             <div className="flex shrink-0 items-center gap-[3.2px]">
               <button

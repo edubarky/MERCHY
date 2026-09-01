@@ -25,21 +25,6 @@
     text-wrap: balance;
   }
 
-  /* Personalizador — píldora de "Resumen del pedido": overflow-x-auto se
-     deja como red de seguridad silenciosa (nunca visible en el ancho real
-     del panel a su tamaño actual, ya verificado), pero la barra de scroll
-     nativa del navegador SÍ se dibuja siempre que overflow-x sea "auto",
-     incluso sin contenido que desbordar en algunos navegadores/SOs — se
-     reportó como visible de más. Oculta solo la barra visual; el
-     contenido sigue siendo scrolleable con touch/trackpad si algún caso
-     extremo futuro lo necesitara. */
-  .scrollbar-none {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* Edge/IE viejos */
-  }
-  .scrollbar-none::-webkit-scrollbar {
-    display: none; /* Chrome/Safari/Edge nuevo */
-  }
 }
 
 /* Personalizador — smaller, lighter react-moveable selection handles,
