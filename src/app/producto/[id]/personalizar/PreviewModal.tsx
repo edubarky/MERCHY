@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import type { PrintTechnique } from "@/types";
 import { VIEW_ORDER, VIEW_LABELS, type ViewElements, type GarmentColor, type ResolvedProductAssets } from "./types";
-import { VIEW_ASSETS } from "./viewAssets";
 import { resolveFontFamilyCss } from "./textFonts";
 import { DEFAULT_FONT_SIZE_RATIO } from "./DesignElementView";
 
@@ -57,7 +56,6 @@ function MiniView({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
-  const asset = VIEW_ASSETS[view];
   // No generic-mockup fallback here either — same rule as the live canvas:
   // only ever the selected product's own photography, or nothing.
   const imgSrc = resolvedAssets[view][garmentColor];
@@ -147,8 +145,15 @@ function MiniView({
 
       <div
         ref={viewportRef}
+        // aspectRatio fijo (1:1), NUNCA asset.aspect por vista: cada eje
+        // (frente/reverso/izquierda/derecha) trae su propia relación de
+        // aspecto real de foto, así que dos tarjetas lado a lado terminaban
+        // con alturas distintas -- una prenda se veía más grande que otra
+        // ("no quiero que un artículo se vea más grande que otro"). Un
+        // cuadrado fijo + object-contain en la imagen deja todas las
+        // tarjetas exactamente del mismo tamaño sin importar la vista.
         className="relative mx-auto overflow-hidden rounded-xl bg-[#F5F5F5]"
-        style={{ width: "100%", aspectRatio: asset.aspect, cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "zoom-in" }}
+        style={{ width: "100%", aspectRatio: 1, cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "zoom-in" }}
         onDoubleClick={handleDoubleClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
