@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import PublicHeader from "@/components/PublicHeader";
-import { useCart } from "@/lib/cart/CartContext";
+import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
 import { formatMXN } from "@/lib/pricing";
 
 function CartEmptyIcon({ className = "" }: { className?: string }) {
@@ -42,10 +42,20 @@ export default function CarritoPage() {
               {items.map((item) => {
                 const thumb = item.customization_snapshot?.canvas_data_url || item.product.variants?.[0]?.images?.[0];
                 const color = item.variants[0];
+                // El renglón "en curso" (ver productDraftCartItemId) todavía
+                // no tiene un diseño confirmado -- llevarlo al Personalizador
+                // continúa justo donde lo dejó (el autoguardado/sincronizado
+                // ya restaura ese mismo estado ahí). Un renglón YA
+                // confirmado (id propio, ver handleAddToCart) no tiene hoy
+                // forma de volver a cargarse en el Personalizador para
+                // editarlo -- llevarlo a la ficha del producto en su lugar.
+                const isDraft = item.id === productDraftCartItemId(item.product.id);
+                const href = isDraft ? `/producto/${item.product.id}/personalizar` : `/producto/${item.product.id}`;
                 return (
-                  <div
+                  <Link
                     key={item.id}
-                    className="flex items-center gap-4 rounded-[20px] bg-white p-5 shadow-[0_2px_16px_rgba(0,0,0,0.05)]"
+                    href={href}
+                    className="flex items-center gap-4 rounded-[20px] bg-white p-5 shadow-[0_2px_16px_rgba(0,0,0,0.05)] transition-shadow duration-150 ease-out hover:shadow-[0_4px_20px_rgba(0,0,0,0.09)]"
                   >
                     <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gray-50">
                       {thumb ? (
@@ -68,13 +78,17 @@ export default function CarritoPage() {
                       <p className="font-bold text-foreground">{formatMXN(item.total_price)} MXN</p>
                       <button
                         type="button"
-                        onClick={() => removeItem(item.id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeItem(item.id);
+                        }}
                         className="text-sm text-ui-gray transition-colors duration-150 hover:text-accent-coral"
                       >
                         Eliminar
                       </button>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

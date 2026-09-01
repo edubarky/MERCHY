@@ -1111,7 +1111,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     const remainder = targetNewTotal % sizes.length;
     const perSize = Object.fromEntries(sizes.map((size, i) => [size, base + (i < remainder ? 1 : 0)]));
 
-    setSizeQuantities((prev) => ({ ...prev, [target.variant.id]: perSize }));
+    setSizeQuantities((prev) => ({ ...prev, [sizeQtyKey(target.variant)]: perSize }));
   }
   function decrementMainQuantity() {
     for (const s of activeSections) {
