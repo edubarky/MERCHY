@@ -1485,6 +1485,14 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
 
           {/* CTAs */}
           <div className="flex gap-3">
+            {/* Interacción "premium" (pedido explícito, tipo Apple/Stripe) --
+                apariencia en reposo intacta a propósito (mismo bg/shadow/
+                radius/padding/texto de siempre); todo lo nuevo vive
+                exclusivamente en hover/active. El borde va SIEMPRE
+                presente pero transparent por defecto (nunca "sin borde")
+                -- así el box-sizing (border-box, default de Tailwind) no
+                cambia entre reposo y hover, ni entre este botón y el de al
+                lado, y no hay ningún salto de tamaño al pasar el cursor. */}
             <Link
               href={personalizarHref}
               aria-disabled={!canPersonalize}
@@ -1492,10 +1500,10 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               onClick={(e) => {
                 if (!canPersonalize) e.preventDefault();
               }}
-              className={`flex-1 flex items-center justify-center py-3.5 rounded-full bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] transition-all duration-300 ease-in-out ${
+              className={`flex-1 flex items-center justify-center py-3.5 rounded-full border bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] transition-all duration-200 ease-out ${
                 canPersonalize
-                  ? "hover:shadow-[0_8px_24px_rgba(40,43,52,0.22)] hover:opacity-90 hover:-translate-y-[1px]"
-                  : "opacity-40 cursor-not-allowed pointer-events-none"
+                  ? "border-transparent hover:-translate-y-0.5 hover:border-primary/50 hover:bg-[#2e323c] hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_0_0_1px_rgba(87,224,217,0.15),0_10px_26px_-6px_rgba(87,224,217,0.35),0_8px_20px_rgba(40,43,52,0.2)] active:scale-[0.98]"
+                  : "border-transparent opacity-40 cursor-not-allowed pointer-events-none"
               }`}
             >
               Personalizar producto
@@ -1504,7 +1512,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               href={`https://wa.me/5215500000000?text=${encodeURIComponent(`Hola, me interesa cotizar: ${product.name} (SKU: ${product.sku})`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center py-3.5 rounded-full bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] hover:shadow-[0_8px_24px_rgba(40,43,52,0.22)] hover:opacity-90 hover:-translate-y-[1px] transition-all duration-300 ease-in-out"
+              className="flex-1 flex items-center justify-center py-3.5 rounded-full border border-transparent bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-[#2e323c] hover:shadow-[0_8px_20px_rgba(40,43,52,0.2),0_0_22px_-4px_rgba(87,224,217,0.4)] active:scale-[0.98]"
             >
               Agregar al carrito
             </a>
