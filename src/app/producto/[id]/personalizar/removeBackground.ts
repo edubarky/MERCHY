@@ -1,23 +1,28 @@
-// Eliminar fondo: inundación (flood-fill) desde los bordes de la imagen,
-// no un recorte por forma ni un modelo de IA -- el mismo criterio que la
-// herramienta "varita mágica" de cualquier editor de imágenes. Funciona
-// bien para el caso real más común (un logo exportado/escaneado sobre un
-// fondo de un solo color, casi siempre blanco); una foto con fondo
-// complejo puede no limpiarse del todo, pero eso queda fuera de alcance
-// sin un modelo de segmentación real.
+// Eliminar fondo: reemplaza por transparencia todo pixel que se PAREZCA
+// al color de fondo detectado, sin importar dónde esté -- no un modelo de
+// IA, ni un recorte por forma. El mismo criterio que un chroma-key/color-
+// key clásico.
 //
 // 1. El color de fondo se toma como el promedio de TODOS los pixeles del
 //    borde (fila de arriba/abajo, columna izquierda/derecha) -- así no
 //    depende de una sola esquina, que podría no ser representativa.
-// 2. Inunda desde cada pixel del borde hacia adentro (pila explícita, no
-//    recursión -- sin riesgo de desbordar el stack con imágenes grandes),
-//    transparentando cada pixel cuya distancia de color al fondo esté
-//    dentro del umbral, y solo esos -- una forma del mismo color que el
-//    fondo pero que NO toca el borde (ej. una "O" blanca dentro del logo)
-//    nunca se transparenta, porque la inundación nunca llega hasta ahí.
+// 2. Cada pixel de la imagen (no solo los conectados al borde) se
+//    transparenta si su distancia de color al fondo está dentro del
+//    umbral -- así un hueco interno del mismo color (ej. el centro de un
+//    anillo, o el interior de una "O"/"A") también se limpia, no solo el
+//    fondo exterior. Antes se probó una versión con inundación (flood-
+//    fill) solo desde el borde -- se descartó justo por esto: un hueco
+//    interno NO conectado al borde se quedaba opaco, y "Cambiar color" lo
+//    pintaba igual que el resto del logo, dando el efecto de "círculo
+//    sólido" reportado en vez de la silueta real.
 // 3. Borde suave: entre el umbral "duro" (transparente total) y 1.8× ese
 //    umbral, el alfa baja gradualmente en vez de un corte de un solo
-//    pixel -- evita el borde dentado típico de un flood-fill binario.
+//    pixel -- evita el borde dentado típico de un color-key binario.
+//
+// Contrapartida aceptada (igual que cualquier chroma-key real): un color
+// DENTRO del logo que por casualidad coincida con el color de fondo
+// también se transparenta -- es el comportamiento esperado para "quitar
+// el fondo", no un caso aparte que distinguir.
 const cache = new Map<string, Promise<string>>();
 
 const DEFAULT_TOLERANCE = 40;
@@ -70,45 +75,17 @@ export function removeBackground(src: string, tolerance = DEFAULT_TOLERANCE): Pr
         const bgB = count > 0 ? bSum / count : 255;
 
         const softEdge = tolerance * 1.8;
-        const visited = new Uint8Array(w * h);
-        const stack: number[] = [];
-
-        const visit = (x: number, y: number) => {
-          if (x < 0 || x >= w || y < 0 || y >= h) return;
-          const idx = y * w + x;
-          if (visited[idx]) return;
-          const i = idx * 4;
-          const dr = data[i] - bgR;
-          const dg = data[i + 1] - bgG;
-          const db = data[i + 2] - bgB;
+        for (let p = 0; p < data.length; p += 4) {
+          const dr = data[p] - bgR;
+          const dg = data[p + 1] - bgG;
+          const db = data[p + 2] - bgB;
           const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-          if (dist > softEdge) return; // no se parece al fondo -- pared, no avanza más por aquí
-          visited[idx] = 1;
           if (dist <= tolerance) {
-            data[i + 3] = 0;
-          } else {
+            data[p + 3] = 0;
+          } else if (dist <= softEdge) {
             const t = (dist - tolerance) / (softEdge - tolerance);
-            data[i + 3] = Math.round(data[i + 3] * t);
+            data[p + 3] = Math.round(data[p + 3] * t);
           }
-          stack.push(idx);
-        };
-
-        for (let x = 0; x < w; x++) {
-          visit(x, 0);
-          visit(x, h - 1);
-        }
-        for (let y = 0; y < h; y++) {
-          visit(0, y);
-          visit(w - 1, y);
-        }
-        while (stack.length > 0) {
-          const idx = stack.pop()!;
-          const x = idx % w;
-          const y = (idx / w) | 0;
-          visit(x + 1, y);
-          visit(x - 1, y);
-          visit(x, y + 1);
-          visit(x, y - 1);
         }
 
         ctx.putImageData(imageData, 0, 0);
