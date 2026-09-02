@@ -6,39 +6,40 @@ import type { PrintTechnique } from "@/types";
 import { VIEW_ORDER, VIEW_LABELS, type ViewElements, type DesignElement, type GarmentColor, type ResolvedProductAssets } from "./types";
 import { resolveFontFamilyCss } from "./textFonts";
 import { DEFAULT_FONT_SIZE_RATIO } from "./DesignElementView";
-import { recolorImage } from "./recolorImage";
+import { needsLogoProcessing, processLogoSrc } from "./logoImagePipeline";
 
-// Mismas "Opciones de diseño" (espejo/opacidad/brillo-contraste/color) que
-// ya aplica el lienzo real (ver DesignElementView) -- si no se replicaran
-// aquí, esta vista previa mostraría el logo ORIGINAL sin los ajustes que
-// el cliente ya eligió, inconsistente con lo que en realidad va a llevar
-// el pedido. Componente propio (no inline en el .map de abajo) porque el
-// recolor es async por elemento -- cada logo necesita su propio estado.
+// Mismas "Opciones de diseño" (fondo/color/espejo/opacidad/brillo-
+// contraste) que ya aplica el lienzo real (ver DesignElementView) -- si no
+// se replicaran aquí, esta vista previa mostraría el logo ORIGINAL sin los
+// ajustes que el cliente ya eligió, inconsistente con lo que en realidad
+// va a llevar el pedido. Componente propio (no inline en el .map de abajo)
+// porque el procesamiento es async por elemento -- cada logo necesita su
+// propio estado.
 function MiniLogoImage({ element }: { element: DesignElement }) {
-  const [recoloredSrc, setRecoloredSrc] = useState<string | null>(null);
+  const [processedSrc, setProcessedSrc] = useState<string | null>(null);
   useEffect(() => {
-    if (!element.src || !element.recolor) {
-      setRecoloredSrc(null);
+    if (!element.src || !needsLogoProcessing(element)) {
+      setProcessedSrc(null);
       return;
     }
     let cancelled = false;
-    recolorImage(element.src, element.recolor)
+    processLogoSrc(element.src, element)
       .then((dataUrl) => {
-        if (!cancelled) setRecoloredSrc(dataUrl);
+        if (!cancelled) setProcessedSrc(dataUrl);
       })
       .catch(() => {
-        if (!cancelled) setRecoloredSrc(null);
+        if (!cancelled) setProcessedSrc(null);
       });
     return () => {
       cancelled = true;
     };
-  }, [element.src, element.recolor]);
+  }, [element.src, element.bgRemoved, element.recolor]);
 
   if (!element.src) return null;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={recoloredSrc ?? element.src}
+      src={processedSrc ?? element.src}
       alt=""
       className="h-full w-full select-none object-contain"
       draggable={false}

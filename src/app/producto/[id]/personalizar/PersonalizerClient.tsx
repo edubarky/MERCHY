@@ -1091,6 +1091,7 @@ export default function PersonalizerClient({
             brightness: el.brightness || undefined,
             contrast: el.contrast || undefined,
             recolor: el.recolor || undefined,
+            bg_removed: el.bgRemoved || undefined,
           });
         else texts.push({ type: "text", text: el.text, ...shared });
       });

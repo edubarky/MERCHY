@@ -5,7 +5,7 @@ import Moveable from "react-moveable";
 import type { DesignElement } from "./types";
 import { resolveFontFamilyCss } from "./textFonts";
 import { measureTextBoxPx } from "./measureText";
-import { recolorImage } from "./recolorImage";
+import { needsLogoProcessing, processLogoSrc } from "./logoImagePipeline";
 
 // Movement/resize/rotation are NOT clamped anywhere — the user has full
 // freedom to place the design anywhere on the product. This only checks
@@ -130,31 +130,32 @@ export default function DesignElementView({
   const [editingText, setEditingText] = useState(false);
   const [draftText, setDraftText] = useState(element.text ?? "");
 
-  // "Cambiar color" (Opciones de diseño, solo logo) -- la versión
-  // recoloreada se calcula async (canvas offscreen, ver recolorImage.ts)
-  // y se cachea ahí mismo por (src, color), así que cambiar de un color a
-  // otro y volver no repite el trabajo. `element.src` original nunca se
-  // sobreescribe -- "Sin cambio de color" simplemente vuelve a mostrarlo
-  // porque este estado se limpia (null) cuando element.recolor es
-  // null/undefined.
-  const [recoloredSrc, setRecoloredSrc] = useState<string | null>(null);
+  // "Eliminar fondo"/"Cambiar color" (Opciones de diseño, solo logo) -- la
+  // versión procesada se calcula async (canvas offscreen, ver
+  // logoImagePipeline.ts/removeBackground.ts/recolorImage.ts), cada paso
+  // cacheado en su propio archivo, así que alternar entre valores ya
+  // vistos no repite el trabajo. `element.src` original nunca se
+  // sobreescribe -- apagar cualquiera de los dos simplemente vuelve a
+  // mostrarlo, porque este estado se limpia (null) cuando ninguno de los
+  // dos está activo.
+  const [processedSrc, setProcessedSrc] = useState<string | null>(null);
   useEffect(() => {
-    if (element.type !== "logo" || !element.src || !element.recolor) {
-      setRecoloredSrc(null);
+    if (element.type !== "logo" || !element.src || !needsLogoProcessing(element)) {
+      setProcessedSrc(null);
       return;
     }
     let cancelled = false;
-    recolorImage(element.src, element.recolor)
+    processLogoSrc(element.src, element)
       .then((dataUrl) => {
-        if (!cancelled) setRecoloredSrc(dataUrl);
+        if (!cancelled) setProcessedSrc(dataUrl);
       })
       .catch(() => {
-        if (!cancelled) setRecoloredSrc(null);
+        if (!cancelled) setProcessedSrc(null);
       });
     return () => {
       cancelled = true;
     };
-  }, [element.type, element.src, element.recolor]);
+  }, [element.type, element.src, element.bgRemoved, element.recolor]);
 
   useLayoutEffect(() => {
     if (!editingText) return;
@@ -317,7 +318,7 @@ export default function DesignElementView({
           element.src ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={recoloredSrc ?? element.src}
+              src={processedSrc ?? element.src}
               alt={element.fileName ?? "logo"}
               className="h-full w-full object-contain pointer-events-none"
               draggable={false}

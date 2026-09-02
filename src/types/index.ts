@@ -109,6 +109,7 @@ export interface CustomizationElement {
   brightness?: number;
   contrast?: number;
   recolor?: string | null;
+  bg_removed?: boolean;
 }
 
 // Detalle completo de UNA técnica activa dentro de una selección múltiple

@@ -87,6 +87,14 @@ export interface DesignElement {
   // paleta por zona, es un color único para todo el diseño. null/undefined
   // = "Sin cambio de color" (se usa el archivo original tal cual).
   recolor?: string | null;
+  // Eliminar fondo: quita (transparenta) el color de fondo detectado en
+  // los bordes de la imagen, y todo lo conectado a él -- inundación desde
+  // el borde (ver removeBackground.ts), no un recorte por forma. Nunca
+  // toca `src` (el archivo original) -- reversible con un solo toggle,
+  // igual que recolor/flipH/flipV. Funciona mejor con fondos de un solo
+  // color (el caso real más común en logos subidos); una foto con fondo
+  // complejo puede no limpiarse del todo.
+  bgRemoved?: boolean;
 
   // text-only
   text?: string;
