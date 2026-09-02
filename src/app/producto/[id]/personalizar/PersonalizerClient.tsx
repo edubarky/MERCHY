@@ -889,6 +889,21 @@ export default function PersonalizerClient({
     });
   }
 
+  // "Atrás"/"Siguiente" (ver más abajo) -- mismo mecanismo de brillo que
+  // sigue al cursor ya usado en ProductDetail.tsx para "Personalizar
+  // producto"/"Agregar al carrito": posición del cursor DENTRO del botón,
+  // en % de su propio ancho/alto, escrita directo como variables CSS en
+  // el propio elemento (nunca useState -- mousemove dispara muy seguido,
+  // pasar eso por React re-renderizaría todo este componente en cada
+  // frame).
+  function handleGlowMove(e: React.MouseEvent<HTMLElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    e.currentTarget.style.setProperty("--glow-x", `${x}%`);
+    e.currentTarget.style.setProperty("--glow-y", `${y}%`);
+  }
+
   function toggleTechnique(id: string) {
     setSelectedTechniqueIds((prev) => {
       // Quitar la técnica ya elegida (el botón "quitar" de su propia
@@ -1833,21 +1848,60 @@ export default function PersonalizerClient({
             </p>
           )}
 
+          {/* Mismo tratamiento "glass" premium que ya llevan "Personalizar
+              producto"/"Agregar al carrito" en la ficha del producto --
+              pedido explícito, aplicado ÚNICAMENTE a estos dos botones.
+              Tamaño/posición/proporción/texto/lógica intactos: mismo
+              Link/button, mismo href/onClick/disabled de siempre. Dos
+              capas decorativas por botón (aria-hidden, pointer-events-
+              none): un reflejo fijo siempre presente + un brillo que
+              sigue al cursor solo en hover (mismas --glow-x/--glow-y de
+              handleGlowMove, ya usado arriba para los otros dos botones).
+              El contenido real va en su propio span con position:relative
+              + z-index para quedar siempre arriba de esas capas. */}
           <div className="flex gap-4">
             <Link
               href={`/producto/${product.id}`}
-              className="flex h-14 flex-1 items-center justify-center rounded-full border-2 border-foreground text-base font-semibold text-foreground transition-all duration-180 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(0,0,0,0.1)]"
+              onMouseMove={handleGlowMove}
+              className="group relative flex h-14 flex-1 items-center justify-center overflow-hidden rounded-full border border-foreground/85 bg-gradient-to-b from-white to-[#fafafa] text-base font-semibold text-foreground shadow-[0_2px_10px_rgba(0,0,0,0.06)] transition-all duration-[220ms] ease-out hover:-translate-y-0.5 hover:border-foreground hover:shadow-[0_10px_24px_-8px_rgba(0,0,0,0.14),0_4px_10px_rgba(0,0,0,0.06)] active:scale-[0.98]"
             >
-              Atrás
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{ background: "radial-gradient(120% 60% at 50% -20%, rgba(255,255,255,0.8), transparent 60%)" }}
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-[260ms] ease-out group-hover:opacity-100"
+                style={{
+                  background: "radial-gradient(150px circle at var(--glow-x,50%) var(--glow-y,50%), rgba(87,224,217,0.14), transparent 70%)",
+                }}
+              />
+              <span className="relative z-10">Atrás</span>
             </Link>
             <button
               type="button"
               onClick={handleAddToCart}
               disabled={addingToCart || techniqueSelectionIncomplete}
               title={techniqueSelectionIncomplete ? "Elige una técnica de impresión y completa sus datos" : undefined}
-              className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+              onMouseMove={handleGlowMove}
+              className="group relative flex h-14 flex-1 items-center justify-center overflow-hidden rounded-full border border-white/25 bg-gradient-to-b from-primary to-primary-dark text-base font-semibold text-white [text-shadow:0_1px_2px_rgba(0,63,60,0.25)] shadow-[0_10px_26px_-10px_rgba(87,224,217,0.6),0_4px_10px_-2px_rgba(87,224,217,0.3)] transition-all duration-[220ms] ease-out hover:-translate-y-0.5 hover:border-white/40 hover:shadow-[0_14px_32px_-10px_rgba(87,224,217,0.7),0_6px_16px_-2px_rgba(87,224,217,0.4)] active:scale-[0.98] disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-[0_10px_26px_-10px_rgba(87,224,217,0.6),0_4px_10px_-2px_rgba(87,224,217,0.3)]"
             >
-              {addingToCart ? "Agregando..." : "Siguiente"} <ArrowRightIcon className="h-4 w-4" />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{ background: "radial-gradient(120% 60% at 50% -20%, rgba(255,255,255,0.4), transparent 60%)" }}
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-[260ms] ease-out group-hover:opacity-100"
+                style={{
+                  background: "radial-gradient(150px circle at var(--glow-x,50%) var(--glow-y,50%), rgba(255,255,255,0.4), transparent 70%)",
+                }}
+              />
+              <span className="relative z-10 flex items-center gap-2">
+                {addingToCart ? "Agregando..." : "Siguiente"} <ArrowRightIcon className="h-4 w-4" />
+              </span>
             </button>
           </div>
         </div>
