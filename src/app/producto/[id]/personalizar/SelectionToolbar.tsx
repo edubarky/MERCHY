@@ -170,24 +170,35 @@ export default function SelectionToolbar({
       </label>
 
       {element.type === "logo" && (
-        // "Eliminar fondo" con acceso directo de un clic -- pedido
-        // explícito de reordenar la barra: esta acción ya no vive
-        // únicamente dentro del panel de "Opciones de diseño" (que ahora
-        // se movió al final, ver abajo), sino aquí, al frente, para
-        // usarla sin tener que abrir el panel completo. La sección
-        // "Fondo" dentro de DesignOptionsPanel se quitó para no
-        // duplicar el mismo control en dos lugares.
-        <button
-          type="button"
-          onClick={() => onChange(element.id, { bgRemoved: !element.bgRemoved })}
-          aria-pressed={!!element.bgRemoved}
-          className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-            element.bgRemoved ? "border-primary bg-primary/10 text-primary-dark" : "border-ui-border text-foreground hover:border-primary"
-          }`}
-        >
-          <TransparentBgIcon className="h-4 w-4" />
-          {element.bgRemoved ? "Fondo eliminado" : "Eliminar fondo"}
-        </button>
+        // "Eliminar fondo" (acceso directo de un clic) y "Opciones de
+        // diseño" van juntos, uno al lado del otro -- pedido explícito.
+        // La sección "Fondo" dentro de DesignOptionsPanel se quitó para
+        // no duplicar el mismo control en dos lugares.
+        <>
+          <button
+            type="button"
+            onClick={() => onChange(element.id, { bgRemoved: !element.bgRemoved })}
+            aria-pressed={!!element.bgRemoved}
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              element.bgRemoved ? "border-primary bg-primary/10 text-primary-dark" : "border-ui-border text-foreground hover:border-primary"
+            }`}
+          >
+            <TransparentBgIcon className="h-4 w-4" />
+            {element.bgRemoved ? "Fondo eliminado" : "Eliminar fondo"}
+          </button>
+
+          <button
+            type="button"
+            onClick={onToggleDesignOptions}
+            aria-expanded={designOptionsOpen}
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              designOptionsOpen ? "border-primary bg-primary/10 text-primary-dark" : "border-ui-border text-foreground hover:border-primary"
+            }`}
+          >
+            <OptionsIcon className="h-4 w-4" />
+            Opciones de diseño
+          </button>
+        </>
       )}
 
       <div className="mx-1 h-6 w-px bg-ui-border" />
@@ -218,20 +229,6 @@ export default function SelectionToolbar({
           <path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6m-6 0 .6 9.2A1.5 1.5 0 0 0 8.1 16.5h3.8a1.5 1.5 0 0 0 1.5-1.3L14 6" />
         </svg>
       </ToolbarIconButton>
-
-      {element.type === "logo" && (
-        <button
-          type="button"
-          onClick={onToggleDesignOptions}
-          aria-expanded={designOptionsOpen}
-          className={`ml-auto flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-            designOptionsOpen ? "border-primary bg-primary/10 text-primary-dark" : "border-ui-border text-foreground hover:border-primary"
-          }`}
-        >
-          <OptionsIcon className="h-4 w-4" />
-          Opciones de diseño
-        </button>
-      )}
     </div>
   );
 }
