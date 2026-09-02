@@ -963,6 +963,21 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     });
   }
 
+  // "Merchy Dynamic Glow" (CTAs "Personalizar producto"/"Agregar al
+  // carrito", ver más abajo) -- posición del cursor DENTRO del botón, en
+  // % de su propio ancho/alto, escrita directo en el elemento como
+  // variables CSS (--glow-x/--glow-y) en vez de useState: mousemove
+  // dispara muy seguido, y un setState ahí re-renderizaría todo
+  // ProductDetail en cada frame -- esto solo toca ese único elemento, sin
+  // pasar por React en absoluto.
+  function handleGlowMove(e: React.MouseEvent<HTMLElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    e.currentTarget.style.setProperty("--glow-x", `${x}%`);
+    e.currentTarget.style.setProperty("--glow-y", `${y}%`);
+  }
+
   function selectVariant(v: ProductVariant) {
     // La imagen de galería siempre sigue al último color tocado, en ambos modos.
     setSelectedVariant(v);
@@ -1483,16 +1498,24 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
             </div>
           )}
 
-          {/* CTAs */}
+          {/* CTAs -- "Merchy Dynamic Glow" (pedido explícito, rediseño de
+              la interacción anterior). Estructura/texto/tamaño/posición/
+              lógica intactos a propósito: sigue siendo el mismo Link/
+              anchor, mismo href, mismo bg/shadow/radius en reposo -- todo
+              lo nuevo vive en el span decorativo interno (aria-hidden,
+              pointer-events-none, nunca afecta el área de clic) y en
+              hover/active. `--glow-x/--glow-y` son variables CSS que
+              handleGlowMove actualiza directo en el propio elemento (nunca
+              via useState -- un mousemove dispara docenas de veces por
+              segundo, y pasar eso por React re-renderizaría todo el
+              componente en cada uno) con la posición del cursor DENTRO del
+              botón en %, así el resplandor interno puede seguirlo. El
+              texto va en su propio span con position:relative + z-index
+              para quedar SIEMPRE arriba del span del glow -- un elemento
+              posicionado (absolute) siempre pinta encima de contenido sin
+              position, sin importar el orden en el DOM, así que el texto
+              plano quedaría tapado sin esto. */}
           <div className="flex gap-3">
-            {/* Interacción "premium" (pedido explícito, tipo Apple/Stripe) --
-                apariencia en reposo intacta a propósito (mismo bg/shadow/
-                radius/padding/texto de siempre); todo lo nuevo vive
-                exclusivamente en hover/active. El borde va SIEMPRE
-                presente pero transparent por defecto (nunca "sin borde")
-                -- así el box-sizing (border-box, default de Tailwind) no
-                cambia entre reposo y hover, ni entre este botón y el de al
-                lado, y no hay ningún salto de tamaño al pasar el cursor. */}
             <Link
               href={personalizarHref}
               aria-disabled={!canPersonalize}
@@ -1500,21 +1523,39 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               onClick={(e) => {
                 if (!canPersonalize) e.preventDefault();
               }}
-              className={`flex-1 flex items-center justify-center py-3.5 rounded-full border bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] transition-all duration-200 ease-out ${
+              onMouseMove={handleGlowMove}
+              className={`group relative flex-1 flex items-center justify-center overflow-hidden py-3.5 rounded-full border bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] transition-all duration-[220ms] ease-out ${
                 canPersonalize
-                  ? "border-transparent hover:-translate-y-0.5 hover:border-primary/50 hover:bg-[#2e323c] hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_0_0_1px_rgba(87,224,217,0.15),0_10px_26px_-6px_rgba(87,224,217,0.35),0_8px_20px_rgba(40,43,52,0.2)] active:scale-[0.98]"
-                  : "border-transparent opacity-40 cursor-not-allowed pointer-events-none"
+                  ? "border-white/[0.08] hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_10px_28px_-8px_rgba(87,224,217,0.45),0_8px_18px_rgba(40,43,52,0.2)] active:scale-[0.98]"
+                  : "border-white/[0.08] opacity-40 cursor-not-allowed pointer-events-none"
               }`}
             >
-              Personalizar producto
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-[260ms] ease-out group-hover:opacity-100"
+                style={{
+                  background:
+                    "radial-gradient(160px circle at var(--glow-x,50%) var(--glow-y,50%), rgba(87,224,217,0.32), transparent 72%), linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0) 45%)",
+                }}
+              />
+              <span className="relative z-10">Personalizar producto</span>
             </Link>
             <a
               href={`https://wa.me/5215500000000?text=${encodeURIComponent(`Hola, me interesa cotizar: ${product.name} (SKU: ${product.sku})`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center py-3.5 rounded-full border border-transparent bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-[#2e323c] hover:shadow-[0_8px_20px_rgba(40,43,52,0.2),0_0_22px_-4px_rgba(87,224,217,0.4)] active:scale-[0.98]"
+              onMouseMove={handleGlowMove}
+              className="group relative flex-1 flex items-center justify-center overflow-hidden py-3.5 rounded-full border border-white/[0.08] bg-[#282B34] text-white font-semibold text-sm shadow-[0_4px_16px_rgba(40,43,52,0.15)] transition-all duration-[220ms] ease-out hover:-translate-y-0.5 hover:border-accent-coral/40 hover:shadow-[0_10px_28px_-8px_rgba(255,116,101,0.4),0_8px_18px_rgba(40,43,52,0.2)] active:scale-[0.98]"
             >
-              Agregar al carrito
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-[260ms] ease-out group-hover:opacity-100"
+                style={{
+                  background:
+                    "radial-gradient(160px circle at var(--glow-x,50%) var(--glow-y,50%), rgba(255,116,101,0.30), transparent 72%), linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0) 45%)",
+                }}
+              />
+              <span className="relative z-10">Agregar al carrito</span>
             </a>
           </div>
         </div>
