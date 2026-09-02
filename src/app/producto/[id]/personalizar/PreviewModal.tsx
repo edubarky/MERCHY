@@ -294,6 +294,8 @@ export default function PreviewModal({
   resolvedAssets,
   garmentColor,
   onConfirm,
+  confirmDisabled = false,
+  confirmDisabledReason,
 }: {
   open: boolean;
   onClose: () => void;
@@ -303,6 +305,13 @@ export default function PreviewModal({
   resolvedAssets: ResolvedProductAssets;
   garmentColor: GarmentColor;
   onConfirm: () => void;
+  // Mismo requisito que "Siguiente" en el panel principal (ver
+  // PersonalizerClient's techniqueSelectionIncomplete) -- sin esto,
+  // "Confirmar diseño" cerraba el modal en silencio sin agregar nada al
+  // carrito (handleAddToCart ya lo bloqueaba ahí, pero acá no había
+  // ninguna señal visible de por qué no pasó nada).
+  confirmDisabled?: boolean;
+  confirmDisabledReason?: string;
 }) {
   const [entered, setEntered] = useState(false);
   // Only show views the user actually put art in — an untouched view (no
@@ -380,7 +389,11 @@ export default function PreviewModal({
           </div>
         )}
 
-        <div className="mt-7 flex gap-4">
+        {confirmDisabled && confirmDisabledReason && (
+          <p className="mt-4 text-center text-xs font-medium text-accent-coral">{confirmDisabledReason}</p>
+        )}
+
+        <div className="mt-4 flex gap-4">
           <button
             type="button"
             onClick={onClose}
@@ -391,7 +404,9 @@ export default function PreviewModal({
           <button
             type="button"
             onClick={onConfirm}
-            className="flex h-14 flex-1 items-center justify-center rounded-full bg-primary text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)]"
+            disabled={confirmDisabled}
+            title={confirmDisabled ? confirmDisabledReason : undefined}
+            className="flex h-14 flex-1 items-center justify-center rounded-full bg-primary text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
           >
             Confirmar diseño
           </button>

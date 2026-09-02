@@ -1044,6 +1044,15 @@ export default function PersonalizerClient({
       return { technique, unitPrice: null, needsQuote: true };
     });
   const anyTechniqueNeedsQuote = techniqueResults.some((r) => r.needsQuote);
+  // Pedido explícito: no se puede avanzar a "Siguiente"/checkout sin
+  // elegir una técnica de impresión Y completar sus datos (tintas para
+  // Serigrafía/Tampografía, tamaño en cm por logo para DTF Textil/DTF
+  // UV) -- ambas condiciones ya las resuelve techniqueResults arriba:
+  // sin ninguna técnica elegida no hay nada en el arreglo, y needsQuote
+  // ya es true tanto para datos incompletos como para pricing_type sin
+  // configurar -- en cualquiera de los dos casos no hay un precio real
+  // que cobrar todavía, así que tampoco debería poder pasar a checkout.
+  const techniqueSelectionIncomplete = selectedTechniqueIds.length === 0 || anyTechniqueNeedsQuote;
   const techniqueTotal = techniqueResults.reduce((sum, r) => sum + (r.unitPrice ?? 0), 0);
   const unitPrice = garmentUnit + techniqueTotal;
   const subtotal = unitPrice * quantity;
@@ -1184,7 +1193,12 @@ export default function PersonalizerClient({
   ]);
 
   async function handleAddToCart() {
-    if (addingToCart) return;
+    // Segunda barrera además del disabled del botón (ver
+    // techniqueSelectionIncomplete) -- este es el único punto real por el
+    // que se agrega al carrito/checkout, tanto desde "Siguiente" como
+    // desde "Confirmar diseño" del PreviewModal, así que basta con
+    // proteger aquí para cubrir los dos caminos a la vez.
+    if (addingToCart || techniqueSelectionIncomplete) return;
     setAddingToCart(true);
     try {
       let canvasDataUrl = "";
@@ -1811,6 +1825,14 @@ export default function PersonalizerClient({
                 sigue exactamente igual, solo se quitó el texto duplicado. */}
           </div>
 
+          {techniqueSelectionIncomplete && (
+            <p className="mt-4 text-center text-xs font-medium text-accent-coral">
+              {selectedTechniqueIds.length === 0
+                ? "Selecciona una técnica de impresión para continuar."
+                : "Completa los datos de la técnica elegida (tintas/tamaño) para continuar."}
+            </p>
+          )}
+
           <div className="flex gap-4">
             <Link
               href={`/producto/${product.id}`}
@@ -1821,8 +1843,9 @@ export default function PersonalizerClient({
             <button
               type="button"
               onClick={handleAddToCart}
-              disabled={addingToCart}
-              className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)] disabled:opacity-60"
+              disabled={addingToCart || techniqueSelectionIncomplete}
+              title={techniqueSelectionIncomplete ? "Elige una técnica de impresión y completa sus datos" : undefined}
+              className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
             >
               {addingToCart ? "Agregando..." : "Siguiente"} <ArrowRightIcon className="h-4 w-4" />
             </button>
@@ -1842,6 +1865,12 @@ export default function PersonalizerClient({
           setPreviewOpen(false);
           handleAddToCart();
         }}
+        confirmDisabled={techniqueSelectionIncomplete}
+        confirmDisabledReason={
+          selectedTechniqueIds.length === 0
+            ? "Selecciona una técnica de impresión para continuar."
+            : "Completa los datos de la técnica elegida (tintas/tamaño) para continuar."
+        }
       />
 
       <ArtLibraryPanel
