@@ -1,13 +1,28 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { DesignElement } from "./types";
 import { TEXT_FONT_CATEGORIES, DEFAULT_TEXT_FONT_LABEL } from "./textFonts";
 import { DEFAULT_FONT_SIZE_PX, FONT_SIZE_MIN_PX, FONT_SIZE_MAX_PX } from "./DesignElementView";
+import DesignOptionsPanel from "./DesignOptionsPanel";
 
 // Common quick-pick sizes shown as a native suggestion dropdown — the
 // input still accepts any value in between via free typing, this is not
 // an exhaustive/enforced list.
 const FONT_SIZE_PRESETS = [12, 16, 20, 24, 32, 40, 48, 60, 72, 96, 120];
+
+function OptionsIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 5.5h8M14.5 5.5h1.5" />
+      <path d="M4 10h1.5M9 10h7" />
+      <path d="M4 14.5h8M14.5 14.5h1.5" />
+      <circle cx="12" cy="5.5" r="1.7" />
+      <circle cx="7" cy="10" r="1.7" />
+      <circle cx="12" cy="14.5" r="1.7" />
+    </svg>
+  );
+}
 
 function ToolbarIconButton({
   label,
@@ -46,6 +61,30 @@ export default function SelectionToolbar({
   onBringFront: () => void;
   onSendBack: () => void;
 }) {
+  // "Opciones de diseño" -- pedido explícito (rotar por ángulo/90°/espejo,
+  // cambiar color, opacidad/brillo/contraste). Solo tiene sentido para un
+  // logo (imagen) -- el texto ya tiene su propio color/tamaño/negrita/
+  // cursiva aquí mismo, y flip/recolor/filtros de imagen no aplican a
+  // texto renderizado como texto real.
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!optionsOpen) return;
+    function onPointerDown(e: MouseEvent) {
+      if (optionsRef.current && !optionsRef.current.contains(e.target as Node)) setOptionsOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [optionsOpen]);
+
+  // Cerrado automáticamente al cambiar de elemento seleccionado (o
+  // deseleccionar) -- nunca debe quedar abierto mostrando los controles
+  // de un elemento que ya no es el activo.
+  useEffect(() => {
+    setOptionsOpen(false);
+  }, [element.id]);
+
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-ui-border bg-white/95 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
       {element.type === "text" && (
@@ -137,6 +176,27 @@ export default function SelectionToolbar({
           className="w-14 rounded-full border border-ui-border px-2 py-1 text-xs focus:outline-none focus:border-primary"
         />
       </label>
+
+      {element.type === "logo" && (
+        <div ref={optionsRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setOptionsOpen((v) => !v)}
+            aria-expanded={optionsOpen}
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              optionsOpen ? "border-primary bg-primary/10 text-primary-dark" : "border-ui-border text-foreground hover:border-primary"
+            }`}
+          >
+            <OptionsIcon className="h-4 w-4" />
+            Opciones de diseño
+          </button>
+          {optionsOpen && (
+            <div className="absolute left-0 top-[calc(100%+8px)] z-[100]">
+              <DesignOptionsPanel element={element} onChange={onChange} />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mx-1 h-6 w-px bg-ui-border" />
 

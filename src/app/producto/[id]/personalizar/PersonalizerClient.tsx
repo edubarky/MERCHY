@@ -1053,7 +1053,18 @@ export default function PersonalizerClient({
     VIEW_ORDER.forEach((v) => {
       elements[v].forEach((el) => {
         const shared = { x: el.xPct, y: el.yPct, width: el.widthPct, height: el.heightPct, rotation: el.rotation };
-        if (el.type === "logo") logos.push({ type: "logo", url: el.src, ...shared });
+        if (el.type === "logo")
+          logos.push({
+            type: "logo",
+            url: el.src,
+            ...shared,
+            flip_h: el.flipH || undefined,
+            flip_v: el.flipV || undefined,
+            opacity: el.opacity !== undefined && el.opacity !== 100 ? el.opacity : undefined,
+            brightness: el.brightness || undefined,
+            contrast: el.contrast || undefined,
+            recolor: el.recolor || undefined,
+          });
         else texts.push({ type: "text", text: el.text, ...shared });
       });
     });
@@ -1300,7 +1311,15 @@ export default function PersonalizerClient({
           )}
 
           {selectedElement && (
-            <div className="mb-5">
+            // relative z-30: SelectionToolbar tiene backdrop-blur-sm, que
+            // crea su propio contexto de apilamiento -- sin un z-index
+            // explícito AQUÍ (el nivel que realmente compite contra el
+            // lienzo, su hermano de abajo en el DOM), el z-index alto del
+            // popover de "Opciones de diseño" quedaba atrapado dentro de
+            // ese contexto y el lienzo (que pinta después) lo tapaba
+            // igual, aunque visualmente pareciera estar encima -- bug real
+            // confirmado con elementsFromPoint durante pruebas.
+            <div className="relative z-30 mb-5">
               <SelectionToolbar
                 element={selectedElement}
                 onChange={updateElement}

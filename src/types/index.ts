@@ -98,6 +98,17 @@ export interface CustomizationElement {
   width: number;
   height: number;
   rotation: number;
+  // "Opciones de diseño" (solo logo) -- puramente informativo para
+  // producción: la verdad visual ya queda en customization_snapshot.
+  // canvas_data_url (la captura completa del diseño), esto es un respaldo
+  // trazable de los valores exactos que el cliente eligió. Ausente =
+  // sin efecto, igual que en DesignElement (ver personalizar/types.ts).
+  flip_h?: boolean;
+  flip_v?: boolean;
+  opacity?: number;
+  brightness?: number;
+  contrast?: number;
+  recolor?: string | null;
 }
 
 // Detalle completo de UNA técnica activa dentro de una selección múltiple

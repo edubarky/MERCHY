@@ -69,6 +69,25 @@ export interface DesignElement {
   // reuse. Each placement still carries its own fileName/fileType/src, so
   // removing the asset from the library never breaks an existing placement.
 
+  // "Opciones de diseño" (logo-only, ver SelectionToolbar/
+  // DesignOptionsPanel) — pedido explícito con referencias visuales de
+  // Rotar/Girar/Cambiar color/Ajustes. Todos opcionales con un default
+  // "sin efecto" (undefined se trata igual que el valor neutro) para que
+  // ningún elemento ya colocado antes de este cambio se vea distinto.
+  flipH?: boolean; // espejo horizontal — aplicado a la imagen, nunca al
+  // contenedor que ya rota/mueve/redimensiona (ver DesignElementView),
+  // así que nunca interfiere con esa lógica.
+  flipV?: boolean; // espejo vertical
+  opacity?: number; // 0-100, default 100 (opaco)
+  brightness?: number; // -100 a 100, default 0 (sin cambio)
+  contrast?: number; // -100 a 100, default 0 (sin cambio)
+  // Recolor de silueta: reemplaza TODO pixel no transparente por este
+  // color sólido (mismo criterio que "un solo color de tinta" en
+  // bordado/DTF), preservando el canal alfa original -- no es una
+  // paleta por zona, es un color único para todo el diseño. null/undefined
+  // = "Sin cambio de color" (se usa el archivo original tal cual).
+  recolor?: string | null;
+
   // text-only
   text?: string;
   fontFamily?: string;

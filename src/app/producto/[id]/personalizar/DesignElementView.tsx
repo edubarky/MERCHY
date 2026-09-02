@@ -1,10 +1,11 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Moveable from "react-moveable";
 import type { DesignElement } from "./types";
 import { resolveFontFamilyCss } from "./textFonts";
 import { measureTextBoxPx } from "./measureText";
+import { recolorImage } from "./recolorImage";
 
 // Movement/resize/rotation are NOT clamped anywhere — the user has full
 // freedom to place the design anywhere on the product. This only checks
@@ -128,6 +129,32 @@ export default function DesignElementView({
   // path every other transform uses.
   const [editingText, setEditingText] = useState(false);
   const [draftText, setDraftText] = useState(element.text ?? "");
+
+  // "Cambiar color" (Opciones de diseño, solo logo) -- la versión
+  // recoloreada se calcula async (canvas offscreen, ver recolorImage.ts)
+  // y se cachea ahí mismo por (src, color), así que cambiar de un color a
+  // otro y volver no repite el trabajo. `element.src` original nunca se
+  // sobreescribe -- "Sin cambio de color" simplemente vuelve a mostrarlo
+  // porque este estado se limpia (null) cuando element.recolor es
+  // null/undefined.
+  const [recoloredSrc, setRecoloredSrc] = useState<string | null>(null);
+  useEffect(() => {
+    if (element.type !== "logo" || !element.src || !element.recolor) {
+      setRecoloredSrc(null);
+      return;
+    }
+    let cancelled = false;
+    recolorImage(element.src, element.recolor)
+      .then((dataUrl) => {
+        if (!cancelled) setRecoloredSrc(dataUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setRecoloredSrc(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [element.type, element.src, element.recolor]);
 
   useLayoutEffect(() => {
     if (!editingText) return;
@@ -290,10 +317,19 @@ export default function DesignElementView({
           element.src ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={element.src}
+              src={recoloredSrc ?? element.src}
               alt={element.fileName ?? "logo"}
               className="h-full w-full object-contain pointer-events-none"
               draggable={false}
+              style={{
+                // El espejo va en la IMAGEN, nunca en el contenedor que
+                // Moveable rota/mueve/redimensiona -- así nunca interfiere
+                // con ese cálculo (rotation sigue siendo un único ángulo
+                // limpio, sin combinarse con signos de escala).
+                transform: `scaleX(${element.flipH ? -1 : 1}) scaleY(${element.flipV ? -1 : 1})`,
+                opacity: (element.opacity ?? 100) / 100,
+                filter: `brightness(${1 + (element.brightness ?? 0) / 100}) contrast(${1 + (element.contrast ?? 0) / 100})`,
+              }}
             />
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-md border border-dashed border-gray-400 bg-white/85 p-1 text-center pointer-events-none">

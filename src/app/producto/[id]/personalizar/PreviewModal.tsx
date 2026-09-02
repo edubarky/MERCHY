@@ -3,9 +3,53 @@
 import { useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import type { PrintTechnique } from "@/types";
-import { VIEW_ORDER, VIEW_LABELS, type ViewElements, type GarmentColor, type ResolvedProductAssets } from "./types";
+import { VIEW_ORDER, VIEW_LABELS, type ViewElements, type DesignElement, type GarmentColor, type ResolvedProductAssets } from "./types";
 import { resolveFontFamilyCss } from "./textFonts";
 import { DEFAULT_FONT_SIZE_RATIO } from "./DesignElementView";
+import { recolorImage } from "./recolorImage";
+
+// Mismas "Opciones de diseño" (espejo/opacidad/brillo-contraste/color) que
+// ya aplica el lienzo real (ver DesignElementView) -- si no se replicaran
+// aquí, esta vista previa mostraría el logo ORIGINAL sin los ajustes que
+// el cliente ya eligió, inconsistente con lo que en realidad va a llevar
+// el pedido. Componente propio (no inline en el .map de abajo) porque el
+// recolor es async por elemento -- cada logo necesita su propio estado.
+function MiniLogoImage({ element }: { element: DesignElement }) {
+  const [recoloredSrc, setRecoloredSrc] = useState<string | null>(null);
+  useEffect(() => {
+    if (!element.src || !element.recolor) {
+      setRecoloredSrc(null);
+      return;
+    }
+    let cancelled = false;
+    recolorImage(element.src, element.recolor)
+      .then((dataUrl) => {
+        if (!cancelled) setRecoloredSrc(dataUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setRecoloredSrc(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [element.src, element.recolor]);
+
+  if (!element.src) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={recoloredSrc ?? element.src}
+      alt=""
+      className="h-full w-full select-none object-contain"
+      draggable={false}
+      style={{
+        transform: `scaleX(${element.flipH ? -1 : 1}) scaleY(${element.flipV ? -1 : 1})`,
+        opacity: (element.opacity ?? 100) / 100,
+        filter: `brightness(${1 + (element.brightness ?? 0) / 100}) contrast(${1 + (element.contrast ?? 0) / 100})`,
+      }}
+    />
+  );
+}
 
 function DownloadIcon({ className = "" }: { className?: string }) {
   return (
@@ -193,8 +237,7 @@ function MiniView({
             >
               {el.type === "logo" ? (
                 el.src ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={el.src} alt="" className="h-full w-full select-none object-contain" draggable={false} />
+                  <MiniLogoImage element={el} />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-gray-400 bg-white/85 text-[7px] text-ui-gray">
                     .AI
