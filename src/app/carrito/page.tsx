@@ -109,12 +109,12 @@ export default function CarritoPage() {
                 <span className="font-bold text-foreground">Total</span>
                 <span className="text-xl font-bold text-foreground">{formatMXN(total)} MXN</span>
               </div>
-              <button
-                type="button"
+              <Link
+                href="/checkout"
                 className="mt-5 flex h-14 w-full items-center justify-center rounded-full bg-primary text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)]"
               >
                 Finalizar compra
-              </button>
+              </Link>
               <Link
                 href="/catalogo"
                 className="mt-3 flex h-12 w-full items-center justify-center rounded-full border-2 border-foreground text-sm font-semibold text-foreground transition-all duration-180 ease-out hover:-translate-y-0.5"

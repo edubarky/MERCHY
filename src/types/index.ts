@@ -210,6 +210,18 @@ export interface Order {
   items?: OrderItem[];
 }
 
+export interface DiscountCode {
+  id: string;
+  code: string;
+  type: "percentage" | "fixed";
+  value: number;
+  min_order: number;
+  max_uses: number | null;
+  current_uses: number;
+  active: boolean;
+  expires_at: string | null;
+}
+
 export interface OrderItem {
   id: string;
   order_id: string;

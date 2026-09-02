@@ -220,6 +220,12 @@ CREATE POLICY "order_items_own" ON order_items
   FOR SELECT USING (
     order_id IN (SELECT id FROM orders WHERE user_id = auth.uid())
   );
+-- Anon puede insertar (guest checkout) -- mismo criterio que orders_insert:
+-- la tabla orders ya confía en cualquier inserción, así que restringir
+-- solo order_items no suma seguridad real, únicamente rompería el
+-- checkout de invitado (ver migración 009).
+CREATE POLICY "order_items_insert" ON order_items
+  FOR INSERT WITH CHECK (true);
 
 -- Public tables (read-only for everyone)
 ALTER TABLE categories       ENABLE ROW LEVEL SECURITY;
