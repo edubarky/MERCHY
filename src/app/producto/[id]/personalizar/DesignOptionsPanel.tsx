@@ -108,9 +108,15 @@ export default function DesignOptionsPanel({
   }
 
   return (
-    <div className="w-[300px] space-y-5 rounded-2xl border border-ui-border bg-white p-4 shadow-[0_12px_32px_rgba(0,0,0,0.12)]">
+    // Grid de 3 columnas en pantallas anchas (antes apilado verticalmente
+    // en un popover angosto de 300px) -- ahora que este panel vive en
+    // flujo normal empujando el lienzo hacia abajo (ver SelectionToolbar),
+    // menos altura = menos empuje, y de paso se aprovecha el ancho
+    // completo de la barra en vez de dejarlo vacío a un lado. En pantallas
+    // angostas cae a una sola columna apilada, igual que antes.
+    <div className="grid grid-cols-1 gap-5 divide-y divide-ui-border rounded-2xl border border-ui-border bg-white p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)] sm:grid-cols-3 sm:divide-y-0 sm:divide-x">
       {/* Rotar */}
-      <div>
+      <div className="sm:pr-5">
         <p className="mb-2 text-sm font-semibold text-foreground">Rotar</p>
         <div className="flex items-end gap-4">
           <label className="flex flex-col gap-1">
@@ -168,10 +174,8 @@ export default function DesignOptionsPanel({
         </div>
       </div>
 
-      <div className="h-px bg-ui-border" />
-
       {/* Cambiar color */}
-      <div>
+      <div className="sm:px-5">
         <p className="mb-2 text-sm font-semibold text-foreground">Cambiar color</p>
         <button
           type="button"
@@ -228,12 +232,10 @@ export default function DesignOptionsPanel({
         )}
       </div>
 
-      <div className="h-px bg-ui-border" />
-
       {/* Ajustes */}
-      <div>
+      <div className="sm:pl-5">
         <p className="mb-3 text-sm font-semibold text-foreground">Ajustes</p>
-        <div className="space-y-4">
+        <div className="space-y-3">
           <SliderRow label="Opacidad" value={opacity} min={0} max={100} onChange={(v) => onChange(element.id, { opacity: v })} />
           <SliderRow label="Brillo" value={brightness} min={-100} max={100} onChange={(v) => onChange(element.id, { brightness: v })} />
           <SliderRow label="Contraste" value={contrast} min={-100} max={100} onChange={(v) => onChange(element.id, { contrast: v })} />
@@ -241,7 +243,7 @@ export default function DesignOptionsPanel({
         <button
           type="button"
           onClick={resetAjustes}
-          className="mt-4 w-full rounded-full border border-ui-border py-2 text-xs font-semibold text-foreground transition-colors hover:border-primary hover:text-primary-dark"
+          className="mt-3 w-full rounded-full border border-ui-border py-2 text-xs font-semibold text-foreground transition-colors hover:border-primary hover:text-primary-dark"
         >
           Restablecer
         </button>
