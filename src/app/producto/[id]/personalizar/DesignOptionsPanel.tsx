@@ -38,16 +38,6 @@ function FlipVerticalIcon({ className = "" }: { className?: string }) {
   );
 }
 
-function TransparentBgIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2.5" y="2.5" width="15" height="15" rx="3" strokeDasharray="2.3 2.1" />
-      <rect x="6" y="6" width="3.6" height="3.6" fill="currentColor" opacity="0.35" stroke="none" />
-      <rect x="10.4" y="10.4" width="3.6" height="3.6" fill="currentColor" opacity="0.35" stroke="none" />
-    </svg>
-  );
-}
-
 function ChevronDownIcon({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 16 16" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
@@ -179,25 +169,6 @@ export default function DesignOptionsPanel({
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="h-px bg-ui-border" />
-
-      {/* Eliminar fondo */}
-      <div>
-        <p className="mb-2 text-sm font-semibold text-foreground">Fondo</p>
-        <button
-          type="button"
-          onClick={() => onChange(element.id, { bgRemoved: !element.bgRemoved })}
-          aria-pressed={!!element.bgRemoved}
-          className={`flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold transition-colors ${
-            element.bgRemoved ? "border-primary bg-primary/10 text-primary-dark" : "border-ui-border text-foreground hover:border-primary"
-          }`}
-        >
-          <TransparentBgIcon className="h-4 w-4" />
-          {element.bgRemoved ? "Fondo eliminado" : "Eliminar fondo"}
-        </button>
-        <p className="mt-1.5 text-[11px] text-ui-gray">Funciona mejor con logos de fondo de un solo color.</p>
       </div>
 
       <div className="h-px bg-ui-border" />
