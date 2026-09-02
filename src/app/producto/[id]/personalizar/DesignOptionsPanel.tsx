@@ -108,15 +108,12 @@ export default function DesignOptionsPanel({
   }
 
   return (
-    // Grid de 3 columnas en pantallas anchas (antes apilado verticalmente
-    // en un popover angosto de 300px) -- ahora que este panel vive en
-    // flujo normal empujando el lienzo hacia abajo (ver SelectionToolbar),
-    // menos altura = menos empuje, y de paso se aprovecha el ancho
-    // completo de la barra en vez de dejarlo vacío a un lado. En pantallas
-    // angostas cae a una sola columna apilada, igual que antes.
-    <div className="grid grid-cols-1 gap-5 divide-y divide-ui-border rounded-2xl border border-ui-border bg-white p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)] sm:grid-cols-3 sm:divide-y-0 sm:divide-x">
+    // Apilado en una sola columna -- vive en el sidebar (~35% del ancho),
+    // no en el ancho completo de la barra, así que una grilla de varias
+    // columnas quedaría apretada ahí.
+    <div className="space-y-5 rounded-2xl border border-ui-border bg-white p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
       {/* Rotar */}
-      <div className="sm:pr-5">
+      <div>
         <p className="mb-2 text-sm font-semibold text-foreground">Rotar</p>
         <div className="flex items-end gap-4">
           <label className="flex flex-col gap-1">
@@ -174,8 +171,10 @@ export default function DesignOptionsPanel({
         </div>
       </div>
 
+      <div className="h-px bg-ui-border" />
+
       {/* Cambiar color */}
-      <div className="sm:px-5">
+      <div>
         <p className="mb-2 text-sm font-semibold text-foreground">Cambiar color</p>
         <button
           type="button"
@@ -232,8 +231,10 @@ export default function DesignOptionsPanel({
         )}
       </div>
 
+      <div className="h-px bg-ui-border" />
+
       {/* Ajustes */}
-      <div className="sm:pl-5">
+      <div>
         <p className="mb-3 text-sm font-semibold text-foreground">Ajustes</p>
         <div className="space-y-3">
           <SliderRow label="Opacidad" value={opacity} min={0} max={100} onChange={(v) => onChange(element.id, { opacity: v })} />

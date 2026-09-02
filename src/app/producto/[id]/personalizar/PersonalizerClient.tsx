@@ -35,6 +35,7 @@ import PrintAreaGuide from "./PrintAreaGuide";
 import ArtLibraryPanel from "./ArtLibraryPanel";
 import DesignsPreviewCard from "./DesignsPreviewCard";
 import SelectionToolbar from "./SelectionToolbar";
+import DesignOptionsPanel from "./DesignOptionsPanel";
 import PrintTechniqueCards from "./PrintTechniqueCards";
 import TechniqueDetailCard from "./TechniqueDetailCard";
 import PreviewModal from "./PreviewModal";
@@ -298,6 +299,32 @@ export default function PersonalizerClient({
   const [history, setHistory] = useState<ViewElements[]>([emptyViewElements()]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // "Opciones de diseño" (rotar/girar/cambiar color/ajustes de un logo) --
+  // pedido explícito: el usuario debe ver la prenda completa junto con el
+  // logo MIENTRAS edita. Ni un overlay flotando encima del lienzo ni
+  // empujarlo hacia abajo cumplen eso (ambos ya probados y rechazados) --
+  // el panel real vive en el sidebar derecho (nunca toca el tamaño/
+  // posición del lienzo), controlado desde aquí para poder cerrarse solo
+  // al cambiar de elemento seleccionado y para el click-outside de abajo.
+  const [designOptionsOpen, setDesignOptionsOpen] = useState(false);
+  const designOptionsButtonRef = useRef<HTMLDivElement>(null);
+  const designOptionsPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setDesignOptionsOpen(false);
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!designOptionsOpen) return;
+    function onPointerDown(e: MouseEvent) {
+      const target = e.target as Node;
+      const insideButton = designOptionsButtonRef.current?.contains(target);
+      const insidePanel = designOptionsPanelRef.current?.contains(target);
+      if (!insideButton && !insidePanel) setDesignOptionsOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [designOptionsOpen]);
   // Drag-over highlight while a file is dragged over the canvas — a ref
   // counter (not a plain boolean) because dragenter/dragleave fire once
   // per child element the pointer crosses, not just for the container as
@@ -1311,15 +1338,7 @@ export default function PersonalizerClient({
           )}
 
           {selectedElement && (
-            // relative z-30: SelectionToolbar tiene backdrop-blur-sm, que
-            // crea su propio contexto de apilamiento -- sin un z-index
-            // explícito AQUÍ (el nivel que realmente compite contra el
-            // lienzo, su hermano de abajo en el DOM), el z-index alto del
-            // popover de "Opciones de diseño" quedaba atrapado dentro de
-            // ese contexto y el lienzo (que pinta después) lo tapaba
-            // igual, aunque visualmente pareciera estar encima -- bug real
-            // confirmado con elementsFromPoint durante pruebas.
-            <div className="relative z-30 mb-5">
+            <div ref={designOptionsButtonRef} className="mb-5">
               <SelectionToolbar
                 element={selectedElement}
                 onChange={updateElement}
@@ -1327,6 +1346,8 @@ export default function PersonalizerClient({
                 onDelete={() => deleteElement(selectedElement.id)}
                 onBringFront={() => bringToFront(selectedElement.id)}
                 onSendBack={() => sendToBack(selectedElement.id)}
+                designOptionsOpen={designOptionsOpen}
+                onToggleDesignOptions={() => setDesignOptionsOpen((v) => !v)}
               />
             </div>
           )}
@@ -1505,6 +1526,18 @@ export default function PersonalizerClient({
 
       {/* ── Panel (derecha, ~35%) ── */}
       <aside className="w-full lg:sticky lg:top-8 lg:w-[35%]">
+        {/* Vive en el sidebar (nunca en el lienzo) a propósito: pedido
+            explícito -- el usuario debe ver la prenda completa junto con
+            el logo MIENTRAS edita. Ni un overlay flotando encima del
+            lienzo ni empujarlo hacia abajo lo permiten (ambos ya probados
+            y descartados) -- aquí, en la columna de al lado, el lienzo
+            completo queda siempre visible sin importar si este panel está
+            abierto. */}
+        {selectedElement?.type === "logo" && designOptionsOpen && (
+          <div ref={designOptionsPanelRef} className="mb-6">
+            <DesignOptionsPanel element={selectedElement} onChange={updateElement} />
+          </div>
+        )}
         <div className="space-y-10 rounded-[24px] bg-white p-8 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
           <div>
             <h1 className="font-display text-[40px] font-bold uppercase leading-[1.05] text-foreground">{product.name}</h1>
