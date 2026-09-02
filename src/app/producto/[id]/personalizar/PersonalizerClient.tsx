@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toPng } from "html-to-image";
 import type { Product, ProductVariant, PriceTier, PrintTechnique, CartItem, CustomizationElement } from "@/types";
 import {
@@ -277,6 +278,7 @@ export default function PersonalizerClient({
   multicolorVariantIds,
   initialQuantity,
 }: Props) {
+  const router = useRouter();
   // "frente" es el default de siempre, pero deja de ser válido para un
   // producto cuyos ejes ni siquiera incluyen "frente" (ej. Set de
   // ejercicio Bor: solo bolsa/ligaFrente/ligaReverso) -- inicializador
@@ -1166,6 +1168,11 @@ export default function PersonalizerClient({
       // cliente vuelve a personalizar este mismo producto después.
       removeItem(draftCartItemId);
       clearDraft(product.id);
+      // "Siguiente" ya no se queda en esta misma página -- pedido
+      // explícito: de aquí en adelante el flujo continúa directo en el
+      // checkout que se acaba de construir (/checkout), el mismo destino
+      // al que ya lleva "Finalizar compra" desde el carrito.
+      router.push("/checkout");
     } finally {
       setAddingToCart(false);
     }
