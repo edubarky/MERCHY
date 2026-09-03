@@ -27,21 +27,21 @@
 
 }
 
-/* Ficha del producto — "MERCHY PERSONALIZATION BURST": microinteracción
-   premium al hacer clic en "Personalizar producto" (pedido explícito,
-   "mucho más impactante" que la versión anterior de solo color):
-   compresión + pulso turquesa + destello + partículas + coral momentáneo
-   + onda de expansión, antes de navegar. Referenciadas por su nombre
-   directo vía `style={{ animation: "..." }}` en ProductDetail.tsx (no
-   como utilidad de Tailwind) — igual de válido: solo necesitan existir
-   en algún lugar del CSS final, no requieren pasar por
-   theme.extend.keyframes. */
+/* Ficha del producto — "MERCHY MAGIC PORTAL": microinteracción premium
+   al hacer clic en "Personalizar producto" (pedido explícito, "mucho
+   más WOW" que la versión anterior "BURST"): impacto (compresión +
+   pulso + destello) + explosión de partículas/líneas/destellos chicos +
+   flash coral + anillo de energía de 3 colores sólidos + destellos tipo
+   estrella, antes de navegar. Referenciadas por su nombre directo vía
+   `style={{ animation: "..." }}` en ProductDetail.tsx (no como utilidad
+   de Tailwind) — igual de válido: solo necesitan existir en algún lugar
+   del CSS final, no requieren pasar por theme.extend.keyframes. */
 @keyframes merchyButtonPress {
   0% {
     transform: scale(1);
   }
-  55% {
-    transform: scale(0.97);
+  45% {
+    transform: scale(0.96);
   }
   100% {
     transform: scale(1);
@@ -63,30 +63,19 @@
   }
 }
 
-/* Pulso turquesa: anillo que nace pegado al botón (mismo tamaño/forma,
-   inset:0) y se expande desde el centro por defecto -- no necesita
-   traslación -50%/-50% porque no usa left/top, solo scale. */
+/* Fase 1 (Impacto): pulso circular rápido pegado al botón (mismo
+   tamaño/forma, inset:0) que se expande desde el centro por defecto --
+   no necesita traslación -50%/-50% porque no usa left/top, solo scale.
+   Distinto del anillo de energía (Fase 4, más abajo): este es el pulso
+   inmediato del click, ese es el anillo elaborado de 3 colores que
+   viene después. */
 @keyframes merchyPulseRing {
   0% {
     transform: scale(1);
-    opacity: 0.55;
+    opacity: 0.6;
   }
   100% {
-    transform: scale(1.32);
-    opacity: 0;
-  }
-}
-
-/* Onda de expansión: segundo halo, vía box-shadow en vez de border (así
-   se lee como un beat distinto del pulso turquesa de arriba) -- muy
-   sutil pero visible, como pide el usuario. */
-@keyframes merchyWaveRing {
-  0% {
-    box-shadow: 0 0 0 0 rgba(87, 224, 217, 0.4);
-    opacity: 1;
-  }
-  100% {
-    box-shadow: 0 0 0 14px rgba(87, 224, 217, 0);
+    transform: scale(1.3);
     opacity: 0;
   }
 }
@@ -106,13 +95,13 @@
   }
 }
 
-/* Partículas del burst -- turquesa/coral/blanco, únicamente. --tx/--ty:
-   distancia y ángulo de CADA partícula (únicas por elemento, ver el
-   array `personalizeParticles` en ProductDetail.tsx) -- una sola
-   keyframe sirve para las 10. left/top 50% + la traslación -50%/-50%
-   HORNEADA en la propia keyframe (una animación reemplaza el transform
-   completo en cada frame, así que no puede vivir aparte como un
-   transform base). */
+/* Partículas del portal (tipo "dot"/"spark") -- turquesa/coral/blanco,
+   únicamente. --tx/--ty: distancia y ángulo de CADA partícula (únicas
+   por elemento, ver el array `personalizeParticles` en
+   ProductDetail.tsx) -- una sola keyframe sirve para las 12. left/top
+   50% + la traslación -50%/-50% HORNEADA en la propia keyframe (una
+   animación reemplaza el transform completo en cada frame, así que no
+   puede vivir aparte como un transform base). */
 @keyframes merchyParticle {
   0% {
     transform: translate(-50%, -50%) translate(0, 0) scale(1);
@@ -120,6 +109,90 @@
   }
   100% {
     transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0.35);
+    opacity: 0;
+  }
+}
+
+/* Partículas tipo "line" -- el mismo viaje radial que merchyParticle,
+   pero además rotadas (--rot) hacia su propia dirección de viaje y
+   estiradas en X (scaleX) según avanzan, para que se lean como un
+   trazo con estela en vez de un punto. --rot se calcula del mismo
+   ángulo que --tx/--ty (ver handlePersonalizeClick), así que el trazo
+   siempre apunta exactamente hacia donde se mueve. */
+@keyframes merchyParticleTrail {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) rotate(var(--rot)) scaleX(0.35);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--rot)) scaleX(1);
+    opacity: 0;
+  }
+}
+
+/* Fase 4 (Anillo de energía) -- anillo fino que nace pegado al botón y
+   se expande hacia afuera desvaneciéndose. Se usa 3 veces en
+   ProductDetail.tsx, una por color (turquesa/coral/blanco vía
+   border-color inline, NUNCA mezclados en un degradado), en cascada. */
+@keyframes merchyEnergyRing {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+/* Fase 5 (Destellos tipo estrella) -- ".merchy-sparkle" es un punto de
+   luz chico (::before/::after cruzados, como un "✦") que toma su color
+   de `color` (currentColor), así un mismo elemento sirve para turquesa
+   o coral según el inline style. Aparece rápido, crece un poco, brilla,
+   y desaparece -- nunca queda montado fuera del click. */
+.merchy-sparkle {
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.merchy-sparkle::before,
+.merchy-sparkle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.merchy-sparkle::before {
+  width: 100%;
+  height: 1.5px;
+  transform: translate(-50%, -50%);
+}
+
+.merchy-sparkle::after {
+  width: 1.5px;
+  height: 100%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes merchySparkle {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.15) rotate(12deg);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(0.9) rotate(12deg);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(0) rotate(12deg);
     opacity: 0;
   }
 }

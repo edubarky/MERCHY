@@ -854,20 +854,45 @@ function TotalPzasCard({ total, onChange }: { total: number; onChange?: (next: n
 export default function ProductDetail({ product, priceTiers, resolvedGallery, modelShots }: Props) {
   const router = useRouter();
   const { upsertItem, removeItem } = useCart();
-  // "MERCHY PERSONALIZATION BURST" al hacer clic en "Personalizar
-  // producto" -- pedido explícito ("mucho más impactante y premium" que
-  // la versión anterior, solo turquesa->coral): secuencia de ~620ms
-  // (comprimir + pulso turquesa + destello + partículas turquesa/coral/
-  // blanco + coral momentáneo + onda de expansión) antes de navegar. El
+  // "MERCHY MAGIC PORTAL" al hacer clic en "Personalizar producto" --
+  // pedido explícito ("mucho más WOW" que la versión anterior, "BURST"):
+  // secuencia de ~640ms (impacto + explosión de partículas/líneas/
+  // destellos + flash coral + anillo de energía de 3 colores sólidos +
+  // destellos tipo estrella alrededor del botón) antes de navegar. El
   // diseño PERMANENTE del botón (turquesa) no cambia en nada -- todo lo
   // demás es puramente temporal, ver handlePersonalizeClick.
   const [personalizeAnimating, setPersonalizeAnimating] = useState(false);
-  // Ángulo/distancia/tamaño/color/delay de cada partícula del burst --
-  // se regenera en cada clic (nunca el mismo patrón dos veces), ver
-  // handlePersonalizeClick.
+  // Ángulo/distancia/tamaño/color/delay/tipo de cada partícula del burst
+  // -- se regenera en cada clic (nunca el mismo patrón dos veces), ver
+  // handlePersonalizeClick. `type`: "dot" (punto chico) | "line" (trazo
+  // con estela, rotado hacia su dirección de viaje) | "spark" (punto con
+  // un glow chico -- el "pequeño destello" que pide la Fase 2, distinto
+  // de las estrellas de la Fase 5). `rot` solo aplica a "line".
   const [personalizeParticles, setPersonalizeParticles] = useState<
-    { id: number; tx: number; ty: number; size: number; color: string; delay: number }[]
+    {
+      id: number;
+      tx: number;
+      ty: number;
+      size: number;
+      color: string;
+      delay: number;
+      type: "dot" | "line" | "spark";
+      rot: number;
+    }[]
   >([]);
+  // Destellos tipo estrella (Fase 5) -- posiciones FIJAS alrededor del
+  // perímetro del botón (no radian desde el centro como las partículas),
+  // turquesa/coral alternados, cada uno con su propio delay para que
+  // aparezcan en cascada. Estático (no se regenera por clic): son parte
+  // del diseño de la animación, no algo aleatorio.
+  const personalizeSparkles = [
+    { id: 0, style: { top: -6, left: "12%" }, color: "#57e0d9", delay: 360 },
+    { id: 1, style: { top: -6, right: "12%" }, color: "#ff7465", delay: 385 },
+    { id: 2, style: { bottom: -6, left: "20%" }, color: "#ff7465", delay: 410 },
+    { id: 3, style: { bottom: -6, right: "20%" }, color: "#57e0d9", delay: 435 },
+    { id: 4, style: { top: "50%", left: -6 }, color: "#57e0d9", delay: 460 },
+    { id: 5, style: { top: "50%", right: -6 }, color: "#ff7465", delay: 485 },
+  ] as const;
   const activeVariants = product.variants.filter((v) => v.active);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -1219,40 +1244,51 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const personalizarQuery = personalizarParams.toString();
   const personalizarHref = `/producto/${product.id}/personalizar${personalizarQuery ? `?${personalizarQuery}` : ""}`;
 
-  // "MERCHY PERSONALIZATION BURST" (pedido explícito, reemplaza la
-  // versión anterior de solo turquesa->coral por algo mucho más
-  // impactante): compresión -> pulso turquesa -> destello -> partículas
-  // turquesa/coral/blanco -> coral momentáneo (color SÓLIDO, nunca un
-  // degradado -- background-color vía @keyframes, no background-image)
-  // -> onda de expansión -> navega. Un solo `animation` (comma-separado)
-  // en el propio botón cubre compresión + el color sólido; el resto son
-  // capas decorativas hijas (ver el <span aria-hidden> más abajo), cada
-  // una con su propio delay para respetar el orden pedido. 620ms en
-  // total (dentro del rango 450-650ms pedido), navega recién al final.
+  // "MERCHY MAGIC PORTAL" (pedido explícito, reemplaza la versión
+  // anterior "BURST" por algo mucho más WOW): impacto (compresión +
+  // pulso rápido + destello) -> explosión de partículas/líneas/
+  // destellos chicos -> flash coral (color SÓLIDO, nunca un degradado --
+  // background-color vía @keyframes, no background-image) -> anillo de
+  // energía de 3 colores SÓLIDOS independientes (turquesa, coral,
+  // blanco -- nunca mezclados en un degradado) -> destellos tipo
+  // estrella alrededor del botón -> navega. Un solo `animation`
+  // (comma-separado) en el propio botón cubre compresión + el color
+  // sólido; el resto son capas decorativas hijas (ver el <span
+  // aria-hidden> más abajo), cada una con su propio delay para respetar
+  // el orden pedido. 640ms en total (dentro del rango 500-650ms
+  // pedido), navega recién al final -- "no debe sentirse retrasada".
   // preventDefault SIEMPRE: la navegación la dispara este handler con
   // router.push, nunca el <Link> directo. Todo lo temporal (coral,
-  // partículas, anillos) se desmonta solo al terminar -- el botón vuelve
-  // a su clase de siempre (bg-primary, turquesa) antes de navegar.
+  // partículas, anillos, destellos) se desmonta solo al terminar -- el
+  // botón vuelve a su clase de siempre (bg-primary, turquesa) antes de
+  // navegar, y la interfaz queda limpia.
   function handlePersonalizeClick(e: React.MouseEvent) {
     e.preventDefault();
     if (!canPersonalize || personalizeAnimating) return;
     const colors = ["#57e0d9", "#ff7465", "#ffffff"];
-    const count = 10;
+    const count = 12;
     setPersonalizeParticles(
       Array.from({ length: count }, (_, i) => {
         // Ángulo repartido en el círculo completo + jitter, para que las
-        // 10 partículas salgan parejas en todas direcciones pero sin
+        // 12 partículas salgan parejas en todas direcciones pero sin
         // verse un patrón perfectamente regular (nunca el mismo dos
-        // veces -- Math.random en cada clic).
+        // veces -- Math.random en cada clic). "dot"/"spark" son puntos
+        // (el spark con un glow chico extra); "line" es un trazo con
+        // estela, rotado (`rot`, en grados) hacia la MISMA dirección en
+        // la que viaja -- nunca partículas grandes, tamaños 2-6px.
         const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
         const distance = 34 + Math.random() * 26;
+        const roll = Math.random();
+        const type: "dot" | "line" | "spark" = roll < 0.55 ? "dot" : roll < 0.8 ? "line" : "spark";
         return {
           id: i,
           tx: Math.cos(angle) * distance,
           ty: Math.sin(angle) * distance,
-          size: 3 + Math.random() * 3,
+          size: type === "line" ? 8 + Math.random() * 6 : 2 + Math.random() * 3,
           color: colors[Math.floor(Math.random() * colors.length)],
-          delay: 100 + Math.random() * 40,
+          delay: 30 + Math.random() * 40,
+          type,
+          rot: (angle * 180) / Math.PI,
         };
       })
     );
@@ -1260,7 +1296,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     window.setTimeout(() => {
       setPersonalizeAnimating(false);
       router.push(personalizarHref);
-    }, 620);
+    }, 640);
   }
 
   return (
@@ -1565,80 +1601,128 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               style={
                 personalizeAnimating
                   ? {
-                      // Compresión (scale 0.97) + el momento coral, ambas
-                      // sobre el propio botón, en un solo `animation`
-                      // comma-separado (targets distintos -- transform vs.
-                      // background-color -- así que no compiten entre sí).
-                      // El coral es color SÓLIDO vía @keyframes (nunca
-                      // background-image/degradado) con su delay propio
-                      // (150ms) para que ocurra recién después del pulso/
-                      // destello, como pide el orden: presión -> pulso ->
-                      // destello -> partículas -> coral -> onda.
+                      // Compresión (scale 0.96, Fase 1) + el flash coral
+                      // (Fase 3), ambas sobre el propio botón, en un solo
+                      // `animation` comma-separado (targets distintos --
+                      // transform vs. background-color -- así que no
+                      // compiten entre sí). El coral es color SÓLIDO vía
+                      // @keyframes (nunca background-image/degradado) con
+                      // su delay propio para que ocurra recién después del
+                      // impacto/partículas, como pide el orden: impacto ->
+                      // partículas -> coral -> anillo -> destellos.
                       animation:
-                        "merchyButtonPress 170ms ease-out, merchyColorPulse 250ms ease-in-out 150ms both",
+                        "merchyButtonPress 140ms ease-out, merchyColorPulse 190ms ease-in-out 140ms both",
                     }
                   : undefined
               }
             >
-              {/* Capas decorativas del burst -- aria-hidden, se desmontan
-                  solas apenas termina (nunca quedan en el DOM). Nunca
-                  tocan el diseño permanente del botón (turquesa, ver
-                  arriba) -- todo aquí es puramente temporal. */}
+              {/* Capas decorativas del "MAGIC PORTAL" -- aria-hidden, se
+                  desmontan solas apenas termina (nunca quedan en el DOM).
+                  Nunca tocan el diseño permanente del botón (turquesa, ver
+                  arriba) -- todo aquí es puramente temporal, la interfaz
+                  queda limpia en cuanto termina la secuencia. */}
               {personalizeAnimating && (
                 <span aria-hidden className="pointer-events-none absolute inset-0">
-                  {/* 1. Pulso turquesa -- anillo de luz pegado al botón que
-                      se expande hacia afuera y desaparece rápido. */}
+                  {/* FASE 1 -- Impacto: pulso circular rápido pegado al
+                      botón, se expande hacia afuera y desaparece casi de
+                      inmediato (distinto del anillo de energía, más lento
+                      y elaborado, de la Fase 4 más abajo). */}
                   <span
                     className="absolute inset-0 rounded-full border-2 border-primary"
-                    style={{ animation: "merchyPulseRing 260ms ease-out 50ms both" }}
+                    style={{ animation: "merchyPulseRing 200ms ease-out both" }}
                   />
-                  {/* 2. Destello central -- blanco/turquesa, "activación
-                      digital". left/top 50% + la traslación -50%/-50%
-                      HORNEADA en la propia animación (no un transform base
-                      aparte): un @keyframes reemplaza el transform
-                      completo en cada frame, así que si el centrado no
-                      fuera parte de la keyframe misma, la animación lo
-                      pisaría y el destello aparecería en la esquina
-                      superior izquierda en vez del centro. */}
+                  {/* Destello central que acompaña el impacto -- blanco/
+                      turquesa, "activación digital". left/top 50% + la
+                      traslación -50%/-50% HORNEADA en la propia animación
+                      (no un transform base aparte): un @keyframes
+                      reemplaza el transform completo en cada frame, así
+                      que si el centrado no fuera parte de la keyframe
+                      misma, la animación lo pisaría y el destello
+                      aparecería en la esquina superior izquierda en vez
+                      del centro. */}
                   <span
                     className="absolute left-1/2 top-1/2 h-4 w-4 rounded-full"
                     style={{
                       background:
                         "radial-gradient(circle, rgba(255,255,255,0.9), rgba(87,224,217,0.5) 55%, transparent 75%)",
-                      animation: "merchyFlash 170ms ease-out 70ms both",
+                      animation: "merchyFlash 160ms ease-out 15ms both",
                     }}
                   />
-                  {/* 3. Explosión de partículas -- 10, turquesa/coral/
-                      blanco (mismo set de marca, nunca confeti/arcoíris),
-                      tamaños chicos y variados, salen del centro y se
-                      desvanecen en ~430ms. --tx/--ty vienen de
-                      personalizeParticles (ángulo/distancia únicos por
-                      partícula, ver handlePersonalizeClick); la keyframe
-                      es la misma para las 10. */}
-                  {personalizeParticles.map((p) => (
+                  {/* FASE 2 -- Explosión de partículas: 12, turquesa/coral/
+                      blanco únicamente (nunca confeti/arcoíris), tamaños
+                      chicos y variados, tres formas ("dot" = punto,
+                      "spark" = punto con un glow chico, "line" = trazo con
+                      estela rotado hacia su propia dirección de viaje) --
+                      salen del centro y se desvanecen en ~380ms. --tx/--ty
+                      vienen de personalizeParticles (ángulo/distancia
+                      únicos por partícula, ver handlePersonalizeClick). */}
+                  {personalizeParticles.map((p) =>
+                    p.type === "line" ? (
+                      <span
+                        key={p.id}
+                        className="absolute left-1/2 top-1/2 rounded-full"
+                        style={
+                          {
+                            width: p.size,
+                            height: 1.5,
+                            backgroundColor: p.color,
+                            "--tx": `${p.tx}px`,
+                            "--ty": `${p.ty}px`,
+                            "--rot": `${p.rot}deg`,
+                            animation: `merchyParticleTrail 380ms ease-out ${p.delay}ms both`,
+                          } as React.CSSProperties
+                        }
+                      />
+                    ) : (
+                      <span
+                        key={p.id}
+                        className="absolute left-1/2 top-1/2 rounded-full"
+                        style={
+                          {
+                            width: p.size,
+                            height: p.size,
+                            backgroundColor: p.color,
+                            boxShadow: p.type === "spark" ? `0 0 5px ${p.color}` : undefined,
+                            "--tx": `${p.tx}px`,
+                            "--ty": `${p.ty}px`,
+                            animation: `merchyParticle 380ms ease-out ${p.delay}ms both`,
+                          } as React.CSSProperties
+                        }
+                      />
+                    )
+                  )}
+                  {/* FASE 4 -- Anillo de energía: 3 anillos finos, cada uno
+                      un color SÓLIDO independiente (turquesa, coral,
+                      blanco -- NUNCA mezclados en un degradado), en
+                      cascada (delay escalonado) desde el centro hacia
+                      afuera, desvaneciéndose suavemente. */}
+                  <span
+                    className="absolute inset-0 rounded-full border"
+                    style={{ borderColor: "#57e0d9", animation: "merchyEnergyRing 230ms ease-out 250ms both" }}
+                  />
+                  <span
+                    className="absolute inset-0 rounded-full border"
+                    style={{ borderColor: "#ff7465", animation: "merchyEnergyRing 230ms ease-out 285ms both" }}
+                  />
+                  <span
+                    className="absolute inset-0 rounded-full border"
+                    style={{ borderColor: "#ffffff", animation: "merchyEnergyRing 230ms ease-out 320ms both" }}
+                  />
+                  {/* FASE 5 -- Destellos tipo estrella: posiciones fijas
+                      alrededor del perímetro del botón (personalizeSparkles,
+                      ver arriba), turquesa/coral alternados, aparecen en
+                      cascada después del anillo de energía. */}
+                  {personalizeSparkles.map((s) => (
                     <span
-                      key={p.id}
-                      className="absolute left-1/2 top-1/2 rounded-full"
-                      style={
-                        {
-                          width: p.size,
-                          height: p.size,
-                          backgroundColor: p.color,
-                          "--tx": `${p.tx}px`,
-                          "--ty": `${p.ty}px`,
-                          animation: `merchyParticle 430ms ease-out ${p.delay}ms both`,
-                        } as React.CSSProperties
-                      }
+                      key={s.id}
+                      className="merchy-sparkle absolute"
+                      style={{
+                        ...s.style,
+                        color: s.color,
+                        animation: `merchySparkle 170ms ease-out ${s.delay}ms both`,
+                      }}
                     />
                   ))}
-                  {/* 4. Onda de expansión -- segundo halo, más tarde y más
-                      sutil que el pulso turquesa del paso 1 (box-shadow en
-                      vez de borde, para que se lea como un beat distinto),
-                      justo antes de navegar. */}
-                  <span
-                    className="absolute inset-0 rounded-full"
-                    style={{ animation: "merchyWaveRing 240ms ease-out 370ms both" }}
-                  />
                 </span>
               )}
               <span className="relative z-10">Personalizar producto</span>
