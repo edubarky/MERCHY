@@ -27,23 +27,67 @@
 
 }
 
-/* Ficha del producto — microinteracción de "activación" al hacer clic en
-   "Personalizar producto" (pedido explícito): comprimir + un destello
-   blanco muy sutil, mientras el propio background-color (ver el style
-   inline en ProductDetail.tsx) transiciona de turquesa a coral y de
-   vuelta -- antes de navegar. Referenciadas por su nombre directo vía
-   `style={{ animation: "..." }}` (no como utilidad de Tailwind) — igual
-   de válido: solo necesitan existir en algún lugar del CSS final, no
-   requieren pasar por theme.extend.keyframes. */
+/* Ficha del producto — "MERCHY PERSONALIZATION BURST": microinteracción
+   premium al hacer clic en "Personalizar producto" (pedido explícito,
+   "mucho más impactante" que la versión anterior de solo color):
+   compresión + pulso turquesa + destello + partículas + coral momentáneo
+   + onda de expansión, antes de navegar. Referenciadas por su nombre
+   directo vía `style={{ animation: "..." }}` en ProductDetail.tsx (no
+   como utilidad de Tailwind) — igual de válido: solo necesitan existir
+   en algún lugar del CSS final, no requieren pasar por
+   theme.extend.keyframes. */
 @keyframes merchyButtonPress {
   0% {
     transform: scale(1);
   }
-  30% {
-    transform: scale(0.98);
+  55% {
+    transform: scale(0.97);
   }
   100% {
     transform: scale(1);
+  }
+}
+
+/* El momento coral: SIEMPRE color sólido (nunca background-image ni
+   degradado) -- background-color interpolado por el propio navegador
+   entre los dos valores exactos de marca, turquesa -> coral -> turquesa. */
+@keyframes merchyColorPulse {
+  0% {
+    background-color: #57e0d9;
+  }
+  50% {
+    background-color: #ff7465;
+  }
+  100% {
+    background-color: #57e0d9;
+  }
+}
+
+/* Pulso turquesa: anillo que nace pegado al botón (mismo tamaño/forma,
+   inset:0) y se expande desde el centro por defecto -- no necesita
+   traslación -50%/-50% porque no usa left/top, solo scale. */
+@keyframes merchyPulseRing {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.32);
+    opacity: 0;
+  }
+}
+
+/* Onda de expansión: segundo halo, vía box-shadow en vez de border (así
+   se lee como un beat distinto del pulso turquesa de arriba) -- muy
+   sutil pero visible, como pide el usuario. */
+@keyframes merchyWaveRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(87, 224, 217, 0.4);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(87, 224, 217, 0);
+    opacity: 0;
   }
 }
 
@@ -58,6 +102,24 @@
   }
   100% {
     transform: translate(-50%, -50%) scale(2.2);
+    opacity: 0;
+  }
+}
+
+/* Partículas del burst -- turquesa/coral/blanco, únicamente. --tx/--ty:
+   distancia y ángulo de CADA partícula (únicas por elemento, ver el
+   array `personalizeParticles` en ProductDetail.tsx) -- una sola
+   keyframe sirve para las 10. left/top 50% + la traslación -50%/-50%
+   HORNEADA en la propia keyframe (una animación reemplaza el transform
+   completo en cada frame, así que no puede vivir aparte como un
+   transform base). */
+@keyframes merchyParticle {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0.35);
     opacity: 0;
   }
 }
