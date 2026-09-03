@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Product, ProductVariant, PriceTier, CartItem } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
@@ -851,7 +852,18 @@ function TotalPzasCard({ total, onChange }: { total: number; onChange?: (next: n
 }
 
 export default function ProductDetail({ product, priceTiers, resolvedGallery, modelShots }: Props) {
+  const router = useRouter();
   const { upsertItem, removeItem } = useCart();
+  // "Magia digital" al hacer clic en "Personalizar producto" -- pedido
+  // explícito, microinteracción de ~480ms (destello + partículas + trazo
+  // de borde) antes de navegar. El diseño PERMANENTE del botón no cambia
+  // en nada -- esto solo agrega una capa decorativa temporal (aria-hidden,
+  // desmontada apenas termina) por encima, y retrasa la navegación real
+  // lo justo para que se alcance a ver.
+  const [personalizeAnimating, setPersonalizeAnimating] = useState(false);
+  const [personalizeParticles, setPersonalizeParticles] = useState<
+    { id: number; tx: number; ty: number; size: number; color: string; delay: number; spark: boolean }[]
+  >([]);
   const activeVariants = product.variants.filter((v) => v.active);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -1203,6 +1215,38 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const personalizarQuery = personalizarParams.toString();
   const personalizarHref = `/producto/${product.id}/personalizar${personalizarQuery ? `?${personalizarQuery}` : ""}`;
 
+  // "Magia digital" -- genera un set de partículas nuevo cada clic (nunca
+  // el mismo patrón dos veces, se siente más vivo) y retrasa la
+  // navegación real justo lo que dura la animación (480ms, dentro del
+  // rango 400-600ms pedido) -- nunca más que eso. preventDefault SIEMPRE
+  // (antes solo cuando !canPersonalize): la navegación ahora la dispara
+  // este handler con router.push, nunca el <Link> directo.
+  function handlePersonalizeClick(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!canPersonalize || personalizeAnimating) return;
+    const count = 8 + Math.floor(Math.random() * 7); // 8-14
+    const colors = ["#57e0d9", "#ff7465", "#ffffff"]; // turquesa / coral / blanco -- únicos permitidos
+    const next = Array.from({ length: count }, (_, i) => {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+      const distance = 22 + Math.random() * 20;
+      return {
+        id: i,
+        tx: Math.round(Math.cos(angle) * distance),
+        ty: Math.round(Math.sin(angle) * distance),
+        size: 3 + Math.round(Math.random() * 3),
+        color: colors[Math.floor(Math.random() * colors.length)],
+        delay: Math.round(Math.random() * 60),
+        spark: Math.random() > 0.5,
+      };
+    });
+    setPersonalizeParticles(next);
+    setPersonalizeAnimating(true);
+    window.setTimeout(() => {
+      setPersonalizeAnimating(false);
+      router.push(personalizarHref);
+    }, 480);
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
@@ -1496,16 +1540,84 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               href={personalizarHref}
               aria-disabled={!canPersonalize}
               tabIndex={canPersonalize ? undefined : -1}
-              onClick={(e) => {
-                if (!canPersonalize) e.preventDefault();
-              }}
-              className={`flex-1 flex items-center justify-center py-3.5 rounded-full bg-primary text-white font-semibold text-sm transition-all duration-200 ease-out ${
+              onClick={handlePersonalizeClick}
+              className={`relative flex-1 flex items-center justify-center py-3.5 rounded-full bg-primary text-white font-semibold text-sm transition-all duration-200 ease-out ${
                 canPersonalize
                   ? "shadow-[0_4px_14px_rgba(87,224,217,0.28)] hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_6px_18px_rgba(87,224,217,0.4)] active:scale-[0.98]"
                   : "opacity-40 cursor-not-allowed pointer-events-none"
               }`}
+              style={personalizeAnimating ? { animation: "merchyButtonPress 220ms ease-out" } : undefined}
             >
-              Personalizar producto
+              {/* Capa decorativa de "magia digital" -- aria-hidden, se
+                  desmonta sola apenas termina la animación (nunca queda
+                  en el DOM). Nunca toca el diseño permanente del botón,
+                  solo se dibuja encima mientras dura el clic. */}
+              {personalizeAnimating && (
+                <span aria-hidden className="pointer-events-none absolute inset-0">
+                  {/* Destello central -- left/top 50% + la traslación
+                      -50%/-50% HORNEADA en la propia animación (no un
+                      transform base aparte): un @keyframes reemplaza el
+                      transform completo en cada frame, así que si el
+                      centrado no fuera parte de la keyframe misma, la
+                      animación lo pisaría y el destello aparecería en la
+                      esquina superior izquierda en vez del centro. */}
+                  <span
+                    className="absolute left-1/2 top-1/2 h-5 w-5 rounded-full"
+                    style={{
+                      background: "radial-gradient(circle, rgba(255,255,255,0.95), rgba(87,224,217,0.55) 55%, transparent 75%)",
+                      animation: "merchyFlash 190ms ease-out forwards",
+                    }}
+                  />
+                  {/* Trazo de luz recorriendo el borde -- anillo estático
+                      (recorte via mask) + un conic-gradient oversized
+                      adentro que gira; así el "trazo" se ve moverse solo
+                      dentro del anillo, nunca cambia la forma del botón. */}
+                  <span
+                    className="absolute inset-0 overflow-hidden rounded-full"
+                    style={{
+                      padding: "1.5px",
+                      WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+                      WebkitMaskComposite: "xor",
+                      maskComposite: "exclude",
+                    }}
+                  >
+                    <span
+                      className="absolute"
+                      style={{
+                        top: "-50%",
+                        left: "-50%",
+                        width: "200%",
+                        height: "200%",
+                        background: "conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.9) 6%, transparent 14%)",
+                        animation: "merchySweep 480ms linear forwards",
+                      }}
+                    />
+                  </span>
+                  {/* Partículas -- turquesa/coral/blanco únicamente. left/
+                      top 50% (el centro del botón); la traslación -50%/
+                      -50% que las deja EXACTAMENTE centradas ahí (antes de
+                      dispersarse) ya viene horneada en cada frame de
+                      merchyParticle, mismo motivo que el destello arriba. */}
+                  {personalizeParticles.map((p) => (
+                    <span
+                      key={p.id}
+                      className="absolute left-1/2 top-1/2 rounded-full"
+                      style={
+                        {
+                          width: p.size,
+                          height: p.size,
+                          backgroundColor: p.color,
+                          boxShadow: p.spark ? `0 0 4px ${p.color}` : undefined,
+                          "--tx": `${p.tx}px`,
+                          "--ty": `${p.ty}px`,
+                          animation: `merchyParticle 420ms ease-out ${p.delay}ms forwards`,
+                        } as React.CSSProperties
+                      }
+                    />
+                  ))}
+                </span>
+              )}
+              <span className="relative z-10">Personalizar producto</span>
             </Link>
             <a
               href={`https://wa.me/5215500000000?text=${encodeURIComponent(`Hola, me interesa cotizar: ${product.name} (SKU: ${product.sku})`)}`}

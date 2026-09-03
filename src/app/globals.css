@@ -27,6 +27,68 @@
 
 }
 
+/* Ficha del producto — microinteracción "magia digital" al hacer clic en
+   "Personalizar producto" (pedido explícito): destello central + trazo de
+   luz sobre el borde + partículas turquesa/coral/blanco dispersándose,
+   antes de navegar. Referenciadas por su nombre directo vía `style=
+   { animation: "..." }` en ProductDetail.tsx (no como utilidad de
+   Tailwind) — igual de válido: solo necesitan existir en algún lugar del
+   CSS final, no requieren pasar por theme.extend.keyframes. */
+@keyframes merchyButtonPress {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes merchyFlash {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+  35% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes merchySweep {
+  0% {
+    transform: rotate(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* --tx/--ty: distancia/ángulo de CADA partícula, únicos por elemento (ver
+   el style inline en ProductDetail.tsx) — la keyframe es la misma para
+   las 8-14, solo cambia hacia dónde apunta cada una. */
+@keyframes merchyParticle {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0.4);
+    opacity: 0;
+  }
+}
+
 /* Personalizador — smaller, lighter react-moveable selection handles,
    scaled by the art's own rendered size via react-moveable's `zoom` prop
    (see DesignElementView.tsx's computeHandleZoom). Scoped to
