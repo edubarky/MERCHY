@@ -963,21 +963,6 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     });
   }
 
-  // "Merchy Dynamic Glow" (CTAs "Personalizar producto"/"Agregar al
-  // carrito", ver más abajo) -- posición del cursor DENTRO del botón, en
-  // % de su propio ancho/alto, escrita directo en el elemento como
-  // variables CSS (--glow-x/--glow-y) en vez de useState: mousemove
-  // dispara muy seguido, y un setState ahí re-renderizaría todo
-  // ProductDetail en cada frame -- esto solo toca ese único elemento, sin
-  // pasar por React en absoluto.
-  function handleGlowMove(e: React.MouseEvent<HTMLElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    e.currentTarget.style.setProperty("--glow-x", `${x}%`);
-    e.currentTarget.style.setProperty("--glow-y", `${y}%`);
-  }
-
   function selectVariant(v: ProductVariant) {
     // La imagen de galería siempre sigue al último color tocado, en ambos modos.
     setSelectedVariant(v);
@@ -1498,24 +1483,14 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
             </div>
           )}
 
-          {/* CTAs -- fondo turquesa Merchy con efecto glass (pedido
-              explícito, reemplaza el fondo oscuro de antes por el color
-              principal de marca). Estructura/texto/tamaño/posición/
-              separación/lógica intactos: sigue siendo el mismo Link/
-              anchor, mismo href de siempre -- solo cambia el color y el
-              tratamiento visual. Dos capas decorativas por botón (aria-
-              hidden, pointer-events-none, nunca afectan el área de clic):
-              una fija (el "reflejo" superior tipo vidrio, siempre visible)
-              y una que sigue al cursor (el brillo dinámico de hover,
-              usando las mismas `--glow-x/--glow-y` que ya escribe
-              handleGlowMove directo en el elemento -- ver esa función
-              arriba). Ambos botones usan el MISMO turqueza -- pedido
-              explícito ("no usar otro color adicional"), ya no hay
-              distinción coral para "Agregar al carrito". El texto va en
-              su propio span con position:relative + z-index para quedar
-              SIEMPRE arriba de las dos capas de glass -- un elemento
-              absolute pinta encima de texto plano sin position sin
-              importar el orden en el DOM. */}
+          {/* CTAs -- "Minimal Sólido" (pedido explícito, reemplaza el
+              tratamiento glass/degradado de antes): color sólido
+              únicamente, sin degradados/glass/glow. Estructura/texto/
+              tamaño/posición/separación/lógica intactos -- mismo Link/
+              anchor, mismo href de siempre. Ambos botones se quedan en el
+              MISMO turquesa (decisión explícita ya tomada antes: "no usar
+              otro color adicional" -- este ajuste solo cambia la técnica
+              visual a sólida, no el color). */}
           <div className="flex gap-3">
             <Link
               href={personalizarHref}
@@ -1524,51 +1499,21 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               onClick={(e) => {
                 if (!canPersonalize) e.preventDefault();
               }}
-              onMouseMove={handleGlowMove}
-              className={`group relative flex-1 flex items-center justify-center overflow-hidden py-3.5 rounded-full border bg-gradient-to-b from-primary to-primary-dark text-white font-semibold text-sm [text-shadow:0_1px_2px_rgba(0,63,60,0.25)] transition-all duration-[220ms] ease-out ${
+              className={`flex-1 flex items-center justify-center py-3.5 rounded-full bg-primary text-white font-semibold text-sm transition-all duration-200 ease-out ${
                 canPersonalize
-                  ? "border-white/25 shadow-[0_10px_26px_-10px_rgba(87,224,217,0.6),0_4px_10px_-2px_rgba(87,224,217,0.3)] hover:-translate-y-0.5 hover:border-white/40 hover:shadow-[0_14px_32px_-10px_rgba(87,224,217,0.7),0_6px_16px_-2px_rgba(87,224,217,0.4)] active:scale-[0.98]"
-                  : "border-white/25 opacity-40 cursor-not-allowed pointer-events-none"
+                  ? "shadow-[0_4px_14px_rgba(87,224,217,0.28)] hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_6px_18px_rgba(87,224,217,0.4)] active:scale-[0.98]"
+                  : "opacity-40 cursor-not-allowed pointer-events-none"
               }`}
             >
-              {/* Reflejo fijo (superficie de vidrio) -- siempre presente,
-                  no solo en hover: un halo claro arriba que se desvanece
-                  hacia abajo, como luz reflejándose en vidrio curvo. */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-0"
-                style={{ background: "radial-gradient(120% 60% at 50% -20%, rgba(255,255,255,0.4), transparent 60%)" }}
-              />
-              {/* Brillo dinámico -- solo en hover, sigue al cursor */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-[260ms] ease-out group-hover:opacity-100"
-                style={{
-                  background: "radial-gradient(150px circle at var(--glow-x,50%) var(--glow-y,50%), rgba(255,255,255,0.4), transparent 70%)",
-                }}
-              />
-              <span className="relative z-10">Personalizar producto</span>
+              Personalizar producto
             </Link>
             <a
               href={`https://wa.me/5215500000000?text=${encodeURIComponent(`Hola, me interesa cotizar: ${product.name} (SKU: ${product.sku})`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              onMouseMove={handleGlowMove}
-              className="group relative flex-1 flex items-center justify-center overflow-hidden py-3.5 rounded-full border border-white/25 bg-gradient-to-b from-primary to-primary-dark text-white font-semibold text-sm [text-shadow:0_1px_2px_rgba(0,63,60,0.25)] shadow-[0_10px_26px_-10px_rgba(87,224,217,0.6),0_4px_10px_-2px_rgba(87,224,217,0.3)] transition-all duration-[220ms] ease-out hover:-translate-y-0.5 hover:border-white/40 hover:shadow-[0_14px_32px_-10px_rgba(87,224,217,0.7),0_6px_16px_-2px_rgba(87,224,217,0.4)] active:scale-[0.98]"
+              className="flex-1 flex items-center justify-center py-3.5 rounded-full bg-primary text-white font-semibold text-sm shadow-[0_4px_14px_rgba(87,224,217,0.28)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_6px_18px_rgba(87,224,217,0.4)] active:scale-[0.98]"
             >
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-0"
-                style={{ background: "radial-gradient(120% 60% at 50% -20%, rgba(255,255,255,0.4), transparent 60%)" }}
-              />
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-[260ms] ease-out group-hover:opacity-100"
-                style={{
-                  background: "radial-gradient(150px circle at var(--glow-x,50%) var(--glow-y,50%), rgba(255,255,255,0.4), transparent 70%)",
-                }}
-              />
-              <span className="relative z-10">Agregar al carrito</span>
+              Agregar al carrito
             </a>
           </div>
         </div>
