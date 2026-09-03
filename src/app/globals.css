@@ -27,77 +27,47 @@
 
 }
 
-/* Ficha del producto — "MERCHY MAGIC SWEEP": microinteracción premium
-   al hacer clic en "Personalizar producto" (pedido explícito: reemplaza
-   POR COMPLETO la versión anterior "LIQUID ENERGY" -- nada de
-   partículas que viajan ni trazos de borde, "el WOW debe venir de la
-   calidad y fluidez, no de la cantidad de efectos"): compresión + una
-   franja de luz suave que recorre el botón + un flash coral muy sutil +
-   2-4 destellos chicos que solo aparecen/se apagan en su lugar, antes
-   de navegar. Referenciadas por su nombre directo vía `style={{
-   animation: "..." }}` en ProductDetail.tsx (no como utilidad de
-   Tailwind) — igual de válido: solo necesitan existir en algún lugar
+/* Ficha del producto — microinteracción minimalista al hacer clic en
+   "Personalizar producto" (pedido explícito: reemplaza POR COMPLETO la
+   versión anterior "MAGIC SWEEP" -- nada de partículas/destellos/franjas
+   de color, "casi invisible pero MUY refinada", inspirada en Apple/
+   Stripe/Linear): solo una microcompresión (scale 0.98) y una línea de
+   luz blanca extremadamente fina que recorre el borde del botón una
+   sola vez, antes de navegar. Referenciadas por su nombre directo vía
+   `style={{ animation: "..." }}` en ProductDetail.tsx (no como utilidad
+   de Tailwind) — igual de válido: solo necesitan existir en algún lugar
    del CSS final, no requieren pasar por theme.extend.keyframes. */
 @keyframes merchyButtonPress {
   0% {
     transform: scale(1);
   }
   45% {
-    transform: scale(0.97);
+    transform: scale(0.98);
   }
   100% {
     transform: scale(1);
   }
 }
 
-/* El momento coral: SIEMPRE color sólido (nunca background-image ni
-   degradado) -- background-color interpolado por el propio navegador
-   entre los dos valores exactos de marca, turquesa -> coral -> turquesa. */
-@keyframes merchyColorPulse {
+/* Traslada el parche de luz de un extremo al otro de la línea de borde
+   (ver el wrapper con mask-composite:exclude en ProductDetail.tsx, que
+   ya recorta la vista a un anillo de 1px -- esta keyframe solo mueve el
+   parche dentro de ese anillo). Sin `infinite`: corre UNA sola vez y se
+   queda invisible (opacity:0 al final), nunca un borde luminoso
+   permanente. */
+@keyframes merchyBorderTravel {
   0% {
-    background-color: #57e0d9;
-  }
-  50% {
-    background-color: #ff7465;
-  }
-  100% {
-    background-color: #57e0d9;
-  }
-}
-
-/* Paso 2 (Magic Sweep) -- traslada la franja de luz de un extremo al
-   otro del botón. La franja en sí (blanco o coral, un solo color con
-   los bordes difuminados por transparencia vía linear-gradient -- eso
-   NO es "un degradado de fondo" simulando un cambio de color, es un
-   elemento de luz/transparencia, ver ProductDetail.tsx) ya define su
-   propio look; esta keyframe solo la mueve. Se usa 2 veces (blanco,
-   luego coral apenas detrás) como capas SEPARADAS, nunca mezcladas. */
-@keyframes merchySweepMove {
-  0% {
-    transform: translateX(-160%);
-  }
-  100% {
-    transform: translateX(260%);
-  }
-}
-
-/* Paso 4 (Destellos) -- puntos de luz chicos y suaves que solo aparecen
-   y se apagan EN SU LUGAR (nunca se desplazan/viajan, para que jamás
-   lean como partículas dispersas). Se usa 3 veces, una por destello
-   (personalizeSparkles en ProductDetail.tsx), con su propio delay para
-   que aparezcan en una cascada breve justo después de que la franja de
-   luz termina su recorrido. */
-@keyframes merchySparkleGlow {
-  0% {
-    transform: scale(0.3);
+    transform: translateX(-120%);
     opacity: 0;
   }
-  45% {
-    transform: scale(1);
-    opacity: 0.95;
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
   }
   100% {
-    transform: scale(0.5);
+    transform: translateX(500%);
     opacity: 0;
   }
 }

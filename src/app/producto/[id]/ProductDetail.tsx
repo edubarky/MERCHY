@@ -854,26 +854,16 @@ function TotalPzasCard({ total, onChange }: { total: number; onChange?: (next: n
 export default function ProductDetail({ product, priceTiers, resolvedGallery, modelShots }: Props) {
   const router = useRouter();
   const { upsertItem, removeItem } = useCart();
-  // "MERCHY MAGIC SWEEP" al hacer clic en "Personalizar producto" --
-  // pedido explícito: reemplazar POR COMPLETO la animación anterior
-  // ("LIQUID ENERGY", con barras/partículas/borde) por algo mucho más
-  // simple y fluido -- ninguna partícula que viaje, ningún trazo de
-  // borde, ningún elemento que sugiera un botón "rompiéndose". Secuencia
-  // corta (~500ms): compresión + una franja de luz suave (blanco/coral)
-  // que recorre el botón de izquierda a derecha + un flash coral MUY
-  // sutil + 2-4 destellos chicos que solo aparecen/desaparecen en su
-  // lugar (nunca salen disparados), antes de navegar. El diseño
-  // PERMANENTE del botón (turquesa) no cambia en nada -- todo lo demás
-  // es puramente temporal, ver handlePersonalizeClick.
+  // Microinteracción minimalista al hacer clic en "Personalizar
+  // producto" -- pedido explícito: reemplaza POR COMPLETO la versión
+  // anterior ("MAGIC SWEEP", con franjas de luz de dos colores +
+  // destellos + flash coral) por algo inspirado en Apple/Stripe/Linear
+  // -- nada de partículas/destellos/flash de color, solo una
+  // microcompresión (scale 0.98) y una línea de luz blanca EXTREMADAMENTE
+  // fina que recorre el borde del botón de izquierda a derecha una sola
+  // vez, antes de navegar. El diseño PERMANENTE del botón (turquesa,
+  // sin degradados) no cambia en nada -- ver handlePersonalizeClick.
   const [personalizeAnimating, setPersonalizeAnimating] = useState(false);
-  // Destellos (paso 4) -- posiciones FIJAS alrededor del botón, chicos y
-  // suaves, turquesa/coral/blanco. Estático (no se regenera por clic):
-  // solo aparecen y se apagan en su lugar, nunca viajan.
-  const personalizeSparkles = [
-    { id: 0, style: { top: -4, left: "16%" }, color: "#57e0d9", delay: 300 },
-    { id: 1, style: { top: -4, right: "16%" }, color: "#ff7465", delay: 330 },
-    { id: 2, style: { bottom: -4, left: "46%" }, color: "#ffffff", delay: 360 },
-  ] as const;
   const activeVariants = product.variants.filter((v) => v.active);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -1225,24 +1215,18 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const personalizarQuery = personalizarParams.toString();
   const personalizarHref = `/producto/${product.id}/personalizar${personalizarQuery ? `?${personalizarQuery}` : ""}`;
 
-  // "MERCHY MAGIC SWEEP" (pedido explícito, reemplaza POR COMPLETO la
-  // versión anterior "LIQUID ENERGY" -- nada de partículas que viajan,
-  // ni borde/trazo, ni nada que sugiera un botón "rompiéndose"):
-  // compresión -> franja de luz suave (blanco + coral, dos capas
-  // separadas, cada una translúcida por su cuenta -- nunca un degradado
-  // de fondo) que recorre el botón de izquierda a derecha -> flash
-  // coral MUY sutil (color SÓLIDO vía @keyframes, no background-image)
-  // -> 2-4 destellos chicos que solo aparecen/se apagan EN SU LUGAR
-  // (nunca salen disparados) -> navega. Un solo `animation`
-  // (comma-separado) en el propio botón cubre compresión + el color
-  // sólido; el resto son capas decorativas hijas (ver el <span
-  // aria-hidden> más abajo), cada una con su propio delay para respetar
-  // el orden pedido. 500ms en total (dentro del rango 450-550ms
-  // pedido), navega recién al final. preventDefault SIEMPRE: la
-  // navegación la dispara este handler con router.push, nunca el <Link>
-  // directo. Todo lo temporal se desmonta solo al terminar -- el botón
-  // vuelve a su clase de siempre (bg-primary, turquesa) antes de
-  // navegar, y la interfaz queda limpia.
+  // Microinteracción minimalista (pedido explícito, reemplaza POR
+  // COMPLETO la versión anterior "MAGIC SWEEP" -- nada de partículas,
+  // destellos, franjas de color ni flash coral, "casi invisible pero
+  // MUY refinada", inspirada en Apple/Stripe/Linear): compresión (scale
+  // 0.98, ~100ms) -> una línea de luz blanca extremadamente fina que
+  // recorre el borde del botón de izquierda a derecha UNA SOLA VEZ (ver
+  // el <span aria-hidden> más abajo) -> el botón vuelve a su estado
+  // normal -> navega ~280ms después del clic (dentro del rango
+  // 250-300ms pedido). preventDefault SIEMPRE: la navegación la dispara
+  // este handler con router.push, nunca el <Link> directo. La línea de
+  // luz se desmonta sola al terminar -- nunca queda un borde luminoso
+  // permanente.
   function handlePersonalizeClick(e: React.MouseEvent) {
     e.preventDefault();
     if (!canPersonalize || personalizeAnimating) return;
@@ -1250,7 +1234,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     window.setTimeout(() => {
       setPersonalizeAnimating(false);
       router.push(personalizarHref);
-    }, 500);
+    }, 280);
   }
 
   return (
@@ -1555,78 +1539,57 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               style={
                 personalizeAnimating
                   ? {
-                      // Compresión (scale 0.97, paso 1, ~100ms) + el flash
-                      // coral MUY sutil (paso 3), ambas sobre el propio
-                      // botón, en un solo `animation` comma-separado
-                      // (targets distintos -- transform vs. background-
-                      // color -- así que no compiten entre sí). El coral es
-                      // color SÓLIDO vía @keyframes (nunca background-
-                      // image/degradado), con su delay propio para que
-                      // ocurra "mientras la luz recorre el botón" y sea
-                      // fluido (ease-in-out, nunca un cambio brusco).
-                      animation:
-                        "merchyButtonPress 100ms ease-out, merchyColorPulse 200ms ease-in-out 80ms both",
+                      // ÚNICO efecto sobre el propio botón: microcompresión,
+                      // scale(0.98), ~100ms -- "sin deformar el botón" (el
+                      // keyframe solo toca `transform`, nunca width/height/
+                      // border-radius). Ya no hay flash de color de ningún
+                      // tipo (pedido explícito: "NO flash coral", "NO
+                      // cambios bruscos de color") -- el fondo turquesa
+                      // sólido se queda exactamente igual todo el tiempo.
+                      animation: "merchyButtonPress 100ms ease-out",
                     }
                   : undefined
               }
             >
-              {/* Capas decorativas del "MAGIC SWEEP" -- aria-hidden, se
-                  desmontan solas apenas termina (nunca quedan en el DOM).
-                  Nunca tocan el diseño permanente del botón (turquesa, ver
-                  arriba) -- todo aquí es puramente temporal, la interfaz
-                  queda limpia en cuanto termina la secuencia. Deliberadamente
-                  pocas capas y NADA que viaje/se disperse (pedido explícito:
-                  "el WOW debe venir de la calidad y fluidez, no de la
-                  cantidad de efectos"; nada de partículas dispersas, trazos
-                  de borde, ni nada que sugiera un botón "rompiéndose"). */}
+              {/* Único detalle decorativo -- aria-hidden, se desmonta solo
+                  apenas termina (nunca queda un borde luminoso permanente).
+                  Nunca toca el diseño permanente del botón (turquesa, ver
+                  arriba). Pedido explícito: "casi invisible pero MUY
+                  refinada" -- inspirada en Apple/Stripe/Linear, sin
+                  partículas/destellos/ondas/glow de ningún tipo. */}
               {personalizeAnimating && (
-                <span aria-hidden className="pointer-events-none absolute inset-0">
-                  {/* Paso 2 -- Magic Sweep: una franja de luz suave que
-                      recorre el botón de izquierda a derecha, como un
-                      reflejo sobre una superficie premium. Dos capas
-                      SEPARADAS (blanco, luego coral apenas detrás) -- cada
-                      una es un solo color con los bordes difuminados por
-                      transparencia (nunca dos colores mezclados en un
-                      degradado). Wrapper propio con `rounded-full
-                      overflow-hidden` (no el contenedor de afuera) para que
-                      la franja jamás se salga de la forma del botón, sin
-                      recortar los destellos de abajo, que sí deben asomar
-                      un poco fuera del botón. */}
-                  <span className="absolute inset-0 rounded-full overflow-hidden">
-                    <span
-                      className="absolute inset-y-0"
-                      style={{
-                        width: "38%",
-                        background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.5) 50%, transparent)",
-                        animation: "merchySweepMove 300ms ease-in-out 10ms both",
-                      }}
-                    />
-                    <span
-                      className="absolute inset-y-0"
-                      style={{
-                        width: "38%",
-                        background: "linear-gradient(100deg, transparent, rgba(255,116,101,0.35) 50%, transparent)",
-                        animation: "merchySweepMove 300ms ease-in-out 40ms both",
-                      }}
-                    />
-                  </span>
-                  {/* Paso 4 -- Destellos: 3 puntos de luz chicos y suaves
-                      (personalizeSparkles, ver arriba) que solo aparecen y
-                      se apagan EN SU LUGAR -- nunca salen disparados ni se
-                      desplazan, para que no lean como partículas. */}
-                  {personalizeSparkles.map((s) => (
-                    <span
-                      key={s.id}
-                      className="absolute rounded-full"
-                      style={{
-                        ...s.style,
-                        width: 8,
-                        height: 8,
-                        background: `radial-gradient(circle, ${s.color}, transparent 70%)`,
-                        animation: `merchySparkleGlow 150ms ease-out ${s.delay}ms both`,
-                      }}
-                    />
-                  ))}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 rounded-full overflow-hidden"
+                  style={{
+                    // Técnica de "borde con recorte": el padding define el
+                    // grosor de la línea visible (1px, extremadamente fina),
+                    // y el mask XOR oculta todo menos ese anillo -- así el
+                    // parche de luz de adentro (ver más abajo) solo se ve
+                    // ahí, nunca como un glow sobre toda la superficie ni
+                    // como algo que cambia la forma del botón.
+                    padding: 1,
+                    WebkitMask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+                    WebkitMaskComposite: "xor",
+                    maskComposite: "exclude",
+                  }}
+                >
+                  {/* Un solo parche de luz blanca, angosto y suave, que
+                      recorre esa línea de izquierda a derecha UNA SOLA VEZ
+                      (la keyframe no tiene `infinite`) y se apaga -- nunca
+                      un borde luminoso que se queda. Al pasar por cada
+                      punto x, ilumina simultáneamente el borde de arriba y
+                      el de abajo en ese punto (ambos forman parte del mismo
+                      anillo delgado), leyéndose como una sola línea de luz
+                      recorriendo el contorno. */}
+                  <span
+                    className="absolute inset-y-0"
+                    style={{
+                      width: "20%",
+                      background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)",
+                      animation: "merchyBorderTravel 260ms ease-in-out both",
+                    }}
+                  />
                 </span>
               )}
               <span className="relative z-10">Personalizar producto</span>
