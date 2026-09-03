@@ -27,17 +27,17 @@
 
 }
 
-/* Ficha del producto — "MERCHY LIQUID ENERGY": microinteracción premium
-   al hacer clic en "Personalizar producto" (pedido explícito: más
-   sofisticada que la versión anterior "MAGIC PORTAL", pero con MENOS
-   efectos a la vez, "una experiencia de marca, no una animación
-   genérica"): compresión + onda de energía (3 barras sólidas) + flash
-   coral + un puñado de partículas minimalistas desde los extremos del
-   botón + un borde que recorre el contorno y se apaga, antes de
-   navegar. Referenciadas por su nombre directo vía `style={{ animation:
-   "..." }}` en ProductDetail.tsx (no como utilidad de Tailwind) — igual
-   de válido: solo necesitan existir en algún lugar del CSS final, no
-   requieren pasar por theme.extend.keyframes. */
+/* Ficha del producto — "MERCHY MAGIC SWEEP": microinteracción premium
+   al hacer clic en "Personalizar producto" (pedido explícito: reemplaza
+   POR COMPLETO la versión anterior "LIQUID ENERGY" -- nada de
+   partículas que viajan ni trazos de borde, "el WOW debe venir de la
+   calidad y fluidez, no de la cantidad de efectos"): compresión + una
+   franja de luz suave que recorre el botón + un flash coral muy sutil +
+   2-4 destellos chicos que solo aparecen/se apagan en su lugar, antes
+   de navegar. Referenciadas por su nombre directo vía `style={{
+   animation: "..." }}` en ProductDetail.tsx (no como utilidad de
+   Tailwind) — igual de válido: solo necesitan existir en algún lugar
+   del CSS final, no requieren pasar por theme.extend.keyframes. */
 @keyframes merchyButtonPress {
   0% {
     transform: scale(1);
@@ -65,85 +65,39 @@
   }
 }
 
-/* Paso 2 (Onda de energía) -- una barra fina y sólida que nace en el
-   centro del botón y crece hacia sus extremos. Solo anima width/
-   opacity (nunca transform), así que el `transform: translate(-50%,
-   -50%)` que la centra puede vivir como un estilo ESTÁTICO aparte (ver
-   ProductDetail.tsx) sin que esta keyframe se lo pise -- el navegador
-   recalcula ese -50% contra el ancho actual en cada cuadro, por eso se
-   mantiene centrada mientras crece. Se usa 3 veces, una por color
-   (turquesa/coral/blanco vía background-color inline, como ELEMENTOS
-   SEPARADOS -- nunca mezclados en un degradado), escalonadas. */
-@keyframes merchyEnergyWave {
+/* Paso 2 (Magic Sweep) -- traslada la franja de luz de un extremo al
+   otro del botón. La franja en sí (blanco o coral, un solo color con
+   los bordes difuminados por transparencia vía linear-gradient -- eso
+   NO es "un degradado de fondo" simulando un cambio de color, es un
+   elemento de luz/transparencia, ver ProductDetail.tsx) ya define su
+   propio look; esta keyframe solo la mueve. Se usa 2 veces (blanco,
+   luego coral apenas detrás) como capas SEPARADAS, nunca mezcladas. */
+@keyframes merchySweepMove {
   0% {
-    width: 0;
-    opacity: 1;
-  }
-  70% {
-    opacity: 0.9;
+    transform: translateX(-160%);
   }
   100% {
-    width: 100%;
-    opacity: 0;
+    transform: translateX(260%);
   }
 }
 
-/* Partículas minimalistas (tipo "dot"/"spark") -- turquesa/coral/
-   blanco, únicamente. --tx/--ty: distancia y ángulo de CADA partícula
-   (únicas por elemento, ver el array `personalizeParticles` en
-   ProductDetail.tsx) -- una sola keyframe sirve para las 8. El origen
-   (left/top) va inline por partícula, cerca de los extremos del botón,
-   no del centro; la traslación -50%/-50% que centra la partícula sobre
-   ESE punto va HORNEADA en la propia keyframe (una animación reemplaza
-   el transform completo en cada frame, así que no puede vivir aparte
-   como un transform base). */
-@keyframes merchyParticle {
+/* Paso 4 (Destellos) -- puntos de luz chicos y suaves que solo aparecen
+   y se apagan EN SU LUGAR (nunca se desplazan/viajan, para que jamás
+   lean como partículas dispersas). Se usa 3 veces, una por destello
+   (personalizeSparkles en ProductDetail.tsx), con su propio delay para
+   que aparezcan en una cascada breve justo después de que la franja de
+   luz termina su recorrido. */
+@keyframes merchySparkleGlow {
   0% {
-    transform: translate(-50%, -50%) translate(0, 0) scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0.35);
+    transform: scale(0.3);
     opacity: 0;
   }
-}
-
-/* Partículas tipo "line" -- el mismo viaje corto que merchyParticle,
-   pero además rotadas (--rot) hacia su propia dirección de viaje y
-   estiradas en X (scaleX) según avanzan, para que se lean como un
-   trazo con estela en vez de un punto. --rot se calcula del mismo
-   ángulo que --tx/--ty (ver handlePersonalizeClick), así que el trazo
-   siempre apunta exactamente hacia donde se mueve. */
-@keyframes merchyParticleTrail {
-  0% {
-    transform: translate(-50%, -50%) translate(0, 0) rotate(var(--rot)) scaleX(0.35);
-    opacity: 1;
+  45% {
+    transform: scale(1);
+    opacity: 0.95;
   }
   100% {
-    transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--rot)) scaleX(1);
-    opacity: 0;
-  }
-}
-
-/* Paso 5 (Borde de energía) -- gira el conic-gradient hijo (ver el
-   wrapper con mask-composite:exclude en ProductDetail.tsx, la técnica
-   clásica de "borde con recorte": el padding define el grosor del
-   anillo visible, el mask XOR oculta todo menos ese anillo) mientras
-   aparece y se apaga -- así se lee como una línea de energía viajando
-   por el contorno del botón, nunca como un anillo que se queda pegado. */
-@keyframes merchyBorderSweep {
-  0% {
-    transform: rotate(0deg);
-    opacity: 0;
-  }
-  12% {
-    opacity: 1;
-  }
-  82% {
-    opacity: 1;
-  }
-  100% {
-    transform: rotate(300deg);
+    transform: scale(0.5);
     opacity: 0;
   }
 }
