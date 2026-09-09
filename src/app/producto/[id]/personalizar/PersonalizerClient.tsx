@@ -594,6 +594,19 @@ export default function PersonalizerClient({
     });
   }
 
+  // Flechas (sin Shift) mueven el elemento seleccionado un paso chico —
+  // no existía ningún atajo de teclado para esto (ver charla 2026-09-10:
+  // "no me deja moverlo con las flechas"). Mismo ancla-por-centro que el
+  // resize de arriba, solo que aquí no hay que recalcular nada más que
+  // xPct/yPct.
+  const MOVE_STEP_PCT = 0.4;
+
+  function moveSelectedElementByKeyboard(dxPct: number, dyPct: number) {
+    const el = elements[activeView].find((e) => e.id === selectedId);
+    if (!el) return;
+    updateElement(el.id, { xPct: el.xPct + dxPct, yPct: el.yPct + dyPct });
+  }
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       const ctrlOrCmd = e.ctrlKey || e.metaKey;
@@ -646,6 +659,24 @@ export default function PersonalizerClient({
         if (isTypingFreeText || !selectedId) return;
         e.preventDefault();
         resizeSelectedElementByKeyboard(e.key === "ArrowRight" ? 1 : -1);
+        return;
+      }
+
+      // Flecha sola (sin Shift) mueve el elemento seleccionado. Guardia
+      // ANCHA (isEditableField, no isTypingFreeText) a propósito -- a
+      // diferencia de Shift+flecha arriba, una flecha SOLA sobre el campo
+      // "Rotación" (type="number") sí tiene un uso nativo real (subir/
+      // bajar ese número), así que aquí NO se debe interceptar solo
+      // porque el foco esté en cualquier campo de formulario.
+      if (
+        !e.shiftKey &&
+        (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
+      ) {
+        if (isEditableField || !selectedId) return;
+        e.preventDefault();
+        const dx = e.key === "ArrowLeft" ? -MOVE_STEP_PCT : e.key === "ArrowRight" ? MOVE_STEP_PCT : 0;
+        const dy = e.key === "ArrowUp" ? -MOVE_STEP_PCT : e.key === "ArrowDown" ? MOVE_STEP_PCT : 0;
+        moveSelectedElementByKeyboard(dx, dy);
         return;
       }
 
