@@ -403,6 +403,12 @@ export default function DesignElementView({
           throttleRotate={0}
           snappable
           snapCenter
+          // Oculta el punto rojo del centro (el pivote de rotación de
+          // react-moveable) — no cumple ninguna función aquí, la rotación
+          // ya se hace con el manijo de arriba (ver charla 2026-09-10:
+          // "quítame ese botón rojo"). Solo esconde el indicador visual,
+          // no cambia nada del drag/resize/rotate real.
+          origin={false}
           className="merchy-moveable"
           zoom={handleZoom}
           onDragStart={({ target }) => {
