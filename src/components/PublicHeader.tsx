@@ -43,16 +43,20 @@ export default function PublicHeader() {
                   key={cat.key}
                   href={buildHref(cat.categoria, cat.q)}
                   onClick={() => setExploreOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-foreground hover:bg-gray-50"
+                  className="flex items-center justify-between gap-3 px-4 py-2 text-sm font-medium text-foreground hover:bg-gray-50"
                 >
-                  {/* El ícono de CategoryBar trae la palabra dibujada
-                      adentro (pensado para verse grande, ~44-48px) — aquí
-                      chico ya no se alcanza a leer, por eso el label real
-                      es este <span>, el ícono queda como acompañamiento
-                      visual nada más. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={iconSrc(cat.icon)} alt="" className="h-8 w-auto flex-shrink-0" draggable={false} />
                   <span>{cat.label}</span>
+                  {/* El ícono de CategoryBar trae la palabra dibujada
+                      abajo del dibujo (hecho para la barra grande del
+                      catálogo). Aquí solo se quiere el dibujo, sin la
+                      palabra: la imagen se pinta a h-12 dentro de un
+                      contenedor h-6 con overflow hidden — la mitad de
+                      arriba (el dibujo) se ve, la mitad de abajo (el
+                      texto) queda recortada. Va a la derecha del label. */}
+                  <span className="flex h-6 w-8 flex-shrink-0 items-start justify-center overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={iconSrc(cat.icon)} alt="" aria-hidden="true" className="h-12 w-auto max-w-none" draggable={false} />
+                  </span>
                 </Link>
               ))}
             </div>
