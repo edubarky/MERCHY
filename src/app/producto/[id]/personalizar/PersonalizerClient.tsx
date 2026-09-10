@@ -12,7 +12,6 @@ import {
   findSizePrice,
   roundUpToConfiguredSize,
   techniquePriceWithIva,
-  formatMXN,
 } from "@/lib/pricing";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
 import { useArtLibrary, type ArtAsset } from "@/lib/artLibrary/ArtLibraryContext";
@@ -34,7 +33,6 @@ import DesignElementView, { DEFAULT_FONT_SIZE_PX, FONT_SIZE_MIN_PX, FONT_SIZE_MA
 import PrintAreaGuide from "./PrintAreaGuide";
 
 import ArtLibraryPanel from "./ArtLibraryPanel";
-import DesignsPreviewCard from "./DesignsPreviewCard";
 import SelectionToolbar from "./SelectionToolbar";
 import DesignOptionsPanel from "./DesignOptionsPanel";
 import PrintTechniqueCards from "./PrintTechniqueCards";
@@ -59,7 +57,7 @@ import {
   IzquierdaPrendaTabIcon,
   DerechaPrendaTabIcon,
   EyeIcon,
-  SparkleIcon,
+
 } from "./Icons";
 
 // Qué ícono le toca a cada pestaña de eje -- ver el comentario junto a
@@ -192,6 +190,12 @@ interface PersonalizerDraft {
   techniqueTintas: Record<string, string>;
   techniqueLogoSizeCm: Record<string, Record<string, { largo: string; alto: string }>>;
   groupOrientation: Partial<Record<string, ViewName>>;
+  // La cantidad ya no se puede cambiar dentro del personalizador (solo en
+  // el paso 1). Se guarda aquí como respaldo para que "salir y volver"
+  // conserve la cantidad aunque el link ya no traiga ?qty (ver charla
+  // 2026-09-10). El ?qty de la ficha del producto sigue mandando cuando
+  // viene presente.
+  quantity?: number;
 }
 
 function draftStorageKey(productId: string) {
@@ -1007,6 +1011,11 @@ export default function PersonalizerClient({
       setTechniqueTintas(draft.techniqueTintas ?? {});
       setTechniqueLogoSizeCm(draft.techniqueLogoSizeCm ?? {});
       setGroupOrientation(draft.groupOrientation ?? {});
+      // ?qty de la ficha manda; si no vino, se recupera del borrador.
+      if (initialQuantity == null && typeof draft.quantity === "number" && draft.quantity > 0) {
+        setQuantity(draft.quantity);
+        setQtyDraft(String(draft.quantity));
+      }
     }
     setDraftReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1026,13 +1035,13 @@ export default function PersonalizerClient({
     const timer = setTimeout(() => {
       const hasContent = numElements > 0 || selectedTechniqueIds.length > 0;
       if (hasContent) {
-        saveDraft(product.id, { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation });
+        saveDraft(product.id, { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation, quantity });
       } else {
         clearDraft(product.id);
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [draftReady, product.id, elements, numElements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation]);
+  }, [draftReady, product.id, elements, numElements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation, quantity]);
   const allLogoElements = applicableViews.flatMap((v) => elements[v].filter((e) => e.type === "logo"));
   const numLogoElements = allLogoElements.length;
   // "Posiciones" (tarjeta de detalle de cada técnica): los ejes reales
@@ -1647,24 +1656,14 @@ export default function PersonalizerClient({
           </div>
 
           <div>
-            <span className="mb-1 block text-2xl font-bold text-foreground">3. Personaliza tu producto</span>
-            <p className="mb-4 text-sm text-ui-gray">Agrega un logo o crea un texto personalizado</p>
+            <span className="mb-4 block text-2xl font-bold text-foreground">3. Personaliza tu producto</span>
 
-            {/* Tus diseños — misma tarjeta de siempre (icono/título/
-                subtítulo/flecha, sigue abriendo la galería completa), pero
-                ahora con una vista previa real de los diseños ya
-                guardados debajo, cuando existen. Vacío -> exactamente la
-                tarjeta de antes, sin miniaturas ficticias. */}
-            <DesignsPreviewCard
-              assets={artAssets}
-              onOpenAll={() => setArtLibraryOpen(true)}
-              onSelect={(asset) => placeAsset(asset)}
-              onRemove={removeAsset}
-            />
-
-            {/* Agregar imagen / Agregar texto — botones compactos, solo
-                ícono + texto principal (sin subtítulo ni flecha). */}
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            {/* Sección compacta a propósito (ver charla 2026-09-10): se
+                quitaron la tarjeta "Tus diseños", el subtítulo y la lista
+                de elementos por vista -- el diseño ya se ve en el lienzo y
+                los elementos se manejan desde el panel de Capas. Así el
+                Desglose de precio no queda tan abajo. */}
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -1690,61 +1689,15 @@ export default function PersonalizerClient({
               onChange={(e) => handleLogoFiles(e.target.files)}
             />
 
-            <div className="mt-5">
-              <div className="mb-3 flex gap-6 text-sm">
-                {tabGroups.map((group) => {
-                  const active = group.views.includes(filesTabView);
-                  const target = group.views.length > 1 ? groupOrientation[group.key] ?? group.views[0] : group.views[0];
-                  return (
-                    <button
-                      key={group.key}
-                      type="button"
-                      onClick={() => setFilesTabView(target)}
-                      className={`border-b-2 pb-1.5 transition-all duration-200 ease-out ${
-                        active ? "border-primary font-semibold text-foreground" : "border-transparent text-ui-gray hover:text-foreground"
-                      }`}
-                    >
-                      {group.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {elements[filesTabView].length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-ui-border px-6 py-8 text-center">
-                  <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <SparkleIcon className="h-5 w-5" />
-                  </span>
-                  <p className="text-sm font-bold text-foreground">Sin elementos en esta vista.</p>
-                  <p className="mt-1 text-xs text-ui-gray">Agrega un logo o texto para comenzar a diseñar.</p>
-                </div>
-              ) : (
-                <div className="max-h-28 space-y-1 overflow-y-auto rounded-2xl border border-ui-border p-2">
-                  {elements[filesTabView].map((el) => (
-                    <div
-                      key={el.id}
-                      onClick={() => {
-                        setActiveView(filesTabView);
-                        setSelectedId(el.id);
-                      }}
-                      className="flex cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-sm transition-colors duration-150 ease-out hover:bg-primary/10"
-                    >
-                      <span className="truncate text-foreground">{el.type === "logo" ? el.fileName : `“${el.text}”`}</span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveView(filesTabView);
-                          deleteElement(el.id);
-                        }}
-                        className="ml-2 shrink-0 text-ui-gray transition-colors duration-150 hover:text-accent-coral"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {artAssets.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setArtLibraryOpen(true)}
+                className="mt-2.5 text-xs font-semibold text-primary-dark hover:underline"
+              >
+                Mis diseños guardados ({artAssets.length})
+              </button>
+            )}
           </div>
 
           <div>
@@ -1834,110 +1787,14 @@ export default function PersonalizerClient({
             )}
           </div>
 
-          {/* Resumen del pedido -- píldora glassmorphism (rediseño puramente
-              visual, pedido explícito: "NO cambies la lógica, cálculos,
-              precios, funcionalidades ni comportamiento existente"). Todo
-              el estado/cálculo (setQty, handleQtyDraftChange/Blur,
-              quantity, qtyDraft, total, unitPrice, numLogoElements,
-              anyTechniqueNeedsQuote) es exactamente el mismo de antes --
-              solo cambió el marcado/clases visuales. Los tramos de precio
-              por cantidad de cada técnica siguen dependiendo de esta misma
-              `quantity`, sin tocar esa lógica. */}
-          {/* Todo en una sola fila (flex-nowrap, no flex-wrap) -- cada
-              sección lleva shrink-0 para que ninguna se comprima de forma
-              rara. Antes llevaba overflow-x-auto como "red de seguridad"
-              para un caso extremo (ej. un total de 6+ cifras + la nota de
-              "técnica por cotizar" al mismo tiempo) -- pero aunque la
-              barra de scroll se ocultaba visualmente (.scrollbar-none), el
-              contenido seguía siendo deslizable con touch/trackpad, y
-              esta píldora ya se había acordado como de tamaño FIJO, sin
-              poder deslizarse bajo ningún caso (pedido explícito). Ahora
-              overflow-hidden: nunca se desliza: un caso extremo se
-              recortaría en vez de scrollear, pero a los precios reales del
-              catálogo esto nunca ocurre en el uso normal. Alturas/
-              paddings/tamaños de fuente reducidos a propósito frente a la
-              versión anterior para que quepa cómodo en el ancho real del
-              panel (~35% del viewport). */}
-          <div className="flex flex-nowrap items-center gap-[13.8px] overflow-hidden rounded-full border border-white bg-white/[0.05] px-[42.4px] py-[18px] shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-[42.4px]">
-            {/* Cantidad -- compacta, botones circulares chicos, turquesa. */}
-            <div className="flex shrink-0 items-center gap-[3.2px]">
-              <button
-                type="button"
-                onClick={() => setQty(quantity - 1)}
-                aria-label="Quitar una pieza"
-                className="flex h-[19.1px] w-[19.1px] shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
-              >
-                <svg viewBox="0 0 16 16" className="h-[9.5px] w-[9.5px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-                  <path d="M3 8h10" />
-                </svg>
-              </button>
-              {/* Cuadro de texto SIEMPRE visible y editable -- sin estado
-                  "modo edición" que haya que activar con un clic aparte
-                  (eso era lo reportado como "muy complicado"). Escribir
-                  aquí actualiza el precio al instante, igual que los
-                  botones -/+. */}
-              <input
-                type="text"
-                inputMode="numeric"
-                value={qtyDraft}
-                onChange={(e) => handleQtyDraftChange(e.target.value)}
-                onBlur={handleQtyDraftBlur}
-                onFocus={(e) => e.currentTarget.select()}
-                aria-label="Cantidad de piezas"
-                className="w-[45.6px] rounded-full bg-white/80 py-0.5 text-center text-xs font-semibold text-foreground outline-none ring-1 ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-primary/40"
-              />
-              <button
-                type="button"
-                onClick={() => setQty(quantity + 1)}
-                aria-label="Agregar una pieza"
-                className="flex h-[19.1px] w-[19.1px] shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
-              >
-                <svg viewBox="0 0 16 16" className="h-[9.5px] w-[9.5px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-                  <path d="M8 3v10M3 8h10" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="h-[31.8px] w-px shrink-0 bg-black/[0.06]" />
-
-            {/* Total -- el elemento visual principal, con jerarquía clara:
-                etiqueta "TOTAL" chica, el monto grande, y "c/u · IVA
-                incluido" discreto debajo -- todo en el mismo bloque
-                compacto, sin forzar la altura del contenedor. */}
-            <div className="flex shrink-0 flex-col justify-center gap-0">
-              <span className="w-fit rounded-full bg-primary/10 px-[2.1px] py-[1.1px] text-[8.5px] font-bold uppercase leading-tight tracking-wide text-primary-dark">
-                Total
-              </span>
-              <p className="flex items-baseline gap-[4.2px] whitespace-nowrap">
-                <span className="text-[19.1px] font-extrabold leading-none tracking-tight text-foreground">{formatMXN(total)}</span>
-                <span className="text-[10.6px] font-semibold text-ui-gray">MXN</span>
-              </p>
-              <p className="whitespace-nowrap text-[7.4px] leading-tight text-ui-gray">
-                {formatMXN(unitPrice)} c/u <span className="mx-0.5 opacity-50">·</span>
-                {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
-              </p>
-            </div>
-
-            <div className="h-[31.8px] w-px shrink-0 bg-black/[0.06]" />
-
-            {/* Logo -- ícono de imagen (no carrito/bolsa) en una cajita
-                glass con borde turquesa muy sutil. */}
-            <div className="flex shrink-0 items-center gap-[6.4px]">
-              <div className="flex h-[25.4px] w-[25.4px] shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/5">
-                <ImageToolIcon className="h-[12.7px] w-[12.7px] text-primary" />
-              </div>
-              <span className="whitespace-nowrap text-[12.7px] font-semibold text-foreground">
-                {numLogoElements} {numLogoElements === 1 ? "Logo" : "Logos"}
-              </span>
-            </div>
-            {/* La nota de "técnica por cotizar" ya no se repite aquí como
-                un cuarto bloque -- era texto redundante (la línea
-                secundaria del Total ya dice "No incluye técnicas por
-                cotizar", y la propia tarjeta de la técnica ya muestra
-                "Por cotizar") que además era la causa real de que la fila
-                se desbordara en este caso específico. anyTechniqueNeedsQuote
-                sigue exactamente igual, solo se quitó el texto duplicado. */}
-          </div>
+          {/* La píldora glass de "Resumen del pedido" (cantidad + total +
+              no. de logos) se quitó: el total ya vive en el Desglose de
+              arriba, y la cantidad se define en el paso 1 (ficha del
+              producto) -- tenerla también aquí solo repetía el control
+              (ver charla 2026-09-10). El diseño/técnica/tintas se
+              autoguardan en el navegador (localStorage), así que salir y
+              volver no pierde nada; la cantidad se restaura del mismo
+              borrador si el link ya no trae ?qty. */}
 
           {techniqueSelectionIncomplete && (
             <p className="mt-4 text-center text-xs font-medium text-accent-coral">
