@@ -61,225 +61,91 @@ function DownloadIcon({ className = "" }: { className?: string }) {
   );
 }
 
-function Tag({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-ui-gray">{children}</span>
-  );
-}
-
-function techniqueEmoji(name: string) {
-  const n = name.toLowerCase();
-  if (n.includes("bordado")) return "🧵";
-  if (n.includes("serigraf")) return "🎨";
-  if (n.includes("dtf") || n.includes("dtg")) return "🖨";
-  return "🖨";
-}
-
-function clampZoom(z: number) {
-  return Math.min(3, Math.max(1, z));
-}
-
+// Una cara de la prenda: solo la etiqueta ("Frente"/"Reverso"/...) y la
+// imagen con el arte colocado encima. Sin fondo gris, sin botón de
+// descarga propio, sin etiquetas de "Logo"/"Texto"/técnica -- pedido
+// explícito: "solo quiero ver las imágenes" (ver charla 2026-09-10). La
+// descarga es una sola, del conjunto completo, y vive en el pie del modal.
 function MiniView({
   view,
   elements,
-  productName,
-  technique,
   resolvedAssets,
   garmentColor,
 }: {
   view: (typeof VIEW_ORDER)[number];
   elements: ViewElements;
-  productName: string;
-  technique: PrintTechnique | null;
   resolvedAssets: ResolvedProductAssets;
   garmentColor: GarmentColor;
 }) {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const [downloading, setDownloading] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
   // No generic-mockup fallback here either — same rule as the live canvas:
   // only ever the selected product's own photography, or nothing.
   const imgSrc = resolvedAssets[view][garmentColor];
   const viewElements = elements[view];
-  const hasLogo = viewElements.some((e) => e.type === "logo");
-  const hasText = viewElements.some((e) => e.type === "text");
-  const isEmpty = viewElements.length === 0;
-
-  // React attaches onWheel as a passive listener, so e.preventDefault() there is a
-  // silent no-op — a native listener is required to actually stop page/modal scroll
-  // while zooming with the wheel.
-  useEffect(() => {
-    const node = viewportRef.current;
-    if (!node) return;
-    function onWheel(e: WheelEvent) {
-      e.preventDefault();
-      setZoom((z) => {
-        const next = clampZoom(z - e.deltaY * 0.0015);
-        if (next === 1) setPan({ x: 0, y: 0 });
-        return next;
-      });
-    }
-    node.addEventListener("wheel", onWheel, { passive: false });
-    return () => node.removeEventListener("wheel", onWheel);
-  }, []);
-
-  function handleDoubleClick() {
-    if (zoom > 1) {
-      setZoom(1);
-      setPan({ x: 0, y: 0 });
-    } else {
-      setZoom(2.2);
-    }
-  }
-
-  function handleMouseDown(e: React.MouseEvent) {
-    if (zoom <= 1) return;
-    setDragging(true);
-    dragRef.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y };
-  }
-
-  function handleMouseMove(e: React.MouseEvent) {
-    if (!dragRef.current) return;
-    const d = dragRef.current;
-    setPan({ x: d.panX + (e.clientX - d.startX), y: d.panY + (e.clientY - d.startY) });
-  }
-
-  function stopDragging() {
-    setDragging(false);
-    dragRef.current = null;
-  }
-
-  async function handleDownload() {
-    if (!contentRef.current || downloading) return;
-    setDownloading(true);
-    const hadZoom = zoom !== 1;
-    if (hadZoom) {
-      setZoom(1);
-      setPan({ x: 0, y: 0 });
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    }
-    try {
-      const dataUrl = await toPng(contentRef.current, { pixelRatio: 2 });
-      const link = document.createElement("a");
-      link.download = `${productName}-${view}.png`;
-      link.href = dataUrl;
-      link.click();
-    } finally {
-      setDownloading(false);
-    }
-  }
 
   return (
-    <div className="relative rounded-2xl border border-ui-border bg-white p-4 shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-semibold text-foreground">{VIEW_LABELS[view]}</p>
-        <button
-          type="button"
-          onClick={handleDownload}
-          disabled={downloading}
-          aria-label={`Descargar vista ${VIEW_LABELS[view]}`}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-primary-dark shadow-[0_4px_10px_rgba(0,0,0,0.12)] transition-transform duration-150 ease-out hover:scale-110 disabled:opacity-50"
-        >
-          <DownloadIcon className="h-4 w-4" />
-        </button>
-      </div>
+    <div className="rounded-2xl border border-ui-border bg-white p-4">
+      <p className="mb-3 text-sm font-semibold text-foreground">{VIEW_LABELS[view]}</p>
 
       <div
-        ref={viewportRef}
         // aspectRatio fijo (1:1), NUNCA asset.aspect por vista: cada eje
-        // (frente/reverso/izquierda/derecha) trae su propia relación de
-        // aspecto real de foto, así que dos tarjetas lado a lado terminaban
-        // con alturas distintas -- una prenda se veía más grande que otra
-        // ("no quiero que un artículo se vea más grande que otro"). Un
-        // cuadrado fijo + object-contain en la imagen deja todas las
-        // tarjetas exactamente del mismo tamaño sin importar la vista.
-        className="relative mx-auto overflow-hidden rounded-xl bg-[#F5F5F5]"
-        style={{ width: "100%", aspectRatio: 1, cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "zoom-in" }}
-        onDoubleClick={handleDoubleClick}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={stopDragging}
-        onMouseLeave={stopDragging}
+        // trae su propia relación de aspecto real de foto, así que dos
+        // tarjetas lado a lado terminaban con alturas distintas. Un
+        // cuadrado fijo + object-contain deja todas iguales.
+        className="relative mx-auto w-full overflow-hidden rounded-xl bg-white"
+        style={{ aspectRatio: 1 }}
       >
-        <div
-          ref={contentRef}
-          className="absolute inset-0"
-          style={{
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transformOrigin: "center center",
-            transition: dragging ? "none" : "transform 150ms ease-out",
-          }}
-        >
-          {imgSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imgSrc} alt={VIEW_LABELS[view]} className="absolute inset-0 h-full w-full select-none object-contain" draggable={false} />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <p className="text-xs text-ui-gray">Fotografías no disponibles aún</p>
-            </div>
-          )}
-          {viewElements.map((el) => (
-            <div
-              key={el.id}
-              className="absolute"
-              style={{
-                left: `${el.xPct}%`,
-                top: `${el.yPct}%`,
-                width: `${el.widthPct}%`,
-                height: `${el.heightPct}%`,
-                transform: `rotate(${el.rotation}deg)`,
-                zIndex: el.zIndex,
-                containerType: "inline-size",
-              }}
-            >
-              {el.type === "logo" ? (
-                el.src ? (
-                  <MiniLogoImage element={el} />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-gray-400 bg-white/85 text-[7px] text-ui-gray">
-                    .AI
-                  </div>
-                )
-              ) : (
-                <div
-                  className="flex h-full w-full items-center overflow-hidden whitespace-nowrap"
-                  style={{
-                    fontFamily: resolveFontFamilyCss(el.fontFamily),
-                    color: el.color || "#1a1a1a",
-                    fontWeight: el.bold ? 700 : 400,
-                    fontStyle: el.italic ? "italic" : "normal",
-                    letterSpacing: `${el.letterSpacing ?? 0}px`,
-                    justifyContent: el.align === "center" ? "center" : el.align === "right" ? "flex-end" : "flex-start",
-                    // Same cqw-of-own-box-width approach as the live canvas
-                    // (DesignElementView) — this is what keeps text looking
-                    // the same *relative* size here as it does in the
-                    // editor, even though this card is a different pixel
-                    // size than the canvas.
-                    fontSize: `${(el.fontSizeRatio ?? DEFAULT_FONT_SIZE_RATIO) * 100}cqw`,
-                  }}
-                >
-                  {el.text}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-3 flex min-h-[26px] flex-wrap items-center gap-1.5">
-        {isEmpty ? (
-          <span className="text-xs text-ui-gray/70">Sin personalización</span>
+        {imgSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imgSrc} alt={VIEW_LABELS[view]} className="absolute inset-0 h-full w-full select-none object-contain" draggable={false} />
         ) : (
-          <>
-            {hasLogo && <Tag>🏷 Logo</Tag>}
-            {hasText && <Tag>🔤 Texto</Tag>}
-            {technique && <Tag>{techniqueEmoji(technique.name)} {technique.name}</Tag>}
-          </>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <p className="text-xs text-ui-gray">Fotografías no disponibles aún</p>
+          </div>
         )}
+        {viewElements.map((el) => (
+          <div
+            key={el.id}
+            className="absolute"
+            style={{
+              left: `${el.xPct}%`,
+              top: `${el.yPct}%`,
+              width: `${el.widthPct}%`,
+              height: `${el.heightPct}%`,
+              transform: `rotate(${el.rotation}deg)`,
+              zIndex: el.zIndex,
+              containerType: "inline-size",
+            }}
+          >
+            {el.type === "logo" ? (
+              el.src ? (
+                <MiniLogoImage element={el} />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-gray-400 bg-white/85 text-[7px] text-ui-gray">
+                  .AI
+                </div>
+              )
+            ) : (
+              <div
+                className="flex h-full w-full items-center overflow-hidden whitespace-nowrap"
+                style={{
+                  fontFamily: resolveFontFamilyCss(el.fontFamily),
+                  color: el.color || "#1a1a1a",
+                  fontWeight: el.bold ? 700 : 400,
+                  fontStyle: el.italic ? "italic" : "normal",
+                  letterSpacing: `${el.letterSpacing ?? 0}px`,
+                  justifyContent: el.align === "center" ? "center" : el.align === "right" ? "flex-end" : "flex-start",
+                  // Same cqw-of-own-box-width approach as the live canvas
+                  // (DesignElementView) — this is what keeps text looking
+                  // the same *relative* size here as it does in the editor,
+                  // even though this card is a different pixel size.
+                  fontSize: `${(el.fontSizeRatio ?? DEFAULT_FONT_SIZE_RATIO) * 100}cqw`,
+                }}
+              >
+                {el.text}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -290,33 +156,29 @@ export default function PreviewModal({
   onClose,
   elements,
   productName,
-  technique,
   resolvedAssets,
   garmentColor,
-  onConfirm,
-  confirmDisabled = false,
-  confirmDisabledReason,
 }: {
   open: boolean;
   onClose: () => void;
   elements: ViewElements;
   productName: string;
-  technique: PrintTechnique | null;
+  // Se conservan en la firma por compatibilidad con quien monta el modal,
+  // aunque esta vista previa ya no los use (ahora es solo "mirar +
+  // descargar"; confirmar/agregar al carrito vive en "Siguiente" del
+  // editor).
+  technique?: PrintTechnique | null;
   resolvedAssets: ResolvedProductAssets;
   garmentColor: GarmentColor;
-  onConfirm: () => void;
-  // Mismo requisito que "Siguiente" en el panel principal (ver
-  // PersonalizerClient's techniqueSelectionIncomplete) -- sin esto,
-  // "Confirmar diseño" cerraba el modal en silencio sin agregar nada al
-  // carrito (handleAddToCart ya lo bloqueaba ahí, pero acá no había
-  // ninguna señal visible de por qué no pasó nada).
+  onConfirm?: () => void;
   confirmDisabled?: boolean;
   confirmDisabledReason?: string;
 }) {
   const [entered, setEntered] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
   // Only show views the user actually put art in — an untouched view (no
-  // logo, no text) never appears here, same "real placed instance" check
-  // MiniView already uses for its own "Sin personalización" tag/isEmpty.
+  // logo, no text) never appears here.
   const viewsWithArt = VIEW_ORDER.filter((view) => elements[view].length > 0);
 
   useEffect(() => {
@@ -338,6 +200,23 @@ export default function PreviewModal({
     };
   }, [open, onClose]);
 
+  // Una sola descarga: toda la hoja de vistas (1, 2, 3 o 4) como una
+  // imagen. Nunca una descarga por cara (pedido explícito, charla
+  // 2026-09-10).
+  async function handleDownloadAll() {
+    if (!sheetRef.current || downloading) return;
+    setDownloading(true);
+    try {
+      const dataUrl = await toPng(sheetRef.current, { pixelRatio: 2, backgroundColor: "#ffffff" });
+      const link = document.createElement("a");
+      link.download = `${productName}.png`;
+      link.href = dataUrl;
+      link.click();
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   if (!open) return null;
 
   return (
@@ -349,15 +228,12 @@ export default function PreviewModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[28px] bg-[#FAFAFA] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.28)] transition-all duration-200 ease-out sm:p-8 ${
+        className={`relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[28px] bg-white p-6 shadow-[0_30px_80px_rgba(0,0,0,0.28)] transition-all duration-200 ease-out sm:p-8 ${
           entered ? "opacity-100 scale-100" : "opacity-0 scale-95"
         }`}
       >
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground">Vista previa del producto</h2>
-            <p className="mt-0.5 text-sm text-ui-gray">Revisa las cuatro caras antes de agregarlo al carrito.</p>
-          </div>
+        <div className="mb-6 flex items-start justify-between">
+          <h2 className="font-display text-xl font-bold text-foreground">Vista Previa</h2>
           <button
             type="button"
             onClick={onClose}
@@ -374,43 +250,32 @@ export default function PreviewModal({
             <p className="text-sm text-ui-gray">Coloca un logo o texto en alguna vista para verla aquí.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {viewsWithArt.map((view) => (
-              <MiniView
-                key={view}
-                view={view}
-                elements={elements}
-                productName={productName}
-                technique={technique}
-                resolvedAssets={resolvedAssets}
-                garmentColor={garmentColor}
-              />
-            ))}
-          </div>
-        )}
+          <>
+            <div ref={sheetRef} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {viewsWithArt.map((view) => (
+                <MiniView
+                  key={view}
+                  view={view}
+                  elements={elements}
+                  resolvedAssets={resolvedAssets}
+                  garmentColor={garmentColor}
+                />
+              ))}
+            </div>
 
-        {confirmDisabled && confirmDisabledReason && (
-          <p className="mt-4 text-center text-xs font-medium text-accent-coral">{confirmDisabledReason}</p>
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={handleDownloadAll}
+                disabled={downloading}
+                className="flex h-14 items-center justify-center gap-2 rounded-full bg-primary px-10 text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+              >
+                <DownloadIcon className="h-5 w-5" />
+                {downloading ? "Generando..." : "Descargar"}
+              </button>
+            </div>
+          </>
         )}
-
-        <div className="mt-4 flex gap-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-14 flex-1 items-center justify-center rounded-full border-2 border-foreground text-base font-semibold text-foreground transition-all duration-180 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(0,0,0,0.1)]"
-          >
-            Volver al editor
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={confirmDisabled}
-            title={confirmDisabled ? confirmDisabledReason : undefined}
-            className="flex h-14 flex-1 items-center justify-center rounded-full bg-primary text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
-          >
-            Confirmar diseño
-          </button>
-        </div>
       </div>
     </div>
   );
