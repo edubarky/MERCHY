@@ -94,6 +94,7 @@ export default function DesignElementView({
   onInteraction: (active: boolean, inBounds: boolean) => void;
 }) {
   const targetRef = useRef<HTMLDivElement>(null);
+  const moveableRef = useRef<Moveable>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
   const textDisplayRef = useRef<HTMLDivElement>(null);
 
@@ -235,6 +236,19 @@ export default function DesignElementView({
     element.italic,
     element.letterSpacing,
   ]);
+
+  // Cuando el tamaño / posición / rotación del elemento cambian por fuera
+  // de react-moveable (teclado: Shift+flecha para escalar, flechas solas
+  // para mover), el recuadro de control con las manijas de esquina no se
+  // entera solo y se queda "congelado" en la medida anterior, dejando un
+  // hueco entre las manijas y el logo ya reescalado (ver charla
+  // 2026-09-10). updateRect() lo recalcula contra el target ya
+  // actualizado. Durante un drag/resize real con el mouse estas props no
+  // cambian hasta soltar, así que esto no interfiere con esa interacción.
+  useLayoutEffect(() => {
+    if (!selected) return;
+    moveableRef.current?.updateRect();
+  }, [selected, element.xPct, element.yPct, element.widthPct, element.heightPct, element.rotation]);
 
   function pxToPct(left: number, top: number, width: number, height: number) {
     const container = containerRef.current;
@@ -388,6 +402,7 @@ export default function DesignElementView({
 
       {selected && !editingText && (
         <Moveable
+          ref={moveableRef}
           target={targetRef}
           draggable
           resizable

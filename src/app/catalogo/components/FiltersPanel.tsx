@@ -491,8 +491,13 @@ export default function FiltersPanel({
     return Array.from(map.entries()).map(([name, hex]) => ({ name, hex }));
   }, [products]);
 
+  // Un solo color a la vez (radio, no checkbox) — volver a tocar el color
+  // activo lo quita (ver charla 2026-09-10: "que solo se pueda elegir 1
+  // color"). `colors` sigue siendo arreglo para no tocar applyFilters /
+  // resolvePreferredVariant / los chips, solo que nunca tiene más de 1.
   function toggleColor(name: string) {
-    updateFilters({ colors: colors.includes(name) ? colors.filter((c) => c !== name) : [...colors, name] });
+    updateFilters({ colors: colors.includes(name) ? [] : [name] });
+    setOpenMenu(null);
   }
 
   const priceChanged = minPrice > DEFAULT_FILTERS.minPrice || maxPrice < DEFAULT_FILTERS.maxPrice;
@@ -573,14 +578,14 @@ export default function FiltersPanel({
 
         {/* Color */}
         <FilterDropdown
-          label="Color"
-          count={colors.length}
+          label={colors[0] || "Color"}
+          active={colors.length > 0}
           open={openMenu === "color"}
           onToggle={() => toggleMenu("color")}
           icon={<PaletteIcon className="h-4 w-4" />}
           width="w-[280px]"
         >
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-ui-gray">Elige uno o varios</p>
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-ui-gray">Elige un color</p>
           <div className="flex flex-wrap items-center gap-4 pt-1">
             {EXAMPLE_COLORS.map((c) => (
               <ColorSwatch key={c.name} name={c.name} hex={c.hex} selected={colors.includes(c.name)} onToggle={() => toggleColor(c.name)} />
