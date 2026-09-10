@@ -119,7 +119,6 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
               <CatalogGridWithFilters
                 products={safeProducts}
                 priceTiers={safeTiers}
-                count={count ?? 0}
                 categoryLabel={categoryLabel}
               />
               <Suspense>

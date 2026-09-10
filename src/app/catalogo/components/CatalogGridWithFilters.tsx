@@ -4,19 +4,17 @@ import { useState } from "react";
 import type { Product, PriceTier } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import FavoritoProductCard from "@/components/home/FavoritoProductCard";
-import FiltersPanel, { applyFilters, DEFAULT_FILTERS, type AppliedFilters } from "./FiltersPanel";
+import FiltersPanel, { applyFilters, sortProducts, DEFAULT_FILTERS, type AppliedFilters } from "./FiltersPanel";
 
 type ProductWithVariants = Product & { variants: NonNullable<Product["variants"]> };
 
 export default function CatalogGridWithFilters({
   products,
   priceTiers,
-  count,
   categoryLabel,
 }: {
   products: ProductWithVariants[];
   priceTiers: PriceTier[];
-  count: number;
   categoryLabel: string | null;
 }) {
   const [filters, setFilters] = useState<AppliedFilters>(DEFAULT_FILTERS);
@@ -53,25 +51,22 @@ export default function CatalogGridWithFilters({
   }
 
   const effectiveProducts = fullCatalog ?? products;
-  const filtered = applyFilters(effectiveProducts, priceTiers, filters);
+  const filtered = sortProducts(applyFilters(effectiveProducts, priceTiers, filters), priceTiers, filters.sort);
 
   return (
     <>
-      {/* Filtros ahora va primero (lado izquierdo) — antes estaba a la
-          derecha, junto al conteo. */}
-      <div className="mb-4 flex items-center gap-4">
-        <FiltersPanel
-          products={effectiveProducts}
-          appliedFilters={filters}
-          resultCount={filtered.length}
-          onApply={setFilters}
-          onOpen={ensureFullCatalog}
-        />
-        <p className="text-sm text-ui-gray">
-          {count} producto{count !== 1 ? "s" : ""}
-          {categoryLabel ? ` en ${categoryLabel}` : ""}
-        </p>
-      </div>
+      {/* Barra de filtros horizontal — Ordenar / Color / Material / Precio
+          como menús propios, más el buscador de palabra clave y los chips
+          de filtros activos (ver charla 2026-09-10). Antes era un panel
+          lateral deslizante. */}
+      <FiltersPanel
+        products={effectiveProducts}
+        appliedFilters={filters}
+        resultCount={filtered.length}
+        categoryLabel={categoryLabel}
+        onApply={setFilters}
+        onOpen={ensureFullCatalog}
+      />
 
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
