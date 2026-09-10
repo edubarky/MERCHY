@@ -1383,21 +1383,6 @@ export default function PersonalizerClient({
             </div>
           )}
 
-          {selectedElement && (
-            <div ref={designOptionsButtonRef} className="mb-5">
-              <SelectionToolbar
-                element={selectedElement}
-                onChange={updateElement}
-                onDuplicate={() => duplicateElement(selectedElement.id)}
-                onDelete={() => deleteElement(selectedElement.id)}
-                onBringFront={() => bringToFront(selectedElement.id)}
-                onSendBack={() => sendToBack(selectedElement.id)}
-                designOptionsOpen={designOptionsOpen}
-                onToggleDesignOptions={() => setDesignOptionsOpen((v) => !v)}
-              />
-            </div>
-          )}
-
           <div className="relative flex justify-center">
             {/* Barra de herramientas flotante */}
             <div className="absolute left-3 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-3">
@@ -1579,6 +1564,26 @@ export default function PersonalizerClient({
             y descartados) -- aquí, en la columna de al lado, el lienzo
             completo queda siempre visible sin importar si este panel está
             abierto. */}
+        {/* Barra de herramientas del elemento seleccionado — vive aquí en
+            el sidebar, NUNCA sobre/encima del lienzo: ponerla en el
+            lienzo (flotando o empujándolo) ya se probó y se descartó
+            porque tapa o mueve la prenda mientras se edita (ver charla
+            2026-09-10 y los comentarios de "Opciones de diseño"). Aquí la
+            columna izquierda con la prenda completa nunca se mueve. */}
+        {selectedElement && (
+          <div ref={designOptionsButtonRef} className="mb-6">
+            <SelectionToolbar
+              element={selectedElement}
+              onChange={updateElement}
+              onDuplicate={() => duplicateElement(selectedElement.id)}
+              onDelete={() => deleteElement(selectedElement.id)}
+              onBringFront={() => bringToFront(selectedElement.id)}
+              onSendBack={() => sendToBack(selectedElement.id)}
+              designOptionsOpen={designOptionsOpen}
+              onToggleDesignOptions={() => setDesignOptionsOpen((v) => !v)}
+            />
+          </div>
+        )}
         {selectedElement?.type === "logo" && designOptionsOpen && (
           <div ref={designOptionsPanelRef} className="mb-6">
             <DesignOptionsPanel element={selectedElement} onChange={updateElement} />
