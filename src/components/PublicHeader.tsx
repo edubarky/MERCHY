@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { useCart } from "@/lib/cart/CartContext";
+import { CATEGORIES, iconSrc, buildHref } from "@/app/catalogo/components/CategoryBar";
 
 export default function PublicHeader() {
   const [exploreOpen, setExploreOpen] = useState(false);
@@ -31,11 +32,29 @@ export default function PublicHeader() {
             </svg>
           </button>
           {exploreOpen && (
-            <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-ui-border rounded-2xl shadow-lg py-2 z-50">
-              <Link href="/catalogo" onClick={() => setExploreOpen(false)} className="block px-4 py-2 text-sm text-foreground hover:bg-gray-50">Todo el catálogo</Link>
-              <Link href="/catalogo?categoria=bebidas" onClick={() => setExploreOpen(false)} className="block px-4 py-2 text-sm text-foreground hover:bg-gray-50">Bebidas</Link>
-              <Link href="/catalogo?categoria=textiles" onClick={() => setExploreOpen(false)} className="block px-4 py-2 text-sm text-foreground hover:bg-gray-50">Textiles</Link>
-              <Link href="/catalogo?categoria=deportivo" onClick={() => setExploreOpen(false)} className="block px-4 py-2 text-sm text-foreground hover:bg-gray-50">Deportivo</Link>
+            // Mismas categorías/íconos que la barra del catálogo (ver
+            // CategoryBar.tsx) — antes esto traía solo 4 grupos genéricos
+            // (Todo el catálogo/Bebidas/Textiles/Deportivo) sin ningún
+            // ícono; ahora son las categorías reales, cada una con su
+            // ícono chico (ver charla 2026-09-10).
+            <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-ui-border rounded-2xl shadow-lg py-2 z-50">
+              {CATEGORIES.map((cat) => (
+                <Link
+                  key={cat.key}
+                  href={buildHref(cat.categoria, cat.q)}
+                  onClick={() => setExploreOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-foreground hover:bg-gray-50"
+                >
+                  {/* El ícono de CategoryBar trae la palabra dibujada
+                      adentro (pensado para verse grande, ~44-48px) — aquí
+                      chico ya no se alcanza a leer, por eso el label real
+                      es este <span>, el ícono queda como acompañamiento
+                      visual nada más. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={iconSrc(cat.icon)} alt="" className="h-8 w-auto flex-shrink-0" draggable={false} />
+                  <span>{cat.label}</span>
+                </Link>
+              ))}
             </div>
           )}
         </div>

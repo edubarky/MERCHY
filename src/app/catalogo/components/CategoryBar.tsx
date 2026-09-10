@@ -9,7 +9,11 @@ import { useSearchParams } from "next/navigation";
 // filter this button applies (see printAreas-style mapping notes below);
 // `label` is only used for alt/aria text, never rendered visibly (the SVG
 // already draws its own label).
-const CATEGORIES: { key: string; icon: string; label: string; categoria: string | null; q?: string }[] = [
+// Exportados para reusarlos tal cual en el desplegable "Explorar" del
+// header (ver PublicHeader.tsx) — mismas categorías/íconos/links que esta
+// barra, una sola fuente de verdad para no desincronizarse si se agrega o
+// renombra una categoría (ver charla 2026-09-10).
+export const CATEGORIES: { key: string; icon: string; label: string; categoria: string | null; q?: string }[] = [
   { key: "novedades", icon: "ICONO DE NOVEDADES.svg", label: "Más relevantes", categoria: null },
   { key: "playeras", icon: "ICONO DE PLAYERAS.svg", label: "Playeras", categoria: "playeras" },
   // "Hoodies" is the label on the editable asset; the real matching DB
@@ -30,11 +34,11 @@ const CATEGORIES: { key: string; icon: string; label: string; categoria: string 
   { key: "bolsas", icon: "ICONO DE BOLSAS.svg", label: "Bolsas", categoria: "bolsas" },
 ];
 
-function iconSrc(file: string) {
+export function iconSrc(file: string) {
   return `/Home/CATÁLOGO DE PRODUCTOS/${encodeURIComponent(file)}`;
 }
 
-function buildHref(categoria: string | null, q?: string) {
+export function buildHref(categoria: string | null, q?: string) {
   const params = new URLSearchParams();
   if (categoria) params.set("categoria", categoria);
   if (q) params.set("q", q);
