@@ -69,16 +69,22 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
     .order("created_at", { ascending: false })
     .range(from, to);
 
-  if (categoria) {
-    const slugs = CATEGORY_GROUPS[categoria] ?? [categoria];
-    const matchingIds = (categories ?? [])
-      .filter((c: Category) => slugs.includes(c.slug))
-      .map((c: Category) => c.id);
+  // IDs de categoría reales a los que resuelve el ?categoria= actual (o
+  // null si no hay ninguno). Se pasa también al grid — cuando abre un
+  // filtro y trae el catálogo completo (todas las categorías), tiene que
+  // volver a acotar por estos IDs o se cuelan productos de otras
+  // categorías (ver charla 2026-09-10).
+  const categoryIds: string[] | null = categoria
+    ? (categories ?? [])
+        .filter((c: Category) => (CATEGORY_GROUPS[categoria] ?? [categoria]).includes(c.slug))
+        .map((c: Category) => c.id)
+    : null;
+  if (categoryIds) {
     // Always apply the filter, even when nothing matches (an empty `.in()`
     // array correctly returns zero rows) — an unrecognized/invalid
     // `categoria` value must show an empty catalog, not silently fall back
     // to showing everything.
-    productsQuery = productsQuery.in("category_id", matchingIds);
+    productsQuery = productsQuery.in("category_id", categoryIds);
   }
 
   if (query) {
@@ -119,6 +125,7 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
               <CatalogGridWithFilters
                 products={safeProducts}
                 priceTiers={safeTiers}
+                categoryIds={categoryIds}
                 categoryLabel={categoryLabel}
               />
               <Suspense>

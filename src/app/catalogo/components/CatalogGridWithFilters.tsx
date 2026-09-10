@@ -11,10 +11,16 @@ type ProductWithVariants = Product & { variants: NonNullable<Product["variants"]
 export default function CatalogGridWithFilters({
   products,
   priceTiers,
+  categoryIds,
   categoryLabel,
 }: {
   products: ProductWithVariants[];
   priceTiers: PriceTier[];
+  /** IDs de categoría reales del ?categoria= actual (null = todo el
+   * catálogo). El catálogo completo que trae ensureFullCatalog es de
+   * TODAS las categorías — hay que volver a acotarlo por estos IDs o se
+   * cuelan productos de otras categorías (ver charla 2026-09-10). */
+  categoryIds: string[] | null;
   categoryLabel: string | null;
 }) {
   const [filters, setFilters] = useState<AppliedFilters>(DEFAULT_FILTERS);
@@ -50,7 +56,12 @@ export default function CatalogGridWithFilters({
     }
   }
 
-  const effectiveProducts = fullCatalog ?? products;
+  // El catálogo completo trae todas las categorías — se re-acota a la
+  // categoría actual (los `products` del servidor ya vienen acotados, así
+  // que solo aplica cuando ya se cargó `fullCatalog`).
+  const catalogInScope =
+    fullCatalog && categoryIds ? fullCatalog.filter((p) => categoryIds.includes(p.category_id)) : fullCatalog;
+  const effectiveProducts = catalogInScope ?? products;
   const filtered = sortProducts(applyFilters(effectiveProducts, priceTiers, filters), priceTiers, filters.sort);
 
   return (
