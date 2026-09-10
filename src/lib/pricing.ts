@@ -41,10 +41,23 @@ export function findQtyPrice(technique: PrintTechnique, totalQty: number): numbe
   return tier ? tier.price_per_element : null;
 }
 
-/** pricing_type "by_tintas" (ej. Serigrafía, Tampografía) -- por número de tintas Y cantidad total. */
-export function findTintasPrice(technique: PrintTechnique, tintas: number, totalQty: number): number | null {
+/** pricing_type "by_tintas" (ej. Serigrafía, Tampografía) -- la FILA de la
+ * tabla ("No. de tintas") es `posiciones × tintas`, igual criterio que
+ * ONPOINT: 2 posiciones × 1 tinta cuesta lo mismo que 1 posición × 2
+ * tintas. El precio de esa fila se cobra UNA vez (las posiciones ya están
+ * dentro del índice) -- no se multiplica por el número de logos. Si
+ * `posiciones × tintas` se pasa de la fila más alta configurada, no se
+ * inventa un precio -> null ("requiere cotización"). */
+export function findTintasPrice(
+  technique: PrintTechnique,
+  tintas: number,
+  posiciones: number,
+  totalQty: number
+): number | null {
+  const fila = tintas * posiciones;
+  if (!Number.isFinite(fila) || fila < 1) return null;
   const tier = technique.price_table.find(
-    (t) => t.tintas === tintas && totalQty >= t.qty_min && (t.qty_max === null || totalQty <= t.qty_max)
+    (t) => t.tintas === fila && totalQty >= t.qty_min && (t.qty_max === null || totalQty <= t.qty_max)
   );
   return tier ? tier.price_per_element : null;
 }
@@ -133,6 +146,27 @@ export function getPriceTierLabel(totalQty: number, tiers: PriceTier[]): string 
     (t) => totalQty >= t.qty_min && (t.qty_max === null || totalQty <= t.qty_max)
   );
   return tier?.label ?? "";
+}
+
+// ---- IVA ----
+// Los catálogos de MERCHY se manejan como PRECIO FINAL AL PÚBLICO. El
+// precio del producto (getProductUnitPrice) ya trae IVA incluido. La tabla
+// de precios de TÉCNICAS viene SIN IVA (así está la referencia del
+// cliente), así que se le agrega aquí y se redondea hacia arriba al peso,
+// mismo criterio de redondeo que getProductUnitPrice (nunca erosionar el
+// margen).
+export const IVA_RATE = 0.16;
+
+export function techniquePriceWithIva(sinIva: number): number {
+  return Math.ceil(sinIva * (1 + IVA_RATE));
+}
+
+/** Parte un total que YA incluye IVA en {subtotal, iva} -- para mostrarlo
+ * desglosado. El IVA queda como exactamente 16% del subtotal
+ * (subtotal = total ÷ 1.16; iva = total − subtotal). */
+export function splitIva(totalConIva: number): { subtotal: number; iva: number } {
+  const subtotal = Math.round(totalConIva / (1 + IVA_RATE));
+  return { subtotal, iva: totalConIva - subtotal };
 }
 
 export function formatMXN(amount: number): string {

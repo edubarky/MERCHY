@@ -11,6 +11,7 @@ import {
   findTintasPrice,
   findSizePrice,
   roundUpToConfiguredSize,
+  techniquePriceWithIva,
   formatMXN,
 } from "@/lib/pricing";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
@@ -38,6 +39,8 @@ import SelectionToolbar from "./SelectionToolbar";
 import DesignOptionsPanel from "./DesignOptionsPanel";
 import PrintTechniqueCards from "./PrintTechniqueCards";
 import TechniqueDetailCard from "./TechniqueDetailCard";
+import TechniqueModal, { TechniqueConfirmedRow } from "./TechniqueModal";
+import PrecioDesglose from "./PrecioDesglose";
 import PreviewModal from "./PreviewModal";
 import {
   TextToolIcon,
@@ -346,6 +349,9 @@ export default function PersonalizerClient({
   // ejes (frente/reverso/izquierda/derecha) hay elementos colocados (ver
   // activePositionLabels más abajo), así que no necesita su propio estado.
   const [selectedTechniqueIds, setSelectedTechniqueIds] = useState<string[]>([]);
+  // Técnica cuyo pop-up de "elegir/editar" está abierto (solo by_tintas
+  // por ahora -- ver TechniqueModal). null = ningún pop-up.
+  const [modalTechniqueId, setModalTechniqueId] = useState<string | null>(null);
   const [techniqueTintas, setTechniqueTintas] = useState<Record<string, string>>({});
   // Medida por LOGO, no una sola compartida por técnica: técnica -> id de
   // elemento -> {largo, alto}. Se agrupan visualmente por posición
@@ -920,19 +926,32 @@ export default function PersonalizerClient({
     });
   }
 
+  function selectTechnique(id: string) {
+    // Elegir una técnica nueva: con la regla de una sola técnica (default
+    // hoy) reemplaza cualquier selección previa en vez de sumarse a ella
+    // -- clic en Serigrafía con DTF UV ya elegido acaba en [Serigrafía].
+    setSelectedTechniqueIds((prev) =>
+      prev.includes(id) ? prev : ALLOW_MULTIPLE_TECHNIQUES ? [...prev, id] : [id]
+    );
+  }
+
   function toggleTechnique(id: string) {
-    setSelectedTechniqueIds((prev) => {
-      // Quitar la técnica ya elegida (el botón "quitar" de su propia
-      // tarjeta, o volver a hacer clic en su card) se comporta exactamente
-      // igual con o sin ALLOW_MULTIPLE_TECHNIQUES -- deja la selección
-      // vacía, nunca "la anterior a esta".
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      // Elegir una técnica nueva: con la regla de una sola técnica
-      // (default hoy) reemplaza cualquier selección previa en vez de
-      // sumarse a ella -- clic en Serigrafía con DTF UV ya elegido acaba
-      // en [Serigrafía], no en [DTF UV, Serigrafía].
-      return ALLOW_MULTIPLE_TECHNIQUES ? [...prev, id] : [id];
-    });
+    // Quitar la técnica ya elegida (su bote, o volver a hacer clic en su
+    // card) deja la selección vacía, nunca "la anterior a esta".
+    if (selectedTechniqueIds.includes(id)) {
+      setSelectedTechniqueIds((prev) => prev.filter((x) => x !== id));
+      return;
+    }
+    // by_tintas (Serigrafía / Tampografía): NO se selecciona directo --
+    // abre el pop-up, y "Confirmar técnica" es lo único que la agrega
+    // (ver charla 2026-09-10). Las demás técnicas se eligen igual que
+    // siempre y muestran su tarjeta de detalle inline.
+    const technique = techniques.find((t) => t.id === id);
+    if (technique?.pricing_type === "by_tintas") {
+      setModalTechniqueId(id);
+      return;
+    }
+    selectTechnique(id);
   }
 
   // Único punto que cambia la cantidad real -- lo usan tanto los botones
@@ -1034,33 +1053,60 @@ export default function PersonalizerClient({
   // types/index.ts) y se suma al total — nunca se inventa un precio: si
   // falta el parámetro (tintas/tamaño) o no hay un renglón que coincida
   // exacto, unitPrice queda en null y needsQuote en true.
+  // "Posiciones" = número de logos colocados (1 logo = 1 posición, criterio
+  // acordado -- charla 2026-09-10). Es el mismo para las 4 vistas.
+  const posiciones = numLogoElements;
+
   interface TechniqueResult {
     technique: PrintTechnique;
+    // unitPrice YA incluye IVA (la tabla de técnicas viene sin IVA -> ver
+    // techniquePriceWithIva). Se suma directo al precio del producto, que
+    // también viene con IVA.
     unitPrice: number | null;
     needsQuote: boolean;
+    // Texto corto para el desglose / la tarjeta confirmada, p.ej.
+    // "2 posiciones · 1 tinta" o "2 logos".
+    resumen: string;
   }
-  const techniqueResults: TechniqueResult[] = selectedTechniqueIds
-    .map((id) => techniques.find((t) => t.id === id))
-    .filter((t): t is PrintTechnique => !!t)
-    .map((technique): TechniqueResult => {
+  // Precio de UNA técnica según su pricing_type (ver types/index.ts) --
+  // nunca se inventa un precio: si falta el parámetro (tintas/tamaño) o no
+  // hay un renglón que coincida exacto, unitPrice queda en null y
+  // needsQuote en true. Se usa tanto para la lista de técnicas ya elegidas
+  // como para la vista previa del pop-up (ver TechniqueModal).
+  const priceTechnique = (technique: PrintTechnique): TechniqueResult => {
+      const logosTxt = `${posiciones} ${posiciones === 1 ? "logo" : "logos"}`;
       if (technique.pricing_type === "by_qty") {
-        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false };
+        // Nota: by_qty (DTG) y by_size (DTF) NO llevan el ×1.16 de IVA
+        // todavía -- solo se aplicó a by_tintas (Serigrafía/Tampografía),
+        // que es lo que se acordó. Cuando se confirme que esas tablas
+        // también vienen sin IVA se envuelven igual con
+        // techniquePriceWithIva.
+        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
         const price = findQtyPrice(technique, quantity);
-        return price === null ? { technique, unitPrice: null, needsQuote: true } : { technique, unitPrice: price * numElements, needsQuote: false };
+        return price === null
+          ? { technique, unitPrice: null, needsQuote: true, resumen: logosTxt }
+          : { technique, unitPrice: price * numElements, needsQuote: false, resumen: logosTxt };
       }
       if (technique.pricing_type === "by_tintas") {
-        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false };
+        if (posiciones === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
+        const posTxt = `${posiciones} ${posiciones === 1 ? "posición" : "posiciones"}`;
         const tintas = parseInt(techniqueTintas[technique.id] ?? "", 10);
-        if (!Number.isFinite(tintas) || tintas <= 0) return { technique, unitPrice: null, needsQuote: true };
-        const price = findTintasPrice(technique, tintas, quantity);
-        return price === null ? { technique, unitPrice: null, needsQuote: true } : { technique, unitPrice: price * numElements, needsQuote: false };
+        if (!Number.isFinite(tintas) || tintas <= 0) return { technique, unitPrice: null, needsQuote: true, resumen: posTxt };
+        const resumen = `${posTxt} · ${tintas} ${tintas === 1 ? "tinta" : "tintas"}`;
+        // La fila de la tabla es posiciones × tintas y se cobra UNA vez
+        // (ver findTintasPrice) -- ya NO se multiplica por el número de
+        // logos como antes.
+        const price = findTintasPrice(technique, tintas, posiciones, quantity);
+        return price === null
+          ? { technique, unitPrice: null, needsQuote: true, resumen }
+          : { technique, unitPrice: techniquePriceWithIva(price), needsQuote: false, resumen };
       }
       if (technique.pricing_type === "by_size") {
         // Suma el precio de cada logo por separado -- cada uno puede tener
         // su propia medida (ver resolveLogoSize), a diferencia de
         // by_qty/by_tintas donde un solo precio se multiplica por el total
         // de elementos.
-        if (allLogoElements.length === 0) return { technique, unitPrice: 0, needsQuote: false };
+        if (allLogoElements.length === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
         let sum = 0;
         let needsQuote = false;
         for (const el of allLogoElements) {
@@ -1069,11 +1115,16 @@ export default function PersonalizerClient({
           if (price === null) needsQuote = true;
           else sum += price;
         }
-        return { technique, unitPrice: needsQuote ? null : sum, needsQuote };
+        return { technique, unitPrice: needsQuote ? null : sum, needsQuote, resumen: logosTxt };
       }
       // pricing_type null -> sin datos suficientes configurados todavía.
-      return { technique, unitPrice: null, needsQuote: true };
-    });
+      return { technique, unitPrice: null, needsQuote: true, resumen: "" };
+  };
+
+  const techniqueResults: TechniqueResult[] = selectedTechniqueIds
+    .map((id) => techniques.find((t) => t.id === id))
+    .filter((t): t is PrintTechnique => !!t)
+    .map(priceTechnique);
   const anyTechniqueNeedsQuote = techniqueResults.some((r) => r.needsQuote);
   // Pedido explícito: no se puede avanzar a "Siguiente"/checkout sin
   // elegir una técnica de impresión Y completar sus datos (tintas para
@@ -1709,47 +1760,74 @@ export default function PersonalizerClient({
                 <div className="-mx-8">
                   <PrintTechniqueCards techniques={techniques} selectedIds={selectedTechniqueIds} onToggle={toggleTechnique} />
                 </div>
-                {/* Cada técnica seleccionada se desglosa en su propia
-                    tarjeta: "Posiciones" se agrupa por eje
-                    (Frente/Reverso/Izquierda/Derecha, ver logosByView),
-                    cada eje muestra cuántos logos tiene y un panel de
-                    Largo/Alto (cm) POR LOGO -- pedido explícito ("si el
-                    usuario agregó 2 logos en la parte de enfrente, ahí va
-                    2 y se desglosan 2 paneles"). Serigrafía/Tampografía
-                    (by_tintas) no tienen medida por tamaño -- ahí
-                    "Posiciones" solo muestra el conteo, junto al campo de
-                    Tintas de siempre. El botón de basura quita esa
-                    técnica de la selección (mismo toggleTechnique que su
-                    tarjeta en el selector de arriba). */}
+                {/* Serigrafía/Tampografía (by_tintas): el clic en su card
+                    abre el pop-up (TechniqueModal); ya confirmadas se ven
+                    como una tarjeta compacta (TechniqueConfirmedRow) con
+                    "✎" para reabrir el pop-up y el bote para quitarla.
+                    Las demás técnicas (DTF/DTG) siguen con su tarjeta de
+                    detalle inline: "Posiciones" agrupado por eje (ver
+                    logosByView), cada eje con su panel de Largo/Alto (cm)
+                    POR LOGO. El botón de basura quita la técnica (mismo
+                    toggleTechnique que su card de arriba). */}
                 {techniqueResults.length > 0 && (
                   <div className="mt-5 flex flex-col gap-3">
-                    {techniqueResults.map(({ technique, unitPrice, needsQuote }) => (
-                      <TechniqueDetailCard
-                        key={technique.id}
-                        technique={technique}
-                        unitPrice={unitPrice}
-                        needsQuote={needsQuote}
-                        logosByView={logosByView}
-                        logoSizeCm={techniqueLogoSizeCm[technique.id] ?? {}}
-                        onLogoSizeCmChange={(elementId, patch) =>
-                          setTechniqueLogoSizeCm((prev) => ({
-                            ...prev,
-                            [technique.id]: {
-                              ...(prev[technique.id] ?? {}),
-                              [elementId]: { ...(prev[technique.id]?.[elementId] ?? { largo: "", alto: "" }), ...patch },
-                            },
-                          }))
-                        }
-                        selectedElementId={selectedId}
-                        onSelectLogo={(view, elementId) => {
-                          setActiveView(view);
-                          setSelectedId(elementId);
-                        }}
-                        tintas={techniqueTintas[technique.id] ?? ""}
-                        onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [technique.id]: v }))}
-                        onRemove={() => toggleTechnique(technique.id)}
-                      />
-                    ))}
+                    {techniqueResults.map(({ technique, unitPrice, needsQuote, resumen }) =>
+                      technique.pricing_type === "by_tintas" ? (
+                        // by_tintas: tarjeta compacta de "ya confirmada".
+                        // Los datos (tintas) se editan en el pop-up ("✎").
+                        <TechniqueConfirmedRow
+                          key={technique.id}
+                          technique={technique}
+                          resumen={resumen}
+                          unitPrice={unitPrice}
+                          needsQuote={needsQuote}
+                          onEdit={() => setModalTechniqueId(technique.id)}
+                          onRemove={() => toggleTechnique(technique.id)}
+                        />
+                      ) : (
+                        <TechniqueDetailCard
+                          key={technique.id}
+                          technique={technique}
+                          unitPrice={unitPrice}
+                          needsQuote={needsQuote}
+                          logosByView={logosByView}
+                          logoSizeCm={techniqueLogoSizeCm[technique.id] ?? {}}
+                          onLogoSizeCmChange={(elementId, patch) =>
+                            setTechniqueLogoSizeCm((prev) => ({
+                              ...prev,
+                              [technique.id]: {
+                                ...(prev[technique.id] ?? {}),
+                                [elementId]: { ...(prev[technique.id]?.[elementId] ?? { largo: "", alto: "" }), ...patch },
+                              },
+                            }))
+                          }
+                          selectedElementId={selectedId}
+                          onSelectLogo={(view, elementId) => {
+                            setActiveView(view);
+                            setSelectedId(elementId);
+                          }}
+                          tintas={techniqueTintas[technique.id] ?? ""}
+                          onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [technique.id]: v }))}
+                          onRemove={() => toggleTechnique(technique.id)}
+                        />
+                      )
+                    )}
+                  </div>
+                )}
+
+                {/* Desglose de precio (producto + técnicas → Subtotal /
+                    IVA / Total) -- estilo ONPOINT, ver charla 2026-09-10.
+                    Solo aparece con al menos una técnica elegida. */}
+                {techniqueResults.length > 0 && (
+                  <div className="mt-4">
+                    <PrecioDesglose
+                      productName={product.name}
+                      garmentUnit={garmentUnit}
+                      techniqueResults={techniqueResults}
+                      quantity={quantity}
+                      total={total}
+                      anyTechniqueNeedsQuote={anyTechniqueNeedsQuote}
+                    />
                   </div>
                 )}
               </>
@@ -1914,6 +1992,30 @@ export default function PersonalizerClient({
             : "Completa los datos de la técnica elegida (tintas/tamaño) para continuar."
         }
       />
+
+      {(() => {
+        const modalTechnique = modalTechniqueId ? techniques.find((t) => t.id === modalTechniqueId) ?? null : null;
+        if (!modalTechnique) return null;
+        const preview = priceTechnique(modalTechnique);
+        return (
+          <TechniqueModal
+            technique={modalTechnique}
+            logosByView={logosByView}
+            posiciones={posiciones}
+            quantity={quantity}
+            tintas={techniqueTintas[modalTechnique.id] ?? ""}
+            onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [modalTechnique.id]: v }))}
+            unitPrice={preview.unitPrice}
+            needsQuote={preview.needsQuote}
+            resumen={preview.resumen}
+            onConfirm={() => {
+              selectTechnique(modalTechnique.id);
+              setModalTechniqueId(null);
+            }}
+            onClose={() => setModalTechniqueId(null)}
+          />
+        );
+      })()}
 
       <ArtLibraryPanel
         open={artLibraryOpen}
