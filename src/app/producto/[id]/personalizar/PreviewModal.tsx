@@ -61,11 +61,11 @@ function DownloadIcon({ className = "" }: { className?: string }) {
   );
 }
 
-// Una cara de la prenda: solo la etiqueta ("Frente"/"Reverso"/...) y la
-// imagen con el arte colocado encima. Sin fondo gris, sin botón de
-// descarga propio, sin etiquetas de "Logo"/"Texto"/técnica -- pedido
-// explícito: "solo quiero ver las imágenes" (ver charla 2026-09-10). La
-// descarga es una sola, del conjunto completo, y vive en el pie del modal.
+// Una cara de la prenda: SOLO la prenda con el arte colocado encima. Sin
+// marco, sin fondo gris, sin nombre de vista, sin etiquetas -- pedido
+// explícito ("que solo estén los productos y los logos", charla
+// 2026-09-10). La descarga es una sola, del conjunto completo, ícono
+// abajo a la derecha del modal.
 function MiniView({
   view,
   elements,
@@ -83,18 +83,15 @@ function MiniView({
   const viewElements = elements[view];
 
   return (
-    <div className="rounded-2xl border border-ui-border bg-white p-4">
-      <p className="mb-3 text-sm font-semibold text-foreground">{VIEW_LABELS[view]}</p>
-
-      <div
-        // aspectRatio fijo (1:1), NUNCA asset.aspect por vista: cada eje
-        // trae su propia relación de aspecto real de foto, así que dos
-        // tarjetas lado a lado terminaban con alturas distintas. Un
-        // cuadrado fijo + object-contain deja todas iguales.
-        className="relative mx-auto w-full overflow-hidden rounded-xl bg-white"
-        style={{ aspectRatio: 1 }}
-      >
-        {imgSrc ? (
+    <div
+      // aspectRatio fijo (1:1), NUNCA asset.aspect por vista: cada eje
+      // trae su propia relación de aspecto real de foto, así que dos
+      // caras lado a lado terminaban con alturas distintas. Un cuadrado
+      // fijo + object-contain deja todas iguales.
+      className="relative mx-auto w-full overflow-hidden bg-white"
+      style={{ aspectRatio: 1 }}
+    >
+      {imgSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imgSrc} alt={VIEW_LABELS[view]} className="absolute inset-0 h-full w-full select-none object-contain" draggable={false} />
         ) : (
@@ -147,7 +144,6 @@ function MiniView({
           </div>
         ))}
       </div>
-    </div>
   );
 }
 
@@ -263,15 +259,18 @@ export default function PreviewModal({
               ))}
             </div>
 
-            <div className="mt-6 flex justify-center">
+            {/* Solo el ícono, abajo a la derecha (pedido explícito charla
+                2026-09-10). */}
+            <div className="mt-5 flex justify-end">
               <button
                 type="button"
                 onClick={handleDownloadAll}
                 disabled={downloading}
-                className="flex h-14 items-center justify-center gap-2 rounded-full bg-primary px-10 text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                aria-label={downloading ? "Generando imagen…" : "Descargar imagen"}
+                title={downloading ? "Generando…" : "Descargar"}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-primary-dark shadow-[0_6px_18px_rgba(0,0,0,0.14)] transition-transform duration-150 ease-out hover:scale-110 disabled:opacity-50"
               >
-                <DownloadIcon className="h-5 w-5" />
-                {downloading ? "Generando..." : "Descargar"}
+                <DownloadIcon className={`h-5 w-5 ${downloading ? "animate-pulse" : ""}`} />
               </button>
             </div>
           </>
