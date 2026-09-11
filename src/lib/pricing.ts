@@ -1,4 +1,4 @@
-import type { PriceTier, PrintTechnique } from "@/types";
+import type { PriceTier, PrintTechnique, CartItem } from "@/types";
 
 export function getProductUnitPrice(
   costo: number,
@@ -176,4 +176,73 @@ export function formatMXN(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+// ---- Recalcular el precio de un renglón del carrito a otra cantidad ----
+// Cambiar la cantidad en el carrito (ver carrito/page.tsx) tiene que
+// respetar los mismos tramos por cantidad que ya se usaron al personalizar
+// -- nunca solo escalar el precio guardado. Reproduce, por técnica, la
+// MISMA fórmula que PersonalizerClient (ver ese archivo): by_qty ×
+// num_elements; by_tintas con posiciones × tintas (num_logo_elements) +
+// IVA de técnica; by_size sumando cada logo por su tamaño ya redondeado.
+// Solo se puede recalcular con seguridad la técnica que coincide con
+// item.technique (la única de la que se guarda price_table completo hoy,
+// ver CartItem) -- cualquier otra conserva su precio ya guardado tal cual
+// en vez de arriesgar un número inventado.
+export function recomputeCartItemUnitPrice(
+  item: CartItem,
+  newQty: number,
+  priceTiers: PriceTier[]
+): { unitPrice: number; needsQuote: boolean } {
+  const garmentUnit = getProductUnitPrice(item.product.costo, newQty, priceTiers);
+  const techniques = item.customization_snapshot?.selected_techniques ?? [];
+
+  if (!techniques.length) {
+    // Sin personalizar, o snapshot guardado antes de que existiera este
+    // detalle -- se conserva la parte de técnica tal cual estaba (ya no
+    // hay con qué recalcularla), solo se actualiza el producto.
+    const oldGarmentUnit = getProductUnitPrice(item.product.costo, item.total_quantity || 1, priceTiers);
+    const oldTechniqueTotal = Math.max(0, item.unit_price - oldGarmentUnit);
+    return { unitPrice: garmentUnit + oldTechniqueTotal, needsQuote: false };
+  }
+
+  let techniqueTotal = 0;
+  let needsQuote = false;
+  for (const t of techniques) {
+    const technique = item.technique?.id === t.technique_id ? item.technique : null;
+    if (!technique) {
+      // No es la técnica "primaria" guardada en el renglón (multi-técnica,
+      // hoy deshabilitado en el personalizador) -- se respeta su precio ya
+      // calculado, no se re-deriva a ciegas.
+      techniqueTotal += t.unit_price ?? 0;
+      if (t.unit_price == null) needsQuote = true;
+      continue;
+    }
+    if (technique.pricing_type === "by_qty") {
+      const price = findQtyPrice(technique, newQty);
+      if (price === null) { needsQuote = true; continue; }
+      techniqueTotal += price * item.num_elements;
+    } else if (technique.pricing_type === "by_tintas") {
+      const posiciones = item.num_logo_elements ?? 0;
+      if (!t.tintas || posiciones === 0) { techniqueTotal += t.unit_price ?? 0; continue; }
+      const price = findTintasPrice(technique, t.tintas, posiciones, newQty);
+      if (price === null) { needsQuote = true; continue; }
+      techniqueTotal += techniquePriceWithIva(price);
+    } else if (technique.pricing_type === "by_size") {
+      const sizes = Object.values(t.logo_sizes ?? {});
+      if (!sizes.length) { techniqueTotal += t.unit_price ?? 0; continue; }
+      let sum = 0;
+      let algunoPorCotizar = false;
+      for (const size of sizes) {
+        const price = findSizePrice(technique, size, newQty);
+        if (price === null) algunoPorCotizar = true;
+        else sum += price;
+      }
+      if (algunoPorCotizar) { needsQuote = true; continue; }
+      techniqueTotal += sum;
+    } else {
+      techniqueTotal += t.unit_price ?? 0;
+    }
+  }
+  return { unitPrice: garmentUnit + techniqueTotal, needsQuote };
 }

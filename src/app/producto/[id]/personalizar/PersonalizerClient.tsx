@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toPng } from "html-to-image";
 import type { Product, ProductVariant, PriceTier, PrintTechnique, CartItem, CustomizationElement } from "@/types";
 import {
@@ -197,6 +197,13 @@ interface PersonalizerDraft {
   // viene presente.
   quantity?: number;
 }
+
+// Mismo contenido que el borrador de localStorage, sin savedAt/quantity
+// (la cantidad de una línea de carrito ya confirmada vive en su propio
+// total_quantity) -- es lo que se guarda en
+// customization_snapshot.editor_state (ver buildCartItem) para que
+// "Editar" desde el carrito pueda reabrir el lienzo EXACTO.
+type EditorState = Omit<PersonalizerDraft, "savedAt" | "quantity">;
 
 function draftStorageKey(productId: string) {
   return `merchy:personalizador-draft:${productId}`;
@@ -406,7 +413,14 @@ export default function PersonalizerClient({
   // page.tsx), que ya usa este mismo CartContext, así que el conteo/pulso
   // sigue siendo el carrito real de la plataforma, no uno nuevo. `addItem`
   // es lo único que este componente todavía necesita del contexto.
-  const { addItem, upsertItem, removeItem } = useCart();
+  const { addItem, upsertItem, removeItem, items: cartItems, hydrated: cartHydrated } = useCart();
+  // ?editar=<id> -- "Editar" desde el carrito de una línea YA
+  // personalizada (ver carrito/page.tsx) -- distinto del renglón "en
+  // curso" de arriba (draftCartItemId, id fijo, todavía sin confirmar).
+  // Mientras esto tenga valor, "Siguiente" reemplaza ESA misma línea del
+  // carrito en vez de crear una nueva (ver handleAddToCart) y vuelve al
+  // carrito en vez de a /checkout.
+  const editarCartItemId = useSearchParams().get("editar");
   // Mismo id que ya viene usando ProductDetail (ver productDraftCartItemId)
   // desde que el cliente eligió cantidad/color/talla en la ficha -- este
   // Personalizador sigue actualizando ESE MISMO renglón (nunca uno nuevo)
@@ -997,11 +1011,45 @@ export default function PersonalizerClient({
     return roundUpToConfiguredSize(largo, alto, sizeOptions);
   }
 
+  // ?editar=<id> -- reabre una línea del carrito YA confirmada tal cual se
+  // guardó (editor_state, ver buildCartItem), en vez del borrador normal
+  // de este producto. Espera a que el carrito termine de hidratar desde
+  // localStorage (si no, `cartItems` todavía está en [] y el id nunca se
+  // encontraría) -- por eso depende de `cartHydrated`/`cartItems` y no
+  // solo corre una vez al montar como el efecto de abajo. El ref evita
+  // repetir la restauración si `cartItems` vuelve a cambiar después
+  // (ej. por el autoguardado del renglón "en curso" de otro producto).
+  const editarResueltoRef = useRef(false);
+  useEffect(() => {
+    if (!editarCartItemId || editarResueltoRef.current || !cartHydrated) return;
+    editarResueltoRef.current = true;
+    const item = cartItems.find((i) => i.id === editarCartItemId);
+    const estado = item?.customization_snapshot?.editor_state as EditorState | undefined;
+    if (item && estado) {
+      setElements(estado.elements);
+      setHistory([estado.elements]);
+      setHistoryIndex(0);
+      setSelectedTechniqueIds(estado.selectedTechniqueIds ?? []);
+      setTechniqueTintas(estado.techniqueTintas ?? {});
+      setTechniqueLogoSizeCm(estado.techniqueLogoSizeCm ?? {});
+      setGroupOrientation(estado.groupOrientation ?? {});
+      setQuantity(item.total_quantity);
+      setQtyDraft(String(item.total_quantity));
+      const variantId = item.variants[0]?.variant_id;
+      if (variantId) setActiveVariantId(variantId);
+    }
+    setDraftReady(true);
+  }, [editarCartItemId, cartHydrated, cartItems]);
+
   // Restaura el borrador guardado de ESTE producto (si hay uno vigente) al
   // entrar -- una sola vez, al montar. `setHistory([draft.elements])` deja
   // el punto restaurado como nuevo inicio del undo (nunca "deshacer" hacia
-  // un vacío que el cliente ni siquiera vio en esta sesión).
+  // un vacío que el cliente ni siquiera vio en esta sesión). Se salta por
+  // completo si viene ?editar= -- ese caso ya lo resuelve el efecto de
+  // arriba, con su propia fuente de verdad (nunca las dos a la vez, o el
+  // borrador normal pisaría el diseño que se está editando).
   useEffect(() => {
+    if (editarCartItemId) return;
     const draft = loadDraft(product.id);
     if (draft) {
       setElements(draft.elements);
@@ -1207,6 +1255,7 @@ export default function PersonalizerClient({
       technique_id: primaryTechnique?.id ?? null,
       technique: primaryTechnique ?? undefined,
       num_elements: numElements,
+      num_logo_elements: allLogoElements.length,
       customization_snapshot:
         numElements > 0
           ? {
@@ -1214,6 +1263,12 @@ export default function PersonalizerClient({
               logos,
               texts,
               applied_to: "all",
+              // Estado completo del editor -- para que "Editar" desde el
+              // carrito reabra el lienzo EXACTO (ver el efecto de
+              // ?editar= arriba). logos/texts arriba son informativos
+              // (producción) y no alcanzan para reconstruir el lienzo:
+              // no llevan a qué vista pertenecen ni el estilo del texto.
+              editor_state: { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation } satisfies EditorState,
               selected_techniques: techniqueResults.map((r) => {
                 const tintasRaw = parseInt(techniqueTintas[r.technique.id] ?? "", 10);
                 const logoSizes: Record<string, string> = {};
@@ -1299,6 +1354,17 @@ export default function PersonalizerClient({
         } catch {
           canvasDataUrl = "";
         }
+      }
+
+      // ?editar=<id> (ver carrito/page.tsx): esto es una edición de una
+      // línea YA confirmada -- se reemplaza ESA misma línea (mismo id,
+      // upsertItem) y se vuelve al carrito a verla actualizada, en vez de
+      // crear un renglón nuevo y seguir a /checkout.
+      if (editarCartItemId) {
+        upsertItem(buildCartItem(editarCartItemId, canvasDataUrl));
+        setSelectedId(null);
+        router.push("/carrito");
+        return;
       }
 
       // Ya no se abre ningún popover local -- el badge/pulso del carrito en

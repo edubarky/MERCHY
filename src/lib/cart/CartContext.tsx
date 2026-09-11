@@ -15,6 +15,12 @@ interface CartContextValue {
   subtotal: number;
   total: number;
   justAdded: boolean;
+  // true una vez que ya se intentó leer el carrito de localStorage (en el
+  // primer render `items` siempre arranca en [] así se haya guardado algo
+  // antes) -- lo necesita quien busque un renglón concreto por id nada
+  // más montar (ver "Editar" en el Personalizador, PersonalizerClient.tsx)
+  // para no darlo por "no existe" antes de que termine de hidratar.
+  hydrated: boolean;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -84,7 +90,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const total = subtotal;
 
   return (
-    <CartContext.Provider value={{ items, addItem, upsertItem, removeItem, clearCart, totalItems, subtotal, total, justAdded }}>
+    <CartContext.Provider value={{ items, addItem, upsertItem, removeItem, clearCart, totalItems, subtotal, total, justAdded, hydrated }}>
       {children}
     </CartContext.Provider>
   );

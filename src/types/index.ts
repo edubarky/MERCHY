@@ -151,6 +151,16 @@ export interface CustomizationSnapshot {
   // (compatibilidad con el carrito/checkout existentes, que todavía
   // muestran una sola técnica) -- este arreglo es la fuente completa.
   selected_techniques?: SelectedTechniqueDetail[];
+  // Estado completo del editor (todas las vistas, técnica, tintas,
+  // medidas, orientación de grupo) tal como lo guarda PersonalizerClient
+  // -- para que "Editar" desde el carrito pueda reabrir el Personalizador
+  // con el diseño EXACTO, en vez de reconstruirlo a ciegas desde
+  // logos/texts (que no llevan a qué vista pertenecen ni el estilo del
+  // texto). Opaco a propósito aquí: su forma real vive en
+  // personalizar/types.ts (ViewElements) y solo ese mismo componente lo
+  // lee/escribe. Ausente en renglones guardados antes de este campo (ver
+  // charla 2026-09-12) -- "Editar" cae a un lienzo vacío en ese caso.
+  editor_state?: unknown;
 }
 
 export interface CartItem {
@@ -161,6 +171,11 @@ export interface CartItem {
   technique_id: string | null;
   technique?: PrintTechnique;
   num_elements: number;
+  // Solo logos (nunca texto) -- es "posiciones" para el precio de
+  // técnicas by_tintas (ver recomputeCartItemUnitPrice en pricing.ts),
+  // que necesita el conteo exacto para recalcular al cambiar la cantidad
+  // en el carrito. Ausente/0 en renglones guardados antes de este campo.
+  num_logo_elements?: number;
   customization_snapshot: CustomizationSnapshot | null;
   unit_price: number;
   total_price: number;
