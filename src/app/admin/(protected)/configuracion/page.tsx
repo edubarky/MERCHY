@@ -14,28 +14,52 @@ const COSTO_EJEMPLO = 1000;
 // el orden que pidió el usuario (ver charla 2026-09-16).
 const TECNICAS_ORDEN = ["DTF Textil", "DTF UV", "Serigrafía", "Tampografía", "Grabado en Láser", "Bordado"];
 
-// Cada renglón de price_table trae su propio "size" o "tintas" — para
-// mostrarlo agrupado (una sub-tabla por tamaño/número de tintas) en vez de
-// una sola lista plana donde esa dimensión se perdería de vista. idx es la
-// posición real dentro de price_table (para poder guardar el borrador de
+type QtyRange = { qty_min: number; qty_max: number | null };
+
+function qtyLabel(q: QtyRange): string {
+  return q.qty_max != null ? `${q.qty_min}-${q.qty_max}` : `${q.qty_min}+`;
+}
+
+// Matriz para mostrar/editar price_table como en la referencia de ONPOINT:
+// una fila por tamaño/número de tintas, una columna por rango de cantidad
+// (los rangos son los mismos para todas las filas de una técnica). idx es
+// la posición real dentro de price_table (para guardar el borrador de
 // vuelta en el lugar correcto sin reordenar nada).
-function groupPriceRows(priceTable: TechniquePrice[]): { key: string; label: string; rows: { row: TechniquePrice; idx: number }[] }[] {
-  const groups = new Map<string, { row: TechniquePrice; idx: number }[]>();
-  const order: string[] = [];
+function buildTechniqueMatrix(priceTable: TechniquePrice[]): {
+  rowKind: "size" | "tintas" | "qty";
+  qtyRanges: QtyRange[];
+  rows: { key: string; label: string; cells: ({ row: TechniquePrice; idx: number } | null)[] }[];
+} {
+  const rowGroups = new Map<string, { row: TechniquePrice; idx: number }[]>();
+  const rowOrder: string[] = [];
+  const qtyRanges: QtyRange[] = [];
+  const qtySeen = new Set<string>();
+  let rowKind: "size" | "tintas" | "qty" = "qty";
+
   priceTable.forEach((row, idx) => {
-    const key = row.size != null ? `size:${row.size}` : row.tintas != null ? `tintas:${row.tintas}` : "qty";
-    if (!groups.has(key)) { groups.set(key, []); order.push(key); }
-    groups.get(key)!.push({ row, idx });
+    const rowKey = row.size != null ? `size:${row.size}` : row.tintas != null ? `tintas:${row.tintas}` : "qty";
+    if (row.size != null) rowKind = "size";
+    else if (row.tintas != null) rowKind = "tintas";
+    if (!rowGroups.has(rowKey)) { rowGroups.set(rowKey, []); rowOrder.push(rowKey); }
+    rowGroups.get(rowKey)!.push({ row, idx });
+
+    const qtyKey = `${row.qty_min}-${row.qty_max}`;
+    if (!qtySeen.has(qtyKey)) { qtySeen.add(qtyKey); qtyRanges.push({ qty_min: row.qty_min, qty_max: row.qty_max }); }
   });
-  return order.map((key) => {
-    const rows = groups.get(key)!;
-    const label = key.startsWith("size:")
-      ? `${key.slice(5)} cm`
-      : key.startsWith("tintas:")
-      ? `${key.slice(7)} ${Number(key.slice(7)) === 1 ? "tinta" : "tintas"}`
-      : "Por cantidad";
-    return { key, label, rows };
+  qtyRanges.sort((a, b) => a.qty_min - b.qty_min);
+
+  const rows = rowOrder.map((rowKey) => {
+    const entries = rowGroups.get(rowKey)!;
+    const label = rowKey.startsWith("size:")
+      ? `${rowKey.slice(5)} cm`
+      : rowKey.startsWith("tintas:")
+      ? `${rowKey.slice(7)} ${Number(rowKey.slice(7)) === 1 ? "tinta" : "tintas"}`
+      : "—";
+    const cells = qtyRanges.map((q) => entries.find(({ row }) => row.qty_min === q.qty_min && row.qty_max === q.qty_max) ?? null);
+    return { key: rowKey, label, cells };
   });
+
+  return { rowKind, qtyRanges, rows };
 }
 
 export default function ConfiguracionPage() {
@@ -226,7 +250,7 @@ export default function ConfiguracionPage() {
           {techniques.map((t) => {
             const isOpen = openTechId === t.id;
             const changeCount = techChangeCount(t);
-            const groups = groupPriceRows(t.price_table);
+            const matrix = buildTechniqueMatrix(t.price_table);
             return (
               <div key={t.id}>
                 <button
@@ -242,7 +266,7 @@ export default function ConfiguracionPage() {
                     <span className="flex-shrink-0 rounded-pill border border-dashed border-ui-border px-3 py-1 text-xs font-semibold text-ui-gray">Sin precio</span>
                   ) : (
                     <span className="flex-shrink-0 rounded-pill border border-ui-border bg-gray-50 px-3 py-1 text-xs font-bold text-foreground">
-                      {groups.length} {groups.length === 1 ? "tabla" : "tablas"}
+                      {matrix.rows.length} {matrix.rows.length === 1 ? "renglón" : "renglones"}
                     </span>
                   )}
                   <svg viewBox="0 0 24 24" className={`h-4 w-4 flex-shrink-0 text-ui-gray transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
@@ -255,34 +279,52 @@ export default function ConfiguracionPage() {
                     {t.price_table.length === 0 ? (
                       <p className="text-sm text-ui-gray py-3">Sin tabla de precios configurada todavía.</p>
                     ) : (
-                      <div className="flex flex-col gap-4 mt-2">
-                        {groups.map((g) => (
-                          <div key={g.key}>
-                            <p className="text-[11px] font-bold uppercase tracking-wide text-ui-gray mb-1.5">{g.label}</p>
-                            <Table headers={["Cantidad", "Precio / elemento"]}>
-                              {g.rows.map(({ row, idx }) => (
-                                <tr key={idx} className="hover:bg-gray-50">
-                                  <Td>
-                                    <span className="text-sm">{row.qty_min}{row.qty_max ? `–${row.qty_max}` : "+"}</span>
-                                  </Td>
-                                  <Td>
-                                    <div className="relative inline-block">
-                                      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-ui-gray">$</span>
-                                      <AdminInput
-                                        type="number"
-                                        min={0}
-                                        step="0.01"
-                                        value={techDrafts[t.id]?.[idx] ?? ""}
-                                        onChange={(e) => updateTechPrice(t.id, idx, e.target.value)}
-                                        className="w-24 pl-5 text-sm"
-                                      />
-                                    </div>
-                                  </Td>
-                                </tr>
+                      <div className="mt-2 overflow-x-auto rounded-xl border border-ui-border">
+                        <table className="w-full text-sm border-collapse">
+                          <thead>
+                            <tr>
+                              <th rowSpan={2} className="border-b border-r border-ui-border bg-gray-50 px-4 py-2.5 text-left text-xs font-semibold text-ui-gray uppercase tracking-wider align-bottom">
+                                {matrix.rowKind === "tintas" ? "No. de tintas" : "Medidas (cm)"}
+                              </th>
+                              <th colSpan={matrix.qtyRanges.length} className="border-b border-ui-border bg-primary/10 px-4 py-2 text-center text-xs font-bold text-primary-dark uppercase tracking-wider">
+                                Cantidad y precio / elemento (sin IVA)
+                              </th>
+                            </tr>
+                            <tr>
+                              {matrix.qtyRanges.map((q) => (
+                                <th key={qtyLabel(q)} className="border-b border-l border-ui-border bg-gray-50 px-3 py-2 text-center text-xs font-semibold text-ui-gray whitespace-nowrap">
+                                  {qtyLabel(q)}
+                                </th>
                               ))}
-                            </Table>
-                          </div>
-                        ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-ui-border">
+                            {matrix.rows.map((r) => (
+                              <tr key={r.key} className="hover:bg-gray-50">
+                                <td className="border-r border-ui-border px-4 py-2 text-sm font-semibold text-foreground whitespace-nowrap">{r.label}</td>
+                                {r.cells.map((cell, i) => (
+                                  <td key={i} className="border-l border-ui-border px-2 py-1.5 text-center">
+                                    {cell ? (
+                                      <div className="relative inline-block">
+                                        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-ui-gray">$</span>
+                                        <AdminInput
+                                          type="number"
+                                          min={0}
+                                          step="0.01"
+                                          value={techDrafts[t.id]?.[cell.idx] ?? ""}
+                                          onChange={(e) => updateTechPrice(t.id, cell.idx, e.target.value)}
+                                          className="w-20 pl-4 text-center text-xs"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-ui-gray">—</span>
+                                    )}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
 
