@@ -1044,6 +1044,30 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // aquí. Sin ninguna pieza asignada todavía (sizeSum === 0, antes de
   // tocar nada), no hay nada que guardar -- quita el renglón en vez de
   // dejar uno vacío.
+  // Compartida entre el autoguardado (abajo) y "Agregar al carrito" directo
+  // (ver handleAddToCartDirect) -- una sola fuente de verdad para armar el
+  // renglón de 1-2, nunca dos copias de esta lógica que puedan divergir.
+  function buildDraftCartItem(): CartItem {
+    return {
+      id: productDraftCartItemId(product.id),
+      product,
+      variants: activeSections.map((s) => ({
+        variant_id: s.variant.id,
+        color_name: s.variant.color_name,
+        color_hex: s.variant.color_hex,
+        qty: sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0),
+        sizes_breakdown: Object.fromEntries(sizes.map((size) => [size, getSizeQty(s.variant, size)])),
+      })),
+      total_quantity: quantity,
+      technique_id: null,
+      technique: undefined,
+      num_elements: 0,
+      customization_snapshot: null,
+      unit_price: unitPrice,
+      total_price: totalPrice,
+    };
+  }
+
   useEffect(() => {
     const id = productDraftCartItemId(product.id);
     const timer = setTimeout(() => {
@@ -1051,29 +1075,22 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         removeItem(id);
         return;
       }
-      const item: CartItem = {
-        id,
-        product,
-        variants: activeSections.map((s) => ({
-          variant_id: s.variant.id,
-          color_name: s.variant.color_name,
-          color_hex: s.variant.color_hex,
-          qty: sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0),
-          sizes_breakdown: Object.fromEntries(sizes.map((size) => [size, getSizeQty(s.variant, size)])),
-        })),
-        total_quantity: quantity,
-        technique_id: null,
-        technique: undefined,
-        num_elements: 0,
-        customization_snapshot: null,
-        unit_price: unitPrice,
-        total_price: totalPrice,
-      };
-      upsertItem(item);
+      upsertItem(buildDraftCartItem());
     }, 400);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id, sizeSum, sizeQuantities, multicolor, quantity, unitPrice, totalPrice, sections]);
+
+  // "Agregar al carrito" directo (sin personalizar) -- pedido explícito:
+  // completar 1-2 y darle aquí debe dejar el renglón confirmado con eso
+  // nada más, sin logo/técnica, en vez del link muerto a WhatsApp que
+  // tenía antes este mismo botón.
+  function handleAddToCartDirect(e: React.MouseEvent) {
+    e.preventDefault();
+    if (sizeSum <= 0) return;
+    upsertItem(buildDraftCartItem());
+    router.push("/carrito");
+  }
 
   // 1 pieza ya es una cantidad válida y completa por sí sola: la sección
   // de tallas se muestra cuando hay algo real que repartir -- MÁS DE UNA
@@ -1594,14 +1611,18 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               )}
               <span className="relative z-10">Personalizar producto</span>
             </Link>
-            <a
-              href={`https://wa.me/5215500000000?text=${encodeURIComponent(`Hola, me interesa cotizar: ${product.name} (SKU: ${product.sku})`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center py-3.5 rounded-full bg-primary text-white font-semibold text-sm shadow-[0_4px_14px_rgba(87,224,217,0.28)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_6px_18px_rgba(87,224,217,0.4)] active:scale-[0.98]"
+            <button
+              type="button"
+              onClick={handleAddToCartDirect}
+              disabled={sizeSum <= 0}
+              className={`flex-1 flex items-center justify-center py-3.5 rounded-full bg-primary text-white font-semibold text-sm transition-all duration-200 ease-out ${
+                sizeSum > 0
+                  ? "shadow-[0_4px_14px_rgba(87,224,217,0.28)] hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_6px_18px_rgba(87,224,217,0.4)] active:scale-[0.98]"
+                  : "opacity-40 cursor-not-allowed"
+              }`}
             >
               Agregar al carrito
-            </a>
+            </button>
           </div>
         </div>
       </div>

@@ -1258,13 +1258,22 @@ export default function PersonalizerClient({
   // carrito de compras", para que si el cliente sale sin terminar el
   // producto YA esté ahí, no solo recuperable al volver a entrar al
   // Personalizador (ver el autoguardado local, arriba).
+  // Colores + desglose de tallas reales ya guardados por ProductDetail
+  // (pasos "1. Selecciona Color"/"2. Selecciona Cantidad") en este mismo
+  // renglón -- editarCartItemId si se está editando una línea ya
+  // confirmada, si no draftCartItemId (el renglón "en curso" que
+  // ProductDetail ya viene sincronizando). El Personalizador (pasos 3-4)
+  // NUNCA debe reconstruir esto desde cero: antes recreaba `variants` con
+  // un solo color activo y `sizes_breakdown: {}` fijo, así que en cuanto
+  // el cliente tocaba cualquier cosa aquí (incluso antes de poner un
+  // logo) se le borraban las tallas y, en Multicolor, se le colapsaban
+  // los demás colores a uno solo (ver charla 2026-09-16, bug real
+  // reportado). Solo si no hay NINGÚN renglón previo (ej. un link directo
+  // al Personalizador sin haber pasado por la ficha) cae al color activo
+  // como respaldo, sin desglose de tallas por no haber de dónde sacarlo.
+  const sourceVariantsItem = cartItems.find((i) => i.id === (editarCartItemId ?? draftCartItemId));
+
   function buildCartItem(id: string, canvasDataUrl: string): CartItem {
-    // El color agregado al carrito es el color ACTIVO en este momento
-    // (`activeVariant`, derivado arriba) -- el que ya se eligió en la
-    // página del producto, o el que se esté mostrando en la barra
-    // Multicolor si el usuario cambió entre colores -- nunca "la primera
-    // variante activa" a secas, para que el carrito siempre coincida con
-    // la prenda que realmente se vio y personalizó.
     const variant = activeVariant ?? product.variants.find((v) => v.active) ?? product.variants[0];
     const logos: CustomizationElement[] = [];
     const texts: CustomizationElement[] = [];
@@ -1291,10 +1300,12 @@ export default function PersonalizerClient({
     return {
       id,
       product,
-      variants: variant
+      variants: sourceVariantsItem?.variants.length
+        ? sourceVariantsItem.variants
+        : variant
         ? [{ variant_id: variant.id, color_name: variant.color_name, color_hex: variant.color_hex, qty: quantity, sizes_breakdown: {} }]
         : [],
-      total_quantity: quantity,
+      total_quantity: sourceVariantsItem?.total_quantity ?? quantity,
       technique_id: primaryTechnique?.id ?? null,
       technique: primaryTechnique ?? undefined,
       num_elements: numElements,
@@ -1361,7 +1372,11 @@ export default function PersonalizerClient({
   // borraría justo lo que ProductDetail acaba de guardar. Solo
   // handleAddToCart (al confirmar) reemplaza este renglón.
   useEffect(() => {
-    if (!draftReady) return;
+    // Editando una línea YA confirmada (?editar=) -- nunca crear/actualizar
+    // en paralelo el renglón "en curso" (draftCartItemId es un id
+    // DISTINTO); handleAddToCart ya reemplaza la línea real que se está
+    // editando, este efecto no debe tocar nada más mientras tanto.
+    if (!draftReady || editarCartItemId) return;
     const timer = setTimeout(() => {
       upsertItem(buildCartItem(draftCartItemId, ""));
     }, 400);
@@ -1369,6 +1384,7 @@ export default function PersonalizerClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     draftReady,
+    editarCartItemId,
     draftCartItemId,
     numElements,
     elements,
