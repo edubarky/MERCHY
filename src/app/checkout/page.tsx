@@ -7,23 +7,15 @@ import PublicHeader from "@/components/PublicHeader";
 import { useCart } from "@/lib/cart/CartContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatMXN } from "@/lib/pricing";
-import type { BillingData, DiscountCode, PaymentMethod, ShippingAddress, ShippingType } from "@/types";
+import { totalBoxes, getShippingZone, getShippingCost, computeEtaRange, formatEtaRange } from "@/lib/shipping";
+import type { BillingData, DiscountCode, PaymentMethod, ProductionTimeTier, ShippingAddress, ShippingType, ShippingZone } from "@/types";
 
-// ---- Costos de envío fijos -- mismo valor por defecto que ya trae
-// orders.shipping_cost en el schema (80.00) para "standard"; "express" es
-// el único otro tramo que pide el diseño. Si algún día se vuelven
-// configurables desde el admin, esto se reemplaza por una tabla, igual que
-// price_tiers -- por ahora, dos tramos fijos alcanzan. ----
-const SHIPPING_COSTS: Record<ShippingType, number> = { standard: 80, express: 150 };
-const SHIPPING_LABELS: Record<ShippingType, { label: string; eta: string }> = {
-  standard: { label: "Envío estándar", eta: "3-5 días" },
-  express: { label: "Envío express", eta: "1-2 días" },
-};
+const SHIPPING_TYPE_LABELS: Record<ShippingType, string> = { standard: "Envío estándar", express: "Envío express" };
 
 // ---- Catálogo de Régimen Fiscal (SAT, vigente para CFDI 4.0) -- estable,
-// cambia muy rara vez, así que se deja fijo aquí en vez de una tabla nueva
-// (mismo criterio que SHIPPING_COSTS arriba). Solo se usa si el cliente
-// decide llenar Facturación -- ver `billingTouched` más abajo. ----
+// cambia muy rara vez, así que se deja fijo aquí en vez de una tabla nueva.
+// Solo se usa si el cliente decide llenar Facturación -- ver
+// `billingTouched` más abajo. ----
 const REGIMENES_FISCALES = [
   { code: "601", label: "601 · General de Ley Personas Morales" },
   { code: "603", label: "603 · Personas Morales con Fines no Lucrativos" },
@@ -169,6 +161,10 @@ interface CpLookup {
   estado: string;
   municipio: string;
   colonias: string[];
+  // Clave de estado de INEGI (2 dígitos, ej. "09" = Ciudad de México) --
+  // más confiable que el nombre para resolver la zona de envío (ver
+  // charla 2026-09-16 y lib/shipping.ts getShippingZone).
+  cveEnt: string;
 }
 
 export default function CheckoutPage() {
@@ -195,6 +191,8 @@ export default function CheckoutPage() {
   const [geoError, setGeoError] = useState<string | null>(null);
 
   const [shippingType, setShippingType] = useState<ShippingType>("standard");
+  const [shippingZones, setShippingZones] = useState<ShippingZone[]>([]);
+  const [productionTiers, setProductionTiers] = useState<ProductionTimeTier[]>([]);
 
   // Facturación es opcional -- billing_data solo se manda si el cliente
   // realmente empezó a llenar esta sección (ver `billingTouched` más
@@ -232,6 +230,18 @@ export default function CheckoutPage() {
     return () => clearTimeout(t);
   }, [items.length, confirmedOrder, router]);
 
+  // Zonas de envío y tramos de producción (ver charla 2026-09-16) -- se
+  // traen una sola vez al montar, igual criterio que price_tiers en otras
+  // pantallas: son catálogos, no cambian mientras el cliente hace checkout.
+  useEffect(() => {
+    supabaseRef.current.from("shipping_zones").select("*").order("sort_order").then(({ data }) => {
+      setShippingZones((data ?? []) as ShippingZone[]);
+    });
+    supabaseRef.current.from("production_time_tiers").select("*").order("qty_min").then(({ data }) => {
+      setProductionTiers((data ?? []) as ProductionTimeTier[]);
+    });
+  }, []);
+
   // Resuelve el CP escrito -- debounced, vía @webrek/mx-cp (SEPOMEX, vive
   // en el propio paquete, sin API key ni red). Un CP inválido/no
   // encontrado limpia Estado/Municipio/Colonia en vez de dejar el último
@@ -255,7 +265,7 @@ export default function CheckoutPage() {
           return;
         }
         const colonias = r.asentamientos.map((a) => a.nombre);
-        setCpLookup({ estado: r.estado, municipio: r.municipio, colonias });
+        setCpLookup({ estado: r.estado, municipio: r.municipio, colonias, cveEnt: r.cveEnt });
         setCpStatus("idle");
         setAddress((prev) => ({
           ...prev,
@@ -336,7 +346,13 @@ export default function CheckoutPage() {
 
   const billingTouched = rfc.trim() !== "" || billingNombre.trim() !== "" || billingApellido1.trim() !== "" || regimenFiscal.trim() !== "";
 
-  const shippingCost = SHIPPING_COSTS[shippingType];
+  // Zona resuelta del CP actual -- null mientras no haya un CP válido (o
+  // sus zonas no hayan cargado todavía), nunca un costo/fecha inventados
+  // (ver charla 2026-09-16).
+  const shippingZone = cpLookup ? getShippingZone(cpLookup.cveEnt, shippingZones) : null;
+  const boxes = totalBoxes(items);
+  const shippingCost = shippingZone ? getShippingCost(shippingZone, shippingType, boxes) : 0;
+  const etaRange = shippingZone ? computeEtaRange(items, shippingZone, shippingType, productionTiers) : null;
   const discountAmount = useMemo(() => {
     if (!appliedDiscount) return 0;
     if (subtotal < appliedDiscount.min_order) return 0;
@@ -398,6 +414,7 @@ export default function CheckoutPage() {
     if (!address.numero_ext.trim()) return "Falta el número exterior.";
     if (!/^\d{5}$/.test(address.cp.trim())) return "El código postal debe tener 5 dígitos.";
     if (!cpLookup) return "No pudimos validar ese código postal.";
+    if (!shippingZone) return "Todavía no tenemos cobertura de envío calculada para esa dirección -- contáctanos directamente.";
     if (!address.colonia.trim()) return "Falta la colonia.";
     if (billingTouched) {
       if (!isValidRfc(rfc)) return "El RFC no es válido.";
@@ -617,33 +634,49 @@ export default function CheckoutPage() {
               </div>
             </Card>
 
-            {/* Método de envío */}
+            {/* Método de envío -- costo y fecha dependen del CP (zona) y de
+                cuántas piezas/cajas lleva el pedido (ver charla 2026-09-16).
+                Sin CP válido todavía no se inventa un costo/fecha: se pide
+                capturarlo primero. */}
             <Card>
               <SectionHeader title="Método de envío" />
-              <div className="space-y-3">
-                {(Object.keys(SHIPPING_LABELS) as ShippingType[]).map((key) => (
-                  <label
-                    key={key}
-                    className={`flex cursor-pointer items-center justify-between rounded-2xl border px-5 py-4 transition-colors ${
-                      shippingType === key ? "border-primary bg-primary/5" : "border-ui-border hover:border-primary/40"
-                    }`}
-                  >
-                    <span className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="shipping"
-                        checked={shippingType === key}
-                        onChange={() => setShippingType(key)}
-                        className="h-4 w-4 accent-primary"
-                      />
-                      <span className="text-sm font-semibold text-foreground">
-                        {SHIPPING_LABELS[key].label} <span className="font-normal text-ui-gray">({SHIPPING_LABELS[key].eta})</span>
-                      </span>
-                    </span>
-                    <span className="text-sm font-semibold text-foreground">{formatMXN(SHIPPING_COSTS[key])}</span>
-                  </label>
-                ))}
-              </div>
+              {!shippingZone ? (
+                <p className="rounded-2xl border border-dashed border-ui-border px-5 py-4 text-sm text-ui-gray">
+                  Ingresa tu código postal en "Dirección de envío" para ver el costo y la fecha de entrega.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {(Object.keys(SHIPPING_TYPE_LABELS) as ShippingType[]).map((key) => {
+                    const cost = getShippingCost(shippingZone, key, boxes);
+                    const range = computeEtaRange(items, shippingZone, key, productionTiers);
+                    return (
+                      <label
+                        key={key}
+                        className={`flex cursor-pointer items-center justify-between rounded-2xl border px-5 py-4 transition-colors ${
+                          shippingType === key ? "border-primary bg-primary/5" : "border-ui-border hover:border-primary/40"
+                        }`}
+                      >
+                        <span className="flex items-center gap-3">
+                          <input
+                            type="radio"
+                            name="shipping"
+                            checked={shippingType === key}
+                            onChange={() => setShippingType(key)}
+                            className="h-4 w-4 accent-primary"
+                          />
+                          <span className="text-sm font-semibold text-foreground">
+                            {SHIPPING_TYPE_LABELS[key]}
+                            <span className="block font-normal text-ui-gray">
+                              {range ? formatEtaRange(range.min, range.max) : "Calculando..."}
+                            </span>
+                          </span>
+                        </span>
+                        <span className="text-sm font-semibold text-foreground">{formatMXN(cost)}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </Card>
 
             {/* Facturación */}
@@ -769,7 +802,10 @@ export default function CheckoutPage() {
                   <span>{formatMXN(subtotal)} MXN</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Envío ({SHIPPING_LABELS[shippingType].label})</span>
+                  <span>
+                    Envío ({SHIPPING_TYPE_LABELS[shippingType]})
+                    {etaRange && <span className="block text-xs text-ui-gray">{formatEtaRange(etaRange.min, etaRange.max)}</span>}
+                  </span>
                   <span>{formatMXN(shippingCost)} MXN</span>
                 </div>
                 {appliedDiscount && (

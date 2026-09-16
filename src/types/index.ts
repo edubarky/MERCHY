@@ -9,6 +9,11 @@ export interface Category {
   icon: string | null;
   sort_order: number;
   active: boolean;
+  // Cuántas piezas de esta categoría caben en una caja de envío -- estimado
+  // editable en Configuración (ver charla 2026-09-16), usado para calcular
+  // cuántas cajas se cobran en el checkout. Varía mucho por categoría
+  // (playeras vs mochilas), nunca un solo número global.
+  pzas_per_box?: number;
 }
 
 export interface Product {
@@ -192,6 +197,37 @@ export type OrderStatus =
   | "cancelled";
 
 export type ShippingType = "standard" | "express";
+
+// Costo/tiempo de envío por zona geográfica (ver charla 2026-09-16 --
+// "Método de envío" depende de la dirección, no es un tramo fijo). Valores
+// de costo son POR CAJA, no por pedido -- ver lib/shipping.ts countBoxes.
+// cve_ent_list son claves de estado de INEGI (2 dígitos, ej. "09" = Ciudad
+// de México) -- mismas que ya devuelve @webrek/mx-cp en buscaCP().
+export interface ShippingZone {
+  id: string;
+  name: string;
+  cve_ent_list: string[];
+  standard_cost_per_box: number;
+  express_cost_per_box: number;
+  standard_dias_min: number;
+  standard_dias_max: number;
+  express_dias_min: number;
+  express_dias_max: number;
+  sort_order: number;
+}
+
+// Tiempo de producción según cuántas piezas trae ESE renglón del carrito
+// (regla de negocio real, ver charla 2026-09-16) -- independiente del
+// envío, se suman después (ver lib/shipping.ts computeEtaRange).
+export interface ProductionTimeTier {
+  id: string;
+  qty_min: number;
+  qty_max: number | null;
+  dias_min: number;
+  dias_max: number;
+  label: string;
+  sort_order: number;
+}
 
 export type PaymentMethod = "card" | "paypal" | "mercadopago" | "transfer";
 

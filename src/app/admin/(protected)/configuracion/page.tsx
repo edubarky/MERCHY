@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader, AdminCard, Table, Td, Btn, AdminInput } from "@/components/admin/ui";
 import { formatMXN } from "@/lib/pricing";
-import type { PriceTier, PrintTechnique, TechniquePrice } from "@/types";
+import type { Category, PriceTier, PrintTechnique, ShippingZone, TechniquePrice } from "@/types";
 
 // Costo base solo para la columna "Precio ejemplo" — un número redondo
 // hace obvio el efecto del margen (60% -> $2,500, 28% -> $1,389).
@@ -96,7 +96,49 @@ export default function ConfiguracionPage() {
     setTechniques(ordered);
   }
 
-  useEffect(() => { loadTiers(); loadTechniques(); }, []);
+  // ---- Envío por zona (shipping_zones) ----
+  const [zones, setZones] = useState<ShippingZone[]>([]);
+  // Borrador por zona: id -> {campo: texto}. El nombre y la lista de
+  // estados no se editan en esta tarjeta -- son parte del diseño de la
+  // zona, no un ajuste de precio/tiempo.
+  type ZoneDraft = {
+    standard_cost_per_box: string; express_cost_per_box: string;
+    standard_dias_min: string; standard_dias_max: string;
+    express_dias_min: string; express_dias_max: string;
+  };
+  const ZONE_FIELDS: (keyof ZoneDraft)[] = ["standard_cost_per_box", "express_cost_per_box", "standard_dias_min", "standard_dias_max", "express_dias_min", "express_dias_max"];
+  const [zoneDrafts, setZoneDrafts] = useState<Record<string, ZoneDraft>>({});
+  const [savingZones, setSavingZones] = useState(false);
+  const [zoneError, setZoneError] = useState("");
+
+  async function loadZones() {
+    const { data } = await supabase.from("shipping_zones").select("*").order("sort_order");
+    const rows = (data ?? []) as ShippingZone[];
+    setZones(rows);
+    setZoneDrafts(Object.fromEntries(rows.map((z) => [z.id, {
+      standard_cost_per_box: String(z.standard_cost_per_box),
+      express_cost_per_box: String(z.express_cost_per_box),
+      standard_dias_min: String(z.standard_dias_min),
+      standard_dias_max: String(z.standard_dias_max),
+      express_dias_min: String(z.express_dias_min),
+      express_dias_max: String(z.express_dias_max),
+    }])));
+  }
+
+  // ---- Piezas por caja (categories.pzas_per_box) ----
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [boxDrafts, setBoxDrafts] = useState<Record<string, string>>({});
+  const [savingBoxes, setSavingBoxes] = useState(false);
+  const [boxError, setBoxError] = useState("");
+
+  async function loadCategories() {
+    const { data } = await supabase.from("categories").select("*").order("sort_order");
+    const rows = (data ?? []) as Category[];
+    setCategories(rows);
+    setBoxDrafts(Object.fromEntries(rows.map((c) => [c.id, String(c.pzas_per_box ?? 30)])));
+  }
+
+  useEffect(() => { loadTiers(); loadTechniques(); loadZones(); loadCategories(); }, []);
 
   function openTechnique(t: PrintTechnique) {
     setOpenTechId((id) => (id === t.id ? null : t.id));
@@ -186,6 +228,78 @@ export default function ConfiguracionPage() {
     }
     await loadTiers();
     setSavingTiers(false);
+  }
+
+  // Filas de zona cuyo borrador cambió respecto a lo guardado (y son
+  // números válidos: costos >= 0, días min <= max).
+  const zoneChanges = useMemo(() => {
+    return zones.flatMap((z) => {
+      const d = zoneDrafts[z.id];
+      if (!d) return [];
+      const nums = ZONE_FIELDS.map((f) => Number((d[f] ?? "").trim()));
+      if (nums.some((n) => !Number.isFinite(n) || n < 0)) return [];
+      const [stdCost, expCost, stdMin, stdMax, expMin, expMax] = nums;
+      if (stdMin > stdMax || expMin > expMax) return [];
+      const changed = ZONE_FIELDS.some((f) => Number(d[f]) !== z[f]);
+      return changed ? [{ id: z.id, standard_cost_per_box: stdCost, express_cost_per_box: expCost, standard_dias_min: stdMin, standard_dias_max: stdMax, express_dias_min: expMin, express_dias_max: expMax }] : [];
+    });
+  }, [zones, zoneDrafts]);
+
+  const zoneDraftsInvalid = useMemo(
+    () => zones.some((z) => {
+      const d = zoneDrafts[z.id];
+      if (!d) return false;
+      const nums = ZONE_FIELDS.map((f) => Number((d[f] ?? "").trim()));
+      if (nums.some((n, i) => (d[ZONE_FIELDS[i]] ?? "").trim() === "" || !Number.isFinite(n) || n < 0)) return true;
+      return nums[2] > nums[3] || nums[4] > nums[5];
+    }),
+    [zones, zoneDrafts]
+  );
+
+  async function saveZones() {
+    if (!zoneChanges.length) return;
+    setSavingZones(true);
+    setZoneError("");
+    for (const c of zoneChanges) {
+      const { id, ...fields } = c;
+      const { error } = await supabase.from("shipping_zones").update(fields).eq("id", id);
+      if (error) { setZoneError(error.message); setSavingZones(false); return; }
+    }
+    await loadZones();
+    setSavingZones(false);
+  }
+
+  // Filas de categoría cuyo "pzas por caja" cambió (entero positivo válido).
+  const boxChanges = useMemo(() => {
+    return categories.flatMap((c) => {
+      const raw = (boxDrafts[c.id] ?? "").trim();
+      if (raw === "") return [];
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) return [];
+      if ((c.pzas_per_box ?? 30) === n) return [];
+      return [{ id: c.id, pzas_per_box: n }];
+    });
+  }, [categories, boxDrafts]);
+
+  const boxDraftsInvalid = useMemo(
+    () => categories.some((c) => {
+      const raw = (boxDrafts[c.id] ?? "").trim();
+      const n = Number(raw);
+      return raw === "" || !Number.isFinite(n) || n <= 0 || !Number.isInteger(n);
+    }),
+    [categories, boxDrafts]
+  );
+
+  async function saveBoxes() {
+    if (!boxChanges.length) return;
+    setSavingBoxes(true);
+    setBoxError("");
+    for (const c of boxChanges) {
+      const { error } = await supabase.from("categories").update({ pzas_per_box: c.pzas_per_box }).eq("id", c.id);
+      if (error) { setBoxError(error.message); setSavingBoxes(false); return; }
+    }
+    await loadCategories();
+    setSavingBoxes(false);
   }
 
   function precioEjemplo(pctStr: string): string {
@@ -346,6 +460,102 @@ export default function ConfiguracionPage() {
             );
           })}
         </div>
+      </AdminCard>
+
+      {/* Envío por zona — costo estimado por caja y días de entrega según
+          destino (ver lib/shipping.ts). Nombre y estados cubiertos son de
+          solo lectura aquí; son el diseño de la zona, no un ajuste de
+          precio. */}
+      <AdminCard className="mt-6">
+        <div className="px-5 py-4 border-b border-ui-border flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-sm">Envío por zona</h2>
+            <p className="text-xs text-ui-gray mt-0.5">Costo estimado por caja y días de entrega según el estado de destino — se usa en el checkout</p>
+          </div>
+          {zoneChanges.length > 0 && (
+            <Btn size="sm" onClick={saveZones} disabled={savingZones || zoneDraftsInvalid} className="flex-shrink-0">
+              {savingZones ? "Guardando..." : `Guardar ${zoneChanges.length} cambio${zoneChanges.length === 1 ? "" : "s"}`}
+            </Btn>
+          )}
+        </div>
+        {zoneError && <p className="px-5 py-3 text-xs text-red-500 bg-red-50">{zoneError}</p>}
+        <Table headers={["Zona", "Costo estándar/caja", "Días estándar", "Costo express/caja", "Días express"]}>
+            {zones.map((z) => {
+              const d = zoneDrafts[z.id] ?? { standard_cost_per_box: "", express_cost_per_box: "", standard_dias_min: "", standard_dias_max: "", express_dias_min: "", express_dias_max: "" };
+              const setField = (field: keyof ZoneDraft, value: string) =>
+                setZoneDrafts((p) => ({ ...p, [z.id]: { ...p[z.id], [field]: value } }));
+              return (
+                <tr key={z.id} className="hover:bg-gray-50">
+                  <Td>
+                    <span className="font-medium text-sm">{z.name}</span>
+                    <p className="text-xs text-ui-gray mt-0.5">{z.cve_ent_list.length} estado{z.cve_ent_list.length === 1 ? "" : "s"}</p>
+                  </Td>
+                  <Td>
+                    <div className="relative inline-block">
+                      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-ui-gray">$</span>
+                      <AdminInput type="number" min={0} step="0.01" value={d.standard_cost_per_box} onChange={(e) => setField("standard_cost_per_box", e.target.value)} className="w-20 pl-5 text-sm" />
+                    </div>
+                  </Td>
+                  <Td>
+                    <div className="flex items-center gap-1 whitespace-nowrap">
+                      <AdminInput type="number" min={0} value={d.standard_dias_min} onChange={(e) => setField("standard_dias_min", e.target.value)} className="w-12 text-sm text-center" />
+                      <span className="text-ui-gray text-xs">a</span>
+                      <AdminInput type="number" min={0} value={d.standard_dias_max} onChange={(e) => setField("standard_dias_max", e.target.value)} className="w-12 text-sm text-center" />
+                      <span className="text-ui-gray text-xs">días</span>
+                    </div>
+                  </Td>
+                  <Td>
+                    <div className="relative inline-block">
+                      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-ui-gray">$</span>
+                      <AdminInput type="number" min={0} step="0.01" value={d.express_cost_per_box} onChange={(e) => setField("express_cost_per_box", e.target.value)} className="w-20 pl-5 text-sm" />
+                    </div>
+                  </Td>
+                  <Td>
+                    <div className="flex items-center gap-1 whitespace-nowrap">
+                      <AdminInput type="number" min={0} value={d.express_dias_min} onChange={(e) => setField("express_dias_min", e.target.value)} className="w-12 text-sm text-center" />
+                      <span className="text-ui-gray text-xs">a</span>
+                      <AdminInput type="number" min={0} value={d.express_dias_max} onChange={(e) => setField("express_dias_max", e.target.value)} className="w-12 text-sm text-center" />
+                      <span className="text-ui-gray text-xs">días</span>
+                    </div>
+                  </Td>
+                </tr>
+              );
+            })}
+          </Table>
+      </AdminCard>
+
+      {/* Piezas por caja — cuántas piezas de cada categoría caben en una
+          caja de envío, usado para calcular cuántas cajas se cobran en el
+          checkout (ver lib/shipping.ts countBoxes). */}
+      <AdminCard className="mt-6">
+        <div className="px-5 py-4 border-b border-ui-border flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-sm">Piezas por caja</h2>
+            <p className="text-xs text-ui-gray mt-0.5">Cuántas piezas de cada categoría caben en una caja — determina cuántas cajas se cobran de envío</p>
+          </div>
+          {boxChanges.length > 0 && (
+            <Btn size="sm" onClick={saveBoxes} disabled={savingBoxes || boxDraftsInvalid} className="flex-shrink-0">
+              {savingBoxes ? "Guardando..." : `Guardar ${boxChanges.length} cambio${boxChanges.length === 1 ? "" : "s"}`}
+            </Btn>
+          )}
+        </div>
+        {boxError && <p className="px-5 py-3 text-xs text-red-500 bg-red-50">{boxError}</p>}
+        <Table headers={["Categoría", "Piezas por caja"]}>
+          {categories.map((c) => (
+            <tr key={c.id} className="hover:bg-gray-50">
+              <Td><span className="font-medium text-sm">{c.name}</span></Td>
+              <Td>
+                <AdminInput
+                  type="number"
+                  min={1}
+                  value={boxDrafts[c.id] ?? ""}
+                  onChange={(e) => setBoxDrafts((p) => ({ ...p, [c.id]: e.target.value }))}
+                  className="w-20 text-sm"
+                />
+              </Td>
+            </tr>
+          ))}
+        </Table>
       </AdminCard>
     </div>
   );
