@@ -90,13 +90,13 @@ export default function PrecioDesglose({
           <Row label="Precio por pieza" value={formatMXN(piezaConIva)} strong />
           <Row label="Cantidad" value={`× ${quantity.toLocaleString("es-MX")} ${quantity === 1 ? "pieza" : "piezas"}`} muted />
           <div className="my-2 h-px bg-ui-border" />
-          <Row label={<>Subtotal <span className="text-[11px] text-ui-gray">(sin IVA)</span></>} value={formatMXN(subtotal)} muted />
-          <Row label="IVA 16%" value={formatMXN(iva)} muted />
-          <div className="my-2 h-px bg-foreground/15" />
           <div className="flex items-baseline justify-between gap-3 py-1 font-display text-[17px] font-bold text-foreground">
             <span>Total</span>
             <span className="tabular-nums">{formatMXN(total)}</span>
           </div>
+          <div className="my-2 h-px bg-foreground/15" />
+          <Row label={<>Subtotal <span className="text-[11px] text-ui-gray">(sin IVA)</span></>} value={formatMXN(subtotal)} muted />
+          <Row label="IVA 16%" value={formatMXN(iva)} muted />
         </>
       )}
     </div>
