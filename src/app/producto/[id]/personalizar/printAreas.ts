@@ -65,11 +65,20 @@ export function normalizeProductKey(value: string): string {
 // itself (that was explicitly reversed; if this is ever revisited, get
 // it in writing which of the two this actually means, this exact area
 // has flipped more than once).
+// widthCm/heightCm aquí son un ESTIMADO genérico (no una medida tomada de
+// un SKU real) — el tamaño típico del área imprimible en una sudadera
+// unisex adulto talla M/L (ver charla 2026-09-16: "calcula unas medidas
+// aprox... y hazlo un estimado como ChatGPT ya lo hace hoy"). Frente/
+// reverso: zona de estampado completo típica del mercado (frente algo
+// más chico que la espalda, que tiene más superficie libre). Izquierda/
+// derecha: manga, angosta y alargada. Sirven para SUGERIR el tamaño real
+// del logo (getElementRealCm) — el cliente siempre puede corregirlo a
+// mano si su diseño en particular difiere.
 const HOODIE_PRINT_AREAS: ProductPrintAreas = {
-  frente: { xPct: 20, yPct: 21, widthPct: 60, heightPct: 37 },
-  reverso: { xPct: 25, yPct: 32, widthPct: 50, heightPct: 48 },
-  izquierda: { xPct: 20, yPct: 23, widthPct: 58, heightPct: 55 },
-  derecha: { xPct: 22, yPct: 23, widthPct: 58, heightPct: 55 },
+  frente: { xPct: 20, yPct: 21, widthPct: 60, heightPct: 37, widthCm: 28, heightCm: 32 },
+  reverso: { xPct: 25, yPct: 32, widthPct: 50, heightPct: 48, widthCm: 32, heightCm: 38 },
+  izquierda: { xPct: 20, yPct: 23, widthPct: 58, heightPct: 55, widthCm: 8, heightCm: 22 },
+  derecha: { xPct: 22, yPct: 23, widthPct: 58, heightPct: 55, widthCm: 8, heightCm: 22 },
   // Ninguna sudadera ofrece pestañas de funda/bolsa/liga (getApplicableViews
   // las deja en los 4 costados de siempre) -- estos valores nunca se leen
   // en la práctica, solo existen para que ProductPrintAreas

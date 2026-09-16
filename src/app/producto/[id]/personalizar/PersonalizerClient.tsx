@@ -11,6 +11,7 @@ import {
   findTintasPrice,
   findSizePrice,
   roundUpToConfiguredSize,
+  getElementRealCm,
   techniquePriceWithIva,
 } from "@/lib/pricing";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
@@ -1106,6 +1107,48 @@ export default function PersonalizerClient({
   })).filter((g) => g.logos.length > 0);
   const activePositionLabels = logosByView.map((g) => g.viewLabel);
 
+  // Sugerencia (mejor esfuerzo) de Largo/Alto real en cm de cada logo, a
+  // partir de su tamaño ya dibujado en el lienzo (widthPct/heightPct, %
+  // del área de impresión) y las medidas reales de esa área (ver
+  // printAreas.ts) — mismo espíritu que suggestInkCount para tintas: se
+  // muestra como referencia y se auto-rellena si el campo sigue vacío,
+  // pero el cliente siempre puede corregirla a mano. null cuando el
+  // producto/vista todavía no tiene medidas reales configuradas (nunca se
+  // inventa una).
+  const suggestedSizeCmByElement: Record<string, { largo: string; alto: string } | null> = {};
+  allLogoElements.forEach((el) => {
+    const pa = getPrintArea(product.name, el.view);
+    const real = getElementRealCm(el.widthPct, el.heightPct, pa.widthCm, pa.heightCm);
+    suggestedSizeCmByElement[el.id] = real ? { largo: real.widthCm.toFixed(1), alto: real.heightCm.toFixed(1) } : null;
+  });
+
+  // Auto-rellena Largo/Alto con la sugerencia mientras el campo siga
+  // vacío -- igual que tintas con onTintasChange en TechniqueModal: si el
+  // cliente ya escribió algo (a mano o de una sugerencia anterior), nunca
+  // se le pisa. Corre para toda técnica que use tamaño (by_size), elegida
+  // o no, para que ya esté listo en cuanto se elija.
+  const sizeSuggestKey = allLogoElements.map((el) => `${el.id}:${el.widthPct.toFixed(1)}:${el.heightPct.toFixed(1)}`).join("|");
+  useEffect(() => {
+    const sizeTechniques = techniques.filter((t) => t.pricing_type !== "by_tintas");
+    if (!sizeTechniques.length || !allLogoElements.length) return;
+    setTechniqueLogoSizeCm((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      sizeTechniques.forEach((t) => {
+        allLogoElements.forEach((el) => {
+          const suggestion = suggestedSizeCmByElement[el.id];
+          if (!suggestion) return;
+          const current = next[t.id]?.[el.id];
+          if (current?.largo || current?.alto) return; // ya tiene algo -- nunca se pisa
+          next[t.id] = { ...(next[t.id] ?? {}), [el.id]: suggestion };
+          changed = true;
+        });
+      });
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sizeSuggestKey, techniques]);
+
   // Cada técnica calcula su propio precio según su pricing_type (ver
   // types/index.ts) y se suma al total — nunca se inventa un precio: si
   // falta el parámetro (tintas/tamaño) o no hay un renglón que coincida
@@ -1811,6 +1854,7 @@ export default function PersonalizerClient({
                           needsQuote={needsQuote}
                           logosByView={logosByView}
                           logoSizeCm={techniqueLogoSizeCm[technique.id] ?? {}}
+                          suggestedSizeCm={suggestedSizeCmByElement}
                           onLogoSizeCmChange={(elementId, patch) =>
                             setTechniqueLogoSizeCm((prev) => ({
                               ...prev,

@@ -136,6 +136,7 @@ function PositionGroup({
   logos,
   showSizeFields,
   logoSizeCm,
+  suggestedSizeCm,
   onLogoSizeCmChange,
   selectedElementId,
   onSelectLogo,
@@ -145,6 +146,7 @@ function PositionGroup({
   logos: DesignElement[];
   showSizeFields: boolean;
   logoSizeCm: Record<string, { largo: string; alto: string }>;
+  suggestedSizeCm: Record<string, { largo: string; alto: string } | null>;
   onLogoSizeCmChange: (elementId: string, patch: Partial<{ largo: string; alto: string }>) => void;
   selectedElementId: string | null;
   onSelectLogo: (view: ViewName, elementId: string) => void;
@@ -160,6 +162,7 @@ function PositionGroup({
       <div className="mt-2 flex flex-wrap gap-2">
         {logos.map((logo, i) => {
           const dims = logoSizeCm[logo.id] ?? { largo: "", alto: "" };
+          const suggestion = suggestedSizeCm[logo.id];
           const isSelected = selectedElementId === logo.id;
           return (
             <div
@@ -178,10 +181,17 @@ function PositionGroup({
                 <span className="min-w-0 flex-1 truncate text-[10px] font-semibold text-ui-gray">Logo {i + 1}</span>
               </button>
               {showSizeFields && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Field label="Largo (cm)" value={dims.largo} onChange={(v) => onLogoSizeCmChange(logo.id, { largo: v })} />
-                  <Field label="Alto (cm)" value={dims.alto} onChange={(v) => onLogoSizeCmChange(logo.id, { alto: v })} />
-                </div>
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Field label="Largo (cm)" value={dims.largo} onChange={(v) => onLogoSizeCmChange(logo.id, { largo: v })} />
+                    <Field label="Alto (cm)" value={dims.alto} onChange={(v) => onLogoSizeCmChange(logo.id, { alto: v })} />
+                  </div>
+                  {suggestion && (
+                    <p className="mt-1.5 text-[10.5px] text-primary-dark">
+                      Sugerido: <b>{suggestion.largo}x{suggestion.alto} cm</b> (estimado según el tamaño en el lienzo)
+                    </p>
+                  )}
+                </>
               )}
             </div>
           );
@@ -197,6 +207,7 @@ export default function TechniqueDetailCard({
   needsQuote,
   logosByView,
   logoSizeCm,
+  suggestedSizeCm,
   onLogoSizeCmChange,
   selectedElementId,
   onSelectLogo,
@@ -209,6 +220,10 @@ export default function TechniqueDetailCard({
   needsQuote: boolean;
   logosByView: { view: ViewName; viewLabel: string; logos: DesignElement[] }[];
   logoSizeCm: Record<string, { largo: string; alto: string }>;
+  // Estimado de Largo/Alto real (cm) por logo, a partir de su tamaño en
+  // el lienzo -- solo referencia, nunca sustituye lo que el cliente ya
+  // haya escrito (ver suggestedSizeCmByElement en PersonalizerClient).
+  suggestedSizeCm: Record<string, { largo: string; alto: string } | null>;
   onLogoSizeCmChange: (elementId: string, patch: Partial<{ largo: string; alto: string }>) => void;
   // Qué elemento está seleccionado ahora mismo en el canvas -- resalta su
   // panel aquí (ver PositionGroup) cuando coincide, para que el resaltado
@@ -260,6 +275,7 @@ export default function TechniqueDetailCard({
               logos={g.logos}
               showSizeFields={showSizeFields}
               logoSizeCm={logoSizeCm}
+              suggestedSizeCm={suggestedSizeCm}
               onLogoSizeCmChange={onLogoSizeCmChange}
               selectedElementId={selectedElementId}
               onSelectLogo={onSelectLogo}
