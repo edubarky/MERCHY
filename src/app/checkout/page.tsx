@@ -740,7 +740,20 @@ export default function CheckoutPage() {
                         <p className="text-ui-gray">Cantidad: {item.total_quantity}</p>
                         {colors && <p className="truncate text-ui-gray">Color: {colors}</p>}
                         {sizesLabel && <p className="truncate text-ui-gray">Tallas: {sizesLabel}</p>}
-                        <p className="text-ui-gray">Tipo de impresión: {item.technique?.name ?? "Sin personalizar"}</p>
+                        {/* Técnica + posición(es) + no. de tintas (si aplica) -- mismo
+                            formato que ya usa CotizacionDoc.tsx. Sin snapshot (renglones
+                            guardados antes de este campo) cae al nombre solo. */}
+                        {(item.customization_snapshot?.selected_techniques ?? []).length > 0 ? (
+                          item.customization_snapshot!.selected_techniques!.map((t) => (
+                            <p key={t.technique_id} className="truncate text-ui-gray">
+                              Impresión: {t.technique_name}
+                              {t.positions?.length ? ` · ${t.positions.join(", ")}` : ""}
+                              {t.tintas ? ` · ${t.tintas} ${t.tintas === 1 ? "tinta" : "tintas"}` : ""}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-ui-gray">Impresión: {item.technique?.name ?? "Sin personalizar"}</p>
+                        )}
                       </div>
                     </div>
                   );
