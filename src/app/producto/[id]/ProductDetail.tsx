@@ -1289,7 +1289,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               la pantalla. Altura fija más baja en su lugar; object-contain
               en la <img> de dentro sigue mostrando la foto completa sin
               recortarla, solo con un poco más de margen arriba/abajo. */}
-          <div className="h-[420px] rounded-[28px] overflow-hidden bg-white border border-[#F1F1F1] shadow-[0_20px_60px_rgba(0,0,0,0.05)] relative">
+          <div className="h-[510px] rounded-[28px] overflow-hidden bg-white border border-[#F1F1F1] shadow-[0_20px_60px_rgba(0,0,0,0.05)] relative">
             {/* Halos de profundidad — iluminación ambiental muy sutil detrás del producto */}
             <div
               className="absolute inset-0 pointer-events-none"
