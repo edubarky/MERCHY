@@ -203,8 +203,19 @@ export default function CarritoPage() {
         i.onerror = () => reject(new Error("No se pudo generar la cotización."));
         i.src = dataUrl;
       });
-      const pdf = new jsPDF({ unit: "px", format: [img.width, img.height] });
-      pdf.addImage(dataUrl, "PNG", 0, 0, img.width, img.height);
+      // Página Carta apaisada de tamaño estándar (en vez de una página del
+      // tamaño exacto en píxeles de la captura) -- pedido explícito (ver
+      // charla 2026-09-17): con el tamaño-a-la-medida, algunos visores de
+      // PDF mostraban la página recortada/con scroll en vez de completa.
+      // La imagen se ajusta dentro de márgenes, conservando su proporción.
+      const pdf = new jsPDF({ unit: "pt", format: "letter", orientation: "landscape" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 24;
+      const scale = Math.min((pageWidth - margin * 2) / img.width, (pageHeight - margin * 2) / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      pdf.addImage(dataUrl, "PNG", (pageWidth - w) / 2, margin, w, h);
       pdf.save("cotizacion-merchy.pdf");
     } catch {
       // Silencioso -- mismo criterio que el resto de descargas del sitio

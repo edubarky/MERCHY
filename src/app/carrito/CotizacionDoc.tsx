@@ -34,11 +34,12 @@ export default function CotizacionDoc({
 
   return (
     <div className="w-[920px] bg-white p-10 text-foreground" style={{ fontFamily: "inherit" }}>
-      <table style={{ width: "100%", borderBottom: "2px solid #1a1a1a", paddingBottom: 16 }}>
+      <table style={{ width: "100%", paddingBottom: 16 }}>
         <tbody>
           <tr>
             <td style={{ verticalAlign: "bottom", paddingBottom: 16 }}>
-              <span className="font-display text-2xl font-bold text-primary-dark">merchy</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Merchy" style={{ height: 32, width: "auto" }} />
             </td>
             <td style={{ verticalAlign: "bottom", textAlign: "right", paddingBottom: 16 }}>
               <p className="font-display text-sm font-bold text-foreground">Cotización</p>
