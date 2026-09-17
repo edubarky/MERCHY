@@ -1448,11 +1448,11 @@ export default function PersonalizerClient({
   }
 
   return (
-    <div className="mx-auto flex max-w-[1680px] flex-col gap-8 px-6 py-8 lg:flex-row lg:items-start lg:gap-10">
+    <div className="mx-auto flex max-w-[1680px] flex-col gap-8 px-6 py-6 lg:flex-row lg:items-start lg:gap-10">
       {/* ── Canvas (izquierda, ~65%) ── */}
       <div className="w-full lg:w-[65%]">
-        <div className="relative rounded-[24px] bg-white p-8 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
-          <div className="mb-8 flex items-center justify-between">
+        <div className="relative rounded-[24px] bg-white p-6 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
+          <div className="mb-5 flex items-center justify-between">
             <div className="flex items-center gap-8">
               {tabGroups.map((group) => {
                 const active = group.views.includes(activeView);
@@ -1609,7 +1609,14 @@ export default function PersonalizerClient({
               // esos ya son más angostos que 600px por sí solos, así que
               // este tope extra nunca llega a aplicar.
               style={{
-                height: "min(75vh, 720px)",
+                // Bajado de min(75vh,720px) -- pedido explícito (ver charla
+                // 2026-09-16): esa altura fija empujaba el hem de la prenda
+                // fuera del viewport en laptops típicas, obligando a hacer
+                // scroll para ver la imagen completa dentro del propio
+                // recuadro. Con esto cabe completa sin scroll junto con el
+                // resto del chrome (header + tabs + padding) en pantallas
+                // normales.
+                height: "min(58vh, 560px)",
                 aspectRatio: asset.aspect,
                 maxWidth: asset.aspect > 1 ? "min(100%, 600px)" : "100%",
               }}
@@ -1774,14 +1781,14 @@ export default function PersonalizerClient({
             <DesignOptionsPanel element={selectedElement} onChange={updateElement} />
           </div>
         )}
-        <div className="space-y-10 rounded-[24px] bg-white p-8 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
+        <div className="space-y-6 rounded-[24px] bg-white p-6 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
           <div>
-            <h1 className="font-display text-[40px] font-bold uppercase leading-[1.05] text-foreground">{product.name}</h1>
-            <p className="mt-2 text-base text-ui-gray">{product.sku}</p>
+            <h1 className="font-display text-xl font-bold uppercase leading-[1.15] text-foreground">{product.name}</h1>
+            <p className="mt-1 text-xs text-ui-gray">{product.sku}</p>
           </div>
 
           <div>
-            <span className="mb-4 block text-2xl font-bold text-foreground">3. Personaliza tu producto</span>
+            <span className="mb-3 block text-base font-bold text-foreground">3. Personaliza tu producto</span>
 
             {/* Sección compacta a propósito (ver charla 2026-09-10): se
                 quitaron la tarjeta "Tus diseños", el subtítulo y la lista
@@ -1826,7 +1833,7 @@ export default function PersonalizerClient({
           </div>
 
           <div>
-            <span className="mb-4 block text-2xl font-bold text-foreground">4. Selecciona el Tipo de impresión</span>
+            <span className="mb-3 block text-base font-bold text-foreground">4. Selecciona el Tipo de impresión</span>
             {/* Solo esta fila "sangra" fuera del padding del panel (-mx-8) para
                 ganar el máximo ancho posible sin tocar el padding compartido
                 por el resto de secciones — el título arriba se queda alineado
@@ -1835,7 +1842,7 @@ export default function PersonalizerClient({
               <p className="text-sm text-ui-gray">No hay técnicas de impresión disponibles para este producto.</p>
             ) : (
               <>
-                <div className="-mx-8">
+                <div className="-mx-6">
                   <PrintTechniqueCards techniques={techniques} selectedIds={selectedTechniqueIds} onToggle={toggleTechnique} />
                 </div>
                 {/* Serigrafía/Tampografía (by_tintas): el clic en su card
@@ -1921,14 +1928,6 @@ export default function PersonalizerClient({
               autoguardan en el navegador (localStorage), así que salir y
               volver no pierde nada; la cantidad se restaura del mismo
               borrador si el link ya no trae ?qty. */}
-
-          {techniqueSelectionIncomplete && (
-            <p className="mt-4 text-center text-xs font-medium text-accent-coral">
-              {selectedTechniqueIds.length === 0
-                ? "Selecciona una técnica de impresión para continuar."
-                : "Completa los datos de la técnica elegida (tintas/tamaño) para continuar."}
-            </p>
-          )}
 
           {/* "Minimal Sólido" (pedido explícito, reemplaza el tratamiento
               glass/glow de antes) -- colores sólidos únicamente, sin
