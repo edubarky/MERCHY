@@ -13,7 +13,18 @@ import { formatMXN, splitIva } from "@/lib/pricing";
 // (ver charla 2026-09-16) que html-to-image calcula mal esas cajas y las
 // deja fuera del PNG capturado. Las tablas usan un algoritmo de layout
 // distinto (celdas con ancho fijo por columna) que sí se captura bien.
-export default function CotizacionDoc({ items, subtotalConIva }: { items: CartItem[]; subtotalConIva: number }) {
+export default function CotizacionDoc({
+  items,
+  subtotalConIva,
+  etaText,
+}: {
+  items: CartItem[];
+  subtotalConIva: number;
+  // Texto ya formateado ("Llega entre el 24 y el 28 de septiembre de
+  // 2026") -- solo si el cliente ya puso un CP válido en el carrito (ver
+  // charla 2026-09-16); ausente/null = no se inventa una fecha aquí.
+  etaText?: string | null;
+}) {
   const { subtotal, iva } = splitIva(subtotalConIva);
 
   return (
@@ -102,7 +113,11 @@ export default function CotizacionDoc({ items, subtotalConIva }: { items: CartIt
       <table style={{ width: "100%", marginTop: 16 }}>
         <tbody>
           <tr>
-            <td style={{ width: 508 }} />
+            <td style={{ width: 508, verticalAlign: "bottom" }}>
+              {etaText && (
+                <p className="text-xs font-semibold text-primary-dark">{etaText}</p>
+              )}
+            </td>
             <td style={{ width: 212 }}>
               <table style={{ width: "100%" }}>
                 <tbody>

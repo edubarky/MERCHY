@@ -7,7 +7,7 @@ import { jsPDF } from "jspdf";
 import PublicHeader from "@/components/PublicHeader";
 import { createClient } from "@/lib/supabase/client";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
-import { formatMXN, recomputeCartItemUnitPrice } from "@/lib/pricing";
+import { formatMXN, recomputeCartItemUnitPrice, splitIva } from "@/lib/pricing";
 import { getShippingZone, computeEtaRange, formatEtaRange } from "@/lib/shipping";
 import CotizacionDoc from "./CotizacionDoc";
 import type { CartItem, PriceTier, ProductionTimeTier, ShippingZone } from "@/types";
@@ -37,6 +37,25 @@ function DownloadIcon({ className = "" }: { className?: string }) {
   );
 }
 
+function ChevronIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+// Precio del producto solo (sin técnicas) y total de sus técnicas -- mismo
+// cálculo que ya usa CotizacionDoc.tsx para el desglose del PDF, ahora
+// también aquí para el desglose en vivo de "Resumen" (ver charla
+// 2026-09-16: antes "Subtotal" mostraba lo mismo que "Total" -- nunca se
+// le quitaba el IVA de verdad).
+function itemPriceParts(item: CartItem) {
+  const techniqueTotal = (item.customization_snapshot?.selected_techniques ?? []).reduce((s, t) => s + (t.unit_price ?? 0), 0);
+  const garmentUnit = Math.max(0, item.unit_price - techniqueTotal);
+  return { garmentUnit, techniqueTotal };
+}
+
 // A dónde manda "Editar" -- solo el renglón "en curso" (todavía sin
 // confirmar, ver productDraftCartItemId) o uno YA confirmado que sí
 // guardó su editor_state (ver PersonalizerClient's buildCartItem) puede
@@ -57,13 +76,9 @@ function editarHref(item: CartItem): string | null {
 }
 
 export default function CarritoPage() {
-  const { items, removeItem, upsertItem, totalItems, subtotal, total } = useCart();
+  const { items, removeItem, upsertItem, totalItems, total } = useCart();
   const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
-  // Texto que se ve en el cuadro de cantidad mientras se escribe -- mismo
-  // patrón que el Personalizador (no se aplica tecla por tecla, solo al
-  // salir del campo o con Enter, para no recalcular precio en cada dígito
-  // a medio escribir).
-  const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
+  const [desgloseOpen, setDesgloseOpen] = useState(false);
   const [qtyErrors, setQtyErrors] = useState<Record<string, string>>({});
   const [downloadingCotizacion, setDownloadingCotizacion] = useState(false);
   const cotizacionRef = useRef<HTMLDivElement>(null);
@@ -136,33 +151,32 @@ export default function CarritoPage() {
   const shippingZone = cpCveEnt ? getShippingZone(cpCveEnt, shippingZones) : null;
   const etaRange = shippingZone ? computeEtaRange(items, shippingZone, "standard", productionTiers) : null;
 
-  function draftFor(item: CartItem) {
-    return qtyDrafts[item.id] ?? String(item.total_quantity);
-  }
-
-  // Cambiar la cantidad en el carrito recalcula el precio con los mismos
-  // tramos que ya se usaron al personalizar (ver recomputeCartItemUnitPrice
-  // en pricing.ts) -- nunca solo escala el precio guardado. Si la nueva
-  // cantidad cae fuera de lo que la técnica tiene tarifado, se rechaza el
-  // cambio (nunca se inventa un precio) y se pide editar el diseño.
-  function applyQty(item: CartItem, rawValue: string) {
-    const parsed = parseInt(rawValue, 10);
-    if (!Number.isFinite(parsed) || parsed <= 0 || parsed === item.total_quantity) {
-      setQtyDrafts((prev) => ({ ...prev, [item.id]: String(item.total_quantity) }));
+  // Cambia la cantidad de UNA talla de UN color -- reemplaza el stepper
+  // "a ciegas" de antes (pedido explícito, ver charla 2026-09-16: "a qué
+  // talla voy a agregar las sudaderas?"). El precio SIEMPRE se calcula
+  // con el total combinado de TODOS los colores/tallas de este renglón
+  // (25 piezas, no 10 y 15 por separado) -- mismos tramos que ya usó el
+  // Personalizador (ver recomputeCartItemUnitPrice), nunca solo escala
+  // el precio guardado. Si la nueva cantidad cae fuera de lo que la
+  // técnica tiene tarifado, se rechaza el cambio y se pide editar el
+  // diseño. Quitar la última pieza de todos los colores/tallas elimina
+  // el renglón (no tiene sentido dejarlo en el carrito con 0 piezas).
+  function applySizeQty(item: CartItem, variantId: string, size: string, nextQty: number) {
+    const clamped = Math.max(0, nextQty);
+    const nextVariants = item.variants.map((v) => {
+      if (v.variant_id !== variantId) return v;
+      const sizes_breakdown = { ...v.sizes_breakdown, [size]: clamped };
+      return { ...v, sizes_breakdown, qty: Object.values(sizes_breakdown).reduce((s, q) => s + q, 0) };
+    });
+    const nextTotal = nextVariants.reduce((sum, v) => sum + v.qty, 0);
+    if (nextTotal <= 0) {
+      removeItem(item.id);
       return;
     }
-    // Los tramos de precio (price_tiers) todavía no cargan -- sin ellos
-    // getProductUnitPrice regresaría $0. Se ignora el cambio en vez de
-    // arriesgar guardar un precio inventado; la ventana es de milisegundos
-    // (se piden al montar la página).
-    if (priceTiers.length === 0) {
-      setQtyDrafts((prev) => ({ ...prev, [item.id]: String(item.total_quantity) }));
-      return;
-    }
-    const { unitPrice, needsQuote } = recomputeCartItemUnitPrice(item, parsed, priceTiers);
+    if (priceTiers.length === 0) return;
+    const { unitPrice, needsQuote } = recomputeCartItemUnitPrice(item, nextTotal, priceTiers);
     if (needsQuote) {
       setQtyErrors((prev) => ({ ...prev, [item.id]: "Esa cantidad requiere cotización para esta técnica — edita el diseño." }));
-      setQtyDrafts((prev) => ({ ...prev, [item.id]: String(item.total_quantity) }));
       return;
     }
     setQtyErrors((prev) => {
@@ -170,14 +184,7 @@ export default function CarritoPage() {
       delete next[item.id];
       return next;
     });
-    upsertItem({
-      ...item,
-      total_quantity: parsed,
-      variants: item.variants.map((v) => ({ ...v, qty: parsed })),
-      unit_price: unitPrice,
-      total_price: unitPrice * parsed,
-    });
-    setQtyDrafts((prev) => ({ ...prev, [item.id]: String(parsed) }));
+    upsertItem({ ...item, variants: nextVariants, total_quantity: nextTotal, unit_price: unitPrice, total_price: unitPrice * nextTotal });
   }
 
   // Aplana el documento completo del carrito (ver CotizacionDoc) a PNG y
@@ -231,85 +238,107 @@ export default function CarritoPage() {
             <div className="flex-1 space-y-4">
               {items.map((item) => {
                 const thumb = item.customization_snapshot?.canvas_data_url || item.product.variants?.[0]?.images?.[0];
-                const color = item.variants[0];
                 const href = editarHref(item);
+                const sizes = item.product.sizes_available;
                 return (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-4 rounded-[20px] bg-white p-5 shadow-[0_2px_16px_rgba(0,0,0,0.05)]"
-                  >
-                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gray-50">
-                      {thumb ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={thumb} alt={item.product.name} className="h-full w-full object-contain" />
-                      ) : null}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-foreground">{item.product.name}</p>
-                      <p className="mt-0.5 text-sm text-ui-gray">{color?.color_name ?? "—"}</p>
-                      {item.customization_snapshot && (
-                        <span className="mt-1.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary-dark">
-                          Personalizado
-                        </span>
-                      )}
-
-                      {/* Cantidad -- editable aquí mismo, recalcula el precio
-                          por tramos al soltar/Enter (ver applyQty). */}
-                      <div className="mt-2.5 flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => applyQty(item, String(item.total_quantity - 1))}
-                          aria-label="Quitar una pieza"
-                          className="flex h-6 w-6 items-center justify-center rounded-full border border-ui-border text-primary-dark transition-colors duration-150 hover:bg-primary/10"
-                        >
-                          −
-                        </button>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={draftFor(item)}
-                          onChange={(e) => setQtyDrafts((prev) => ({ ...prev, [item.id]: e.target.value.replace(/[^0-9]/g, "") }))}
-                          onBlur={(e) => applyQty(item, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") e.currentTarget.blur();
-                          }}
-                          aria-label="Cantidad de piezas"
-                          className="h-6 w-14 rounded-full border border-ui-border text-center text-xs font-semibold text-foreground outline-none focus:border-primary"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => applyQty(item, String(item.total_quantity + 1))}
-                          aria-label="Agregar una pieza"
-                          className="flex h-6 w-6 items-center justify-center rounded-full border border-ui-border text-primary-dark transition-colors duration-150 hover:bg-primary/10"
-                        >
-                          +
-                        </button>
-                        <span className="text-xs text-ui-gray">pzas</span>
-                      </div>
-                      {qtyErrors[item.id] && <p className="mt-1 text-xs text-accent-coral">{qtyErrors[item.id]}</p>}
-                    </div>
-
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <p className="font-bold text-foreground">{formatMXN(item.total_price)} MXN</p>
-                      <div className="flex items-center gap-3 text-sm">
-                        {href ? (
-                          <Link href={href} className="font-semibold text-primary-dark hover:underline">
-                            Editar
-                          </Link>
-                        ) : (
-                          <Link href={`/producto/${item.product.id}`} className="font-semibold text-primary-dark hover:underline">
-                            Ver producto
-                          </Link>
+                  <div key={item.id} className="rounded-[20px] bg-white p-5 shadow-[0_2px_16px_rgba(0,0,0,0.05)]">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-foreground">{item.product.name}</p>
+                        {item.customization_snapshot && (
+                          <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary-dark">
+                            Personalizado
+                          </span>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => removeItem(item.id)}
-                          className="text-ui-gray transition-colors duration-150 hover:text-accent-coral"
-                        >
-                          Eliminar
-                        </button>
                       </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <p className="font-bold text-foreground">{formatMXN(item.total_price)} MXN</p>
+                        <p className="text-xs text-ui-gray">{item.total_quantity} pzas en total</p>
+                      </div>
+                    </div>
+
+                    {/* Un bloque por color -- pedido explícito (ver charla
+                        2026-09-16): con Multicolor (2+ variantes) cada uno
+                        se ve por separado con su propia foto y sus propias
+                        tallas, pero el PRECIO siempre usa el total
+                        combinado (25 piezas), nunca cada color por
+                        separado (10 y 15) -- ver applySizeQty. El diseño
+                        (logo) es el mismo para todos los colores de este
+                        renglón (así se coloca hoy en el Personalizador),
+                        así que solo el primer color muestra la miniatura
+                        ya compuesta con el logo; los demás muestran su
+                        propia foto de color sin logo -- referencia de
+                        cuál prenda es, no una segunda composición real. */}
+                    <div className="mt-3 space-y-3">
+                      {item.variants.map((v, i) => {
+                        const variantPhoto = item.product.variants?.find((pv) => pv.id === v.variant_id)?.images?.[0];
+                        const vThumb = i === 0 ? thumb : variantPhoto;
+                        return (
+                          <div key={v.variant_id} className="flex items-start gap-3 border-t border-ui-border pt-3 first:border-t-0 first:pt-0">
+                            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50">
+                              {vThumb ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={vThumb} alt={v.color_name} className="h-full w-full object-contain" />
+                              ) : null}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-foreground">
+                                {v.color_name} <span className="font-normal text-ui-gray">· {v.qty} pzas</span>
+                              </p>
+                              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                {sizes.map((size) => {
+                                  const qty = v.sizes_breakdown[size] ?? 0;
+                                  return (
+                                    <div
+                                      key={size}
+                                      className="flex items-center gap-1 rounded-full border border-ui-border bg-gray-50 px-1.5 py-0.5"
+                                    >
+                                      <span className="text-[11px] font-semibold text-foreground">{size}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => applySizeQty(item, v.variant_id, size, qty - 1)}
+                                        aria-label={`Quitar una pieza de talla ${size}, color ${v.color_name}`}
+                                        className="flex h-4 w-4 items-center justify-center text-primary-dark"
+                                      >
+                                        −
+                                      </button>
+                                      <span className="w-4 text-center text-[11px] font-semibold text-foreground">{qty}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => applySizeQty(item, v.variant_id, size, qty + 1)}
+                                        aria-label={`Agregar una pieza de talla ${size}, color ${v.color_name}`}
+                                        className="flex h-4 w-4 items-center justify-center text-primary-dark"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {qtyErrors[item.id] && <p className="mt-2 text-xs text-accent-coral">{qtyErrors[item.id]}</p>}
+
+                    <div className="mt-3 flex items-center gap-3 border-t border-ui-border pt-3 text-sm">
+                      {href ? (
+                        <Link href={href} className="font-semibold text-primary-dark hover:underline">
+                          Editar
+                        </Link>
+                      ) : (
+                        <Link href={`/producto/${item.product.id}`} className="font-semibold text-primary-dark hover:underline">
+                          Ver producto
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item.id)}
+                        className="text-ui-gray transition-colors duration-150 hover:text-accent-coral"
+                      >
+                        Eliminar
+                      </button>
                     </div>
                   </div>
                 );
@@ -343,17 +372,63 @@ export default function CarritoPage() {
             </div>
 
             <div className="w-full rounded-[20px] bg-white p-6 shadow-[0_2px_16px_rgba(0,0,0,0.05)] lg:w-[340px] lg:sticky lg:top-8">
-              <p className="mb-4 text-base font-bold text-foreground">Resumen</p>
-              <div className="space-y-2 text-sm text-ui-gray">
-                <div className="flex justify-between">
-                  <span>Total de productos</span>
-                  <span>{totalItems}</span>
+              {/* Desglose completo colapsable -- pedido explícito (ver
+                  charla 2026-09-16): antes "Subtotal" mostraba el mismo
+                  número que "Total" (nunca se le quitaba el IVA de
+                  verdad). Ahora es el mismo desglose de Producto/técnica/
+                  Precio por pieza por renglón + Subtotal(sin IVA)/IVA que
+                  ya usa el PDF de cotización (ver CotizacionDoc), solo
+                  que aquí se puede contraer/expandir. */}
+              <button
+                type="button"
+                onClick={() => setDesgloseOpen((v) => !v)}
+                className="flex w-full items-center justify-between"
+              >
+                <span className="text-base font-bold text-foreground">Resumen ({totalItems} pzas)</span>
+                <ChevronIcon className={`h-4 w-4 text-ui-gray transition-transform duration-200 ${desgloseOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {desgloseOpen && (
+                <div className="mt-4 space-y-3">
+                  {items.map((item) => {
+                    const { garmentUnit } = itemPriceParts(item);
+                    return (
+                      <div key={item.id} className="space-y-0.5 border-b border-ui-border pb-3 text-xs text-ui-gray">
+                        <p className="mb-1 truncate text-sm font-semibold text-foreground">{item.product.name}</p>
+                        <div className="flex justify-between">
+                          <span>Producto</span>
+                          <span>{formatMXN(garmentUnit)}</span>
+                        </div>
+                        {(item.customization_snapshot?.selected_techniques ?? []).map((t) => (
+                          <div key={t.technique_id} className="flex justify-between">
+                            <span className="truncate pr-2">{t.technique_name}</span>
+                            <span className="shrink-0">{t.needs_quote || t.unit_price == null ? "Por cotizar" : formatMXN(t.unit_price)}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between border-t border-dashed border-ui-border pt-1 font-semibold text-foreground">
+                          <span>Precio por pieza</span>
+                          <span>{formatMXN(item.unit_price)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Cantidad</span>
+                          <span>× {item.total_quantity} piezas</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="flex justify-between text-sm text-ui-gray">
+                    <span>
+                      Subtotal <span className="text-xs">(sin IVA)</span>
+                    </span>
+                    <span>{formatMXN(splitIva(total).subtotal)} MXN</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-ui-gray">
+                    <span>IVA 16%</span>
+                    <span>{formatMXN(splitIva(total).iva)} MXN</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>{formatMXN(subtotal)} MXN</span>
-                </div>
-              </div>
+              )}
+
               <div className="mt-4 flex items-center justify-between rounded-2xl bg-primary/10 px-5 py-4">
                 <span className="font-bold text-foreground">Total</span>
                 <span className="text-xl font-bold text-foreground">{formatMXN(total)} MXN</span>
@@ -373,7 +448,7 @@ export default function CarritoPage() {
                 href="/checkout"
                 className="mt-3 flex h-14 w-full items-center justify-center rounded-full bg-primary text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)]"
               >
-                Finalizar compra
+                Continuar
               </Link>
               <Link
                 href="/catalogo"
@@ -400,7 +475,7 @@ export default function CarritoPage() {
       {items.length > 0 && (
         <div style={{ position: "fixed", top: 0, left: 0, opacity: 0, pointerEvents: "none", zIndex: -1 }} aria-hidden="true">
           <div ref={cotizacionRef}>
-            <CotizacionDoc items={items} subtotalConIva={total} />
+            <CotizacionDoc items={items} subtotalConIva={total} etaText={etaRange ? formatEtaRange(etaRange.min, etaRange.max) : null} />
           </div>
         </div>
       )}
