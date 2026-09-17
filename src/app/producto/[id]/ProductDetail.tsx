@@ -1281,16 +1281,6 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-      {/* Breadcrumb -- mb-6 -> mb-3 y el py-8 de arriba -> py-4 del
-          contenedor entero (pedido explícito, ver charla 2026-09-16): la
-          foto principal + este espacio empujaban la fila de miniaturas
-          fuera del viewport en laptops típicas. */}
-      <nav className="text-sm text-ui-gray mb-3">
-        <a href="/catalogo" className="hover:text-primary transition-colors">Catálogo</a>
-        <span className="mx-2">›</span>
-        <span className="text-foreground">{product.name}</span>
-      </nav>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* ── Galería ── */}
         <div className="space-y-4">
@@ -1365,16 +1355,28 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         {/* ── Info ── */}
         <div className="space-y-[29px]">
           <div>
-            {product.category?.slug ? (
-              <Link
-                href={`/catalogo?categoria=${product.category.slug}`}
-                className="inline-block text-sm text-ui-gray mb-2 cursor-pointer transition-colors duration-200 hover:text-primary active:text-primary"
-              >
-                {product.category.name}
+            {/* Reemplaza el breadcrumb de arriba de la página ("Catálogo ›
+                Sudadera Ocean") -- pedido explícito (ver charla
+                2026-09-16): esta misma línea ya cumplía "dónde estoy", solo
+                le faltaba el link a Catálogo para ser un breadcrumb
+                completo. Quitar el otro ahorra el espacio que empujaba las
+                miniaturas fuera del viewport. */}
+            <p className="mb-2 text-sm text-ui-gray">
+              <Link href="/catalogo" className="transition-colors duration-200 hover:text-primary active:text-primary">
+                Catálogo
               </Link>
-            ) : (
-              <p className="text-sm text-ui-gray mb-2">{product.category?.name}</p>
-            )}
+              <span className="mx-1.5">›</span>
+              {product.category?.slug ? (
+                <Link
+                  href={`/catalogo?categoria=${product.category.slug}`}
+                  className="transition-colors duration-200 hover:text-primary active:text-primary"
+                >
+                  {product.category.name}
+                </Link>
+              ) : (
+                product.category?.name
+              )}
+            </p>
             <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-foreground uppercase tracking-tight">{product.name}</h1>
             <p className="text-xs text-ui-gray mt-2">{product.sku}</p>
           </div>
@@ -1507,11 +1509,15 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               </div>
             </div>
             <div className="text-right">
+              {/* Volteado -- pedido explícito (ver charla 2026-09-16): el
+                  unitario en negritas arriba (es el precio real que ve el
+                  cliente por pieza), el total en gris abajo. Antes era al
+                  revés. */}
               <p className="text-3xl font-extrabold text-foreground tracking-tight">
-                {formatMXN(totalPrice)} <span className="text-sm font-normal text-ui-gray">MXN</span>
+                {formatMXN(unitPrice)} <span className="text-sm font-normal text-ui-gray">MXN</span>
               </p>
               <p className="text-xs text-ui-gray mt-2">IVA incluido c/u</p>
-              <p className="text-xs text-ui-gray">{formatMXN(unitPrice)}</p>
+              <p className="text-xs text-ui-gray">Total: {formatMXN(totalPrice)}</p>
             </div>
           </div>
 
