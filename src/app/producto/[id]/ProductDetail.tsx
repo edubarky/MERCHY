@@ -1525,7 +1525,11 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               tallas. 1 pieza ya es una cantidad válida y completa: no hay
               ningún paso de confirmación ni un quantity > 1 de por medio. */}
           {showSizes && (
-            <div className="space-y-2">
+            // mt inline para pisar el space-y-[29px] del padre solo aquí --
+            // pedido explícito (ver charla 2026-09-16): la mitad del
+            // espacio que había con "2. Selecciona Cantidad" arriba, sin
+            // tocar el resto de separaciones de la columna.
+            <div className="space-y-2" style={{ marginTop: "14.5px" }}>
               <div className="space-y-3">
                 {sections.map((s) => (
                   <AnimatedSizeSection
