@@ -148,6 +148,10 @@ export default function ConfiguracionPage() {
   const [savingContact, setSavingContact] = useState(false);
   const [contactError, setContactError] = useState("");
   const [contactSaved, setContactSaved] = useState(false);
+  // Se ve como texto fijo (gris, no editable) hasta que se le da "Editar"
+  // -- son datos sensibles (CLABE, correo) que casi nunca cambian, así no
+  // se prestan a un toque accidental (ver charla 2026-09-16).
+  const [contactEditing, setContactEditing] = useState(false);
 
   async function loadSettings() {
     const { data } = await supabase.from("store_settings").select("*").eq("id", "default").maybeSingle();
@@ -358,7 +362,18 @@ export default function ConfiguracionPage() {
     }
     setSettings(data as StoreSettings);
     setContactSaved(true);
+    setContactEditing(false);
     setTimeout(() => setContactSaved(false), 1800);
+  }
+
+  function cancelContactEdit() {
+    setEmailDraft(settings?.notification_email ?? "");
+    setWhatsappDraft(settings?.whatsapp_number ?? "");
+    setBankNameDraft(settings?.transfer_bank_name ?? "");
+    setClabeDraft(settings?.transfer_clabe ?? "");
+    setBeneficiaryDraft(settings?.transfer_beneficiary ?? "");
+    setContactError("");
+    setContactEditing(false);
   }
 
   function precioEjemplo(pctStr: string): string {
@@ -380,21 +395,45 @@ export default function ConfiguracionPage() {
             <h2 className="font-semibold text-sm">Datos de contacto</h2>
             <p className="text-xs text-ui-gray mt-0.5">A dónde llega la notificación de cada pedido y el WhatsApp que ve el cliente en el sitio</p>
           </div>
-          {contactChanged && (
-            <Btn size="sm" onClick={saveContact} disabled={savingContact || contactInvalid} className="flex-shrink-0">
-              {savingContact ? "Guardando..." : "Guardar cambios"}
-            </Btn>
-          )}
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {contactEditing ? (
+              <>
+                <Btn size="sm" variant="ghost" onClick={cancelContactEdit} disabled={savingContact}>
+                  Cancelar
+                </Btn>
+                <Btn size="sm" onClick={saveContact} disabled={savingContact || contactInvalid || !contactChanged}>
+                  {savingContact ? "Guardando..." : "Guardar"}
+                </Btn>
+              </>
+            ) : (
+              <Btn size="sm" variant="secondary" onClick={() => setContactEditing(true)}>
+                Editar
+              </Btn>
+            )}
+          </div>
         </div>
         {contactError && <p className="px-5 py-3 text-xs text-red-500 bg-red-50">{contactError}</p>}
         <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5">
             <FieldLabel>Correo de notificación de pedidos</FieldLabel>
-            <AdminInput type="email" value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} placeholder="pedidos@merchy.mx" />
+            <AdminInput
+              type="email"
+              value={emailDraft}
+              onChange={(e) => setEmailDraft(e.target.value)}
+              placeholder="pedidos@merchy.mx"
+              disabled={!contactEditing}
+              className={!contactEditing ? "bg-gray-50 text-ui-gray border-transparent" : ""}
+            />
           </label>
           <label className="flex flex-col gap-1.5">
             <FieldLabel>WhatsApp (botón flotante del sitio)</FieldLabel>
-            <AdminInput value={whatsappDraft} onChange={(e) => setWhatsappDraft(e.target.value)} placeholder="+525512345678" />
+            <AdminInput
+              value={whatsappDraft}
+              onChange={(e) => setWhatsappDraft(e.target.value)}
+              placeholder="+525512345678"
+              disabled={!contactEditing}
+              className={!contactEditing ? "bg-gray-50 text-ui-gray border-transparent" : ""}
+            />
           </label>
         </div>
         <div className="px-5 pb-2">
@@ -402,7 +441,13 @@ export default function ConfiguracionPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <label className="flex flex-col gap-1.5">
               <FieldLabel>Banco</FieldLabel>
-              <AdminInput value={bankNameDraft} onChange={(e) => setBankNameDraft(e.target.value)} placeholder="BBVA" />
+              <AdminInput
+                value={bankNameDraft}
+                onChange={(e) => setBankNameDraft(e.target.value)}
+                placeholder="BBVA"
+                disabled={!contactEditing}
+                className={!contactEditing ? "bg-gray-50 text-ui-gray border-transparent" : ""}
+              />
             </label>
             <label className="flex flex-col gap-1.5">
               <FieldLabel>CLABE (18 dígitos)</FieldLabel>
@@ -411,11 +456,19 @@ export default function ConfiguracionPage() {
                 onChange={(e) => setClabeDraft(e.target.value.replace(/\D/g, "").slice(0, 18))}
                 placeholder="000000000000000000"
                 inputMode="numeric"
+                disabled={!contactEditing}
+                className={!contactEditing ? "bg-gray-50 text-ui-gray border-transparent" : ""}
               />
             </label>
             <label className="flex flex-col gap-1.5">
               <FieldLabel>Beneficiario</FieldLabel>
-              <AdminInput value={beneficiaryDraft} onChange={(e) => setBeneficiaryDraft(e.target.value)} placeholder="ON POINT IMPORTADORA Y COMERCIALIZADORA" />
+              <AdminInput
+                value={beneficiaryDraft}
+                onChange={(e) => setBeneficiaryDraft(e.target.value)}
+                placeholder="ON POINT IMPORTADORA Y COMERCIALIZADORA"
+                disabled={!contactEditing}
+                className={!contactEditing ? "bg-gray-50 text-ui-gray border-transparent" : ""}
+              />
             </label>
           </div>
         </div>
