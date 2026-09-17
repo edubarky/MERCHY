@@ -75,6 +75,20 @@ function editarHref(item: CartItem): string | null {
   return `/producto/${item.product.id}/personalizar?${params.toString()}`;
 }
 
+// Identifica este carrito como cotización -- pedido explícito (ver charla
+// 2026-09-17): si después se aprueba, sirve para ligar toda la
+// información de ese pedido a este mismo número. "COT-" (no "MRC-", el
+// prefijo de un pedido ya confirmado en checkout) para no confundir una
+// cotización sin comprometer con un pedido real.
+function generateCotizacionNumber() {
+  const now = new Date();
+  const y = String(now.getFullYear()).slice(-2);
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `COT-${y}${m}${d}-${rand}`;
+}
+
 export default function CarritoPage() {
   const { items, removeItem, upsertItem, totalItems, total } = useCart();
   const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
@@ -82,6 +96,10 @@ export default function CarritoPage() {
   const [qtyErrors, setQtyErrors] = useState<Record<string, string>>({});
   const [downloadingCotizacion, setDownloadingCotizacion] = useState(false);
   const cotizacionRef = useRef<HTMLDivElement>(null);
+  // Una sola vez por visita al carrito (no en cada re-render) -- lazy
+  // initializer de useState, mismo criterio que cualquier valor que deba
+  // quedar estable mientras la pestaña siga abierta.
+  const [cotizacionNumber] = useState(generateCotizacionNumber);
 
   // Fecha estimada de entrega -- pedido explícito (ver charla 2026-09-16):
   // el carrito es donde el cliente resume su compra, así que también debe
@@ -486,7 +504,12 @@ export default function CarritoPage() {
       {items.length > 0 && (
         <div style={{ position: "fixed", top: 0, left: 0, opacity: 0, pointerEvents: "none", zIndex: -1 }} aria-hidden="true">
           <div ref={cotizacionRef}>
-            <CotizacionDoc items={items} subtotalConIva={total} etaText={etaRange ? formatEtaRange(etaRange.min, etaRange.max) : null} />
+            <CotizacionDoc
+              items={items}
+              subtotalConIva={total}
+              etaText={etaRange ? formatEtaRange(etaRange.min, etaRange.max) : null}
+              cotizacionNumber={cotizacionNumber}
+            />
           </div>
         </div>
       )}

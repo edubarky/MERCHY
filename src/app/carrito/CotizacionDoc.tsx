@@ -22,6 +22,7 @@ export default function CotizacionDoc({
   items,
   subtotalConIva,
   etaText,
+  cotizacionNumber,
 }: {
   items: CartItem[];
   subtotalConIva: number;
@@ -29,6 +30,11 @@ export default function CotizacionDoc({
   // 2026") -- solo si el cliente ya puso un CP válido en el carrito (ver
   // charla 2026-09-16); ausente/null = no se inventa una fecha aquí.
   etaText?: string | null;
+  // Generado una sola vez por sesión de carrito (ver carrito/page.tsx) --
+  // pedido explícito (ver charla 2026-09-17): identifica este carrito
+  // como cotización, para que si después se aprueba, se pueda ligar toda
+  // la información de ese pedido a este mismo número.
+  cotizacionNumber: string;
 }) {
   const { subtotal, iva } = splitIva(subtotalConIva);
 
@@ -37,16 +43,15 @@ export default function CotizacionDoc({
       <table style={{ width: "100%", paddingBottom: 16 }}>
         <tbody>
           <tr>
-            <td style={{ verticalAlign: "bottom", paddingBottom: 16 }}>
+            <td style={{ verticalAlign: "bottom", paddingBottom: 8 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="Merchy" style={{ height: 32, width: "auto" }} />
+              <img src="/logo.png" alt="Merchy" style={{ height: 42, width: "auto" }} />
             </td>
             <td style={{ verticalAlign: "bottom", textAlign: "right", paddingBottom: 16 }}>
-              <p className="font-display text-sm font-bold text-foreground">Cotización</p>
+              <p className="font-display text-sm font-bold text-foreground">Cotización {cotizacionNumber}</p>
               <p className="text-xs text-ui-gray">
                 {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}
               </p>
-              <p className="text-xs text-ui-gray">Válida sujeta a existencias — no es un comprobante fiscal.</p>
             </td>
           </tr>
         </tbody>
@@ -62,7 +67,7 @@ export default function CotizacionDoc({
             : item.product.sizes_available[0];
 
           return (
-            <table key={item.id} style={{ width: "100%", marginTop: 24, paddingBottom: 24, borderBottom: "1px solid #E5E5E5" }}>
+            <table key={item.id} style={{ width: "100%", marginTop: 24, paddingBottom: 24 }}>
               <tbody>
                 <tr>
                   {/* ── Imagen, centrada -- mismo criterio que Vista Previa ── */}
@@ -150,7 +155,7 @@ export default function CotizacionDoc({
                         </tr>
                         <tr className="font-display text-sm font-bold text-foreground" style={{ borderTop: "1px solid #1a1a1a" }}>
                           <td style={{ padding: "4px 0 0" }}>Total</td>
-                          <td style={{ padding: "4px 0 0", textAlign: "right" }}>{formatMXN(item.total_price)}</td>
+                          <td style={{ padding: "4px 0 0", textAlign: "right" }}>{formatMXN(item.total_price)} MXN</td>
                         </tr>
                       </tbody>
                     </table>
@@ -192,7 +197,7 @@ export default function CotizacionDoc({
                   </tr>
                   <tr className="font-display text-lg font-bold text-foreground" style={{ borderTop: "2px solid #1a1a1a" }}>
                     <td style={{ padding: "6px 0 0" }}>Total</td>
-                    <td style={{ padding: "6px 0 0", textAlign: "right" }}>{formatMXN(subtotalConIva)}</td>
+                    <td style={{ padding: "6px 0 0", textAlign: "right" }}>{formatMXN(subtotalConIva)} MXN</td>
                   </tr>
                 </tbody>
               </table>
@@ -200,10 +205,6 @@ export default function CotizacionDoc({
           </tr>
         </tbody>
       </table>
-
-      <p className="mt-6 border-t border-ui-border pt-3 text-center text-[10px] text-ui-gray">
-        merchy.mx · Precios en MXN, IVA incluido. El envío se calcula al finalizar la compra.
-      </p>
     </div>
   );
 }
