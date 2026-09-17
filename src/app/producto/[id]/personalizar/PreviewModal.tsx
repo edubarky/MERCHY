@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
-import type { PrintTechnique } from "@/types";
+import type { Product, ProductVariant, PrintTechnique } from "@/types";
 import { VIEW_ORDER, VIEW_LABELS, type ViewElements, type DesignElement, type GarmentColor, type ResolvedProductAssets } from "./types";
 import { resolveFontFamilyCss } from "./textFonts";
 import { DEFAULT_FONT_SIZE_RATIO } from "./DesignElementView";
 import { needsLogoProcessing, processLogoSrc } from "./logoImagePipeline";
+import PrecioDesglose, { type TechRow } from "./PrecioDesglose";
 
 // Mismas "Opciones de diseño" (fondo/color/espejo/opacidad/brillo-
 // contraste) que ya aplica el lienzo real (ver DesignElementView) -- si no
@@ -154,6 +155,13 @@ export default function PreviewModal({
   productName,
   resolvedAssets,
   garmentColor,
+  product,
+  activeVariant,
+  garmentUnit,
+  techniqueResults,
+  quantity,
+  total,
+  anyTechniqueNeedsQuote,
 }: {
   open: boolean;
   onClose: () => void;
@@ -169,6 +177,16 @@ export default function PreviewModal({
   onConfirm?: () => void;
   confirmDisabled?: boolean;
   confirmDisabledReason?: string;
+  // Panel de info + desglose del lado derecho (ver charla 2026-09-16) --
+  // mismos datos que ya calcula/muestra PersonalizerClient en su propio
+  // sidebar, pasados tal cual para no duplicar esa lógica aquí.
+  product: Product & { variants: ProductVariant[] };
+  activeVariant?: ProductVariant;
+  garmentUnit: number;
+  techniqueResults: TechRow[];
+  quantity: number;
+  total: number;
+  anyTechniqueNeedsQuote: boolean;
 }) {
   const [entered, setEntered] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -215,6 +233,10 @@ export default function PreviewModal({
 
   if (!open) return null;
 
+  const sizesLabel = product.sizes_available.length > 1
+    ? `${product.sizes_available[0]} - ${product.sizes_available[product.sizes_available.length - 1]}`
+    : product.sizes_available[0];
+
   return (
     <div
       className={`fixed inset-0 z-[200] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm transition-opacity duration-200 ease-out ${
@@ -224,21 +246,22 @@ export default function PreviewModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[28px] bg-white p-6 shadow-[0_30px_80px_rgba(0,0,0,0.28)] transition-all duration-200 ease-out sm:p-8 ${
+        className={`relative w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-[28px] bg-white p-6 shadow-[0_30px_80px_rgba(0,0,0,0.28)] transition-all duration-200 ease-out sm:p-8 ${
           entered ? "opacity-100 scale-100" : "opacity-0 scale-95"
         }`}
       >
-        <div className="mb-6 flex items-start justify-between">
-          <h2 className="font-display text-xl font-bold text-foreground">Vista Previa</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-md transition-transform duration-150 ease-out hover:scale-110"
-          >
-            ✕
-          </button>
-        </div>
+        {/* Un solo cierre para todo el modal -- ya no hay título "Vista
+            Previa" ni su propia X (pedido explícito, ver charla
+            2026-09-16): esto ahora es una revisión completa del pedido
+            (imagen + info + precio), no solo "mirar la imagen". */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar"
+          className="absolute right-6 top-6 z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-md transition-transform duration-150 ease-out hover:scale-110 sm:right-8 sm:top-8"
+        >
+          ✕
+        </button>
 
         {viewsWithArt.length === 0 ? (
           <div className="flex flex-col items-center py-10 text-center">
@@ -246,34 +269,90 @@ export default function PreviewModal({
             <p className="text-sm text-ui-gray">Coloca un logo o texto en alguna vista para verla aquí.</p>
           </div>
         ) : (
-          <>
-            <div ref={sheetRef} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {viewsWithArt.map((view) => (
-                <MiniView
-                  key={view}
-                  view={view}
-                  elements={elements}
-                  resolvedAssets={resolvedAssets}
-                  garmentColor={garmentColor}
-                />
-              ))}
-            </div>
-
-            {/* Solo el ícono, abajo a la derecha (pedido explícito charla
-                2026-09-10). */}
-            <div className="mt-5 flex justify-end">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_1.05fr] md:items-start">
+            {/* ── Imagen(es), centrada -- sin marco/título/chrome propio ── */}
+            <div className="flex flex-col items-center justify-center">
+              <div
+                ref={sheetRef}
+                className={`grid gap-4 ${viewsWithArt.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
+                style={{ width: viewsWithArt.length > 1 ? "100%" : "min(100%, 320px)" }}
+              >
+                {viewsWithArt.map((view) => (
+                  <MiniView
+                    key={view}
+                    view={view}
+                    elements={elements}
+                    resolvedAssets={resolvedAssets}
+                    garmentColor={garmentColor}
+                  />
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={handleDownloadAll}
                 disabled={downloading}
                 aria-label={downloading ? "Generando imagen…" : "Descargar imagen"}
                 title={downloading ? "Generando…" : "Descargar"}
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-primary-dark shadow-[0_6px_18px_rgba(0,0,0,0.14)] transition-transform duration-150 ease-out hover:scale-110 disabled:opacity-50"
+                className="mt-4 flex h-11 w-11 items-center justify-center rounded-full bg-white text-primary-dark shadow-[0_6px_18px_rgba(0,0,0,0.14)] transition-transform duration-150 ease-out hover:scale-110 disabled:opacity-50"
               >
                 <DownloadIcon className={`h-5 w-5 ${downloading ? "animate-pulse" : ""}`} />
               </button>
             </div>
-          </>
+
+            {/* ── Info del producto + desglose de precio ── */}
+            <div className="space-y-5">
+              <div>
+                <h2 className="font-display text-xl font-bold uppercase text-foreground">{productName}</h2>
+                <p className="mt-1 text-xs text-ui-gray">{product.sku}</p>
+              </div>
+
+              {product.description && <p className="text-sm text-ui-gray leading-relaxed">{product.description}</p>}
+
+              <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-sm text-foreground">
+                {product.composition && (
+                  <span>
+                    <span className="font-semibold">Composición:</span> {product.composition}
+                  </span>
+                )}
+                {sizesLabel && (
+                  <span>
+                    <span className="font-semibold">Tallas:</span> {sizesLabel}
+                  </span>
+                )}
+              </div>
+
+              {product.variants.length > 0 && (
+                <div>
+                  <p className="mb-2 text-sm font-semibold text-foreground">Color</p>
+                  <div className="flex flex-wrap gap-2">
+                    {product.variants
+                      .filter((v) => v.active)
+                      .map((v) => (
+                        <span
+                          key={v.id}
+                          title={v.color_name}
+                          style={{ backgroundColor: v.color_hex }}
+                          className={`h-7 w-7 rounded-full border-2 ${
+                            activeVariant?.id === v.id ? "border-primary ring-2 ring-primary/30" : "border-white ring-1 ring-ui-border"
+                          }`}
+                        />
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {techniqueResults.length > 0 && (
+                <PrecioDesglose
+                  productName={productName}
+                  garmentUnit={garmentUnit}
+                  techniqueResults={techniqueResults}
+                  quantity={quantity}
+                  total={total}
+                  anyTechniqueNeedsQuote={anyTechniqueNeedsQuote}
+                />
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>
