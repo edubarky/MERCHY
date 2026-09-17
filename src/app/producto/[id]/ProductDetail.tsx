@@ -856,33 +856,40 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const { items: cartItems, upsertItem, removeItem, hydrated } = useCart();
 
   // Ajustador temporal de espaciado -- SOLO visible con ?ajustar=1 en la
-  // URL, nunca para un cliente real (ver charla 2026-09-16: 2 intentos a
-  // ciegas del margen de los CTAs fallaron, esto deja que se pruebe en
-  // vivo hasta que quede bien y luego se me pasa el número final para
-  // dejarlo fijo en el código -- después se puede borrar todo este
-  // bloque). Guardado en sessionStorage para que sobreviva un refresh
-  // mientras se está ajustando.
+  // URL, nunca para un cliente real (ver charla 2026-09-16). UNA sola
+  // escala mueve TODOS los espacios de la columna derecha a la vez, en la
+  // misma proporción entre ellos -- hay 2 tamaños base a propósito: los
+  // "cortos" (etiqueta -> su propio contenido, ej. "Selecciona Color" ->
+  // los círculos) y los "largos" (entre pasos distintos, ej. colores ->
+  // "2. Selecciona Cantidad"), y multiplicar todos por el mismo número
+  // nunca rompe esa relación. Cuando quede bien, se me pasa el número
+  // final de `spacingScale` y se hornea directo en los estilos (se borra
+  // todo este bloque + los GAP_* de abajo se vuelven valores fijos).
   const searchParams = useSearchParams();
   const adjustMode = searchParams.get("ajustar") === "1";
-  const [ctaMarginTop, setCtaMarginTop] = useState(24);
-  const [ctaMarginBottom, setCtaMarginBottom] = useState(8);
+  const [spacingScale, setSpacingScale] = useState(1);
   useEffect(() => {
     if (!adjustMode) return;
     try {
-      const saved = sessionStorage.getItem("merchy_cta_margins");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setCtaMarginTop(parsed.top);
-        setCtaMarginBottom(parsed.bottom);
-      }
+      const saved = sessionStorage.getItem("merchy_spacing_scale");
+      if (saved) setSpacingScale(Number(saved));
     } catch {}
   }, [adjustMode]);
   useEffect(() => {
     if (!adjustMode) return;
     try {
-      sessionStorage.setItem("merchy_cta_margins", JSON.stringify({ top: ctaMarginTop, bottom: ctaMarginBottom }));
+      sessionStorage.setItem("merchy_spacing_scale", String(spacingScale));
     } catch {}
-  }, [adjustMode, ctaMarginTop, ctaMarginBottom]);
+  }, [adjustMode, spacingScale]);
+
+  // Valores base (px @ escala 1) de cada nivel de espacio -- ver
+  // comentario de arriba.
+  const GAP_LONG = 20 * spacingScale; // entre pasos distintos (title/desc/info/color/cantidad)
+  const GAP_SHORT = 8 * spacingScale; // etiqueta -> su propio contenido
+  const GAP_QTY_TO_TALLAS = 14.5 * spacingScale;
+  const GAP_TALLAS_LABEL = 6 * spacingScale;
+  const GAP_CTA_TOP = 28 * spacingScale;
+  const GAP_CTA_BOTTOM = 8 * spacingScale;
   // Microinteracción minimalista al hacer clic en "Personalizar
   // producto" -- pedido explícito: reemplaza POR COMPLETO la versión
   // anterior ("MAGIC SWEEP", con franjas de luz de dos colores +
@@ -1382,12 +1389,12 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         </div>
 
         {/* ── Info ── */}
-        {/* space-y-[29px] -> [20px] -- pedido explícito (ver charla
-            2026-09-16): para que "Personalizar producto"/"Agregar al
-            carrito" queden visibles junto con la foto principal, sin
-            scroll. Ningún tamaño de letra cambia -- el hueco entre
-            secciones era el verdadero sobrante, no la tipografía. */}
-        <div className="space-y-5">
+        {/* Cada bloque trae su propio marginTop en vez de un space-y
+            compartido -- pedido explícito (ver charla 2026-09-16): así el
+            ajustador puede escalar TODOS los espacios a la vez (mismo
+            GAP_LONG/GAP_SHORT que se usan más abajo) sin perder la
+            relación entre los cortos y los largos. */}
+        <div>
           <div>
             {/* Reemplaza el breadcrumb de arriba de la página ("Catálogo ›
                 Sudadera Ocean") -- pedido explícito (ver charla
@@ -1395,7 +1402,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                 le faltaba el link a Catálogo para ser un breadcrumb
                 completo. Quitar el otro ahorra el espacio que empujaba las
                 miniaturas fuera del viewport. */}
-            <p className="mb-2 text-[13px] text-ui-gray">
+            <p className="text-[13px] text-ui-gray" style={{ marginBottom: GAP_SHORT }}>
               <Link href="/catalogo" className="transition-colors duration-200 hover:text-primary active:text-primary">
                 Catálogo
               </Link>
@@ -1415,15 +1422,15 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                 charla 2026-09-16), para compensar la holgura nueva de los
                 CTAs de abajo sin que vuelva a hacer falta scroll. */}
             <h1 className="font-display font-extrabold text-[23px] sm:text-[29px] text-foreground uppercase tracking-tight">{product.name}</h1>
-            <p className="text-[11px] text-ui-gray mt-2">{product.sku}</p>
+            <p className="text-[11px] text-ui-gray" style={{ marginTop: GAP_SHORT }}>{product.sku}</p>
           </div>
 
           {product.description && (
-            <p className="text-[13px] text-ui-gray leading-[1.5]">{product.description}</p>
+            <p className="text-[13px] text-ui-gray leading-[1.5]" style={{ marginTop: GAP_LONG }}>{product.description}</p>
           )}
 
           {/* Info row */}
-          <div className="flex gap-x-6 text-[13px] text-foreground">
+          <div className="flex gap-x-6 text-[13px] text-foreground" style={{ marginTop: GAP_LONG }}>
             <div className="flex-1 flex flex-col gap-3">
               {product.composition && (
                 <span className="flex items-start gap-1.5">
@@ -1458,8 +1465,8 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
 
           {/* Color selector */}
           {activeVariants.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
+            <div style={{ marginTop: GAP_LONG }}>
+              <div className="flex items-center justify-between" style={{ marginBottom: GAP_SHORT }}>
                 <p className="text-[13px] font-semibold text-foreground">
                   1. Selecciona Color: <span className="font-normal text-ui-gray">{selectedVariant?.color_name}</span>
                 </p>
@@ -1498,9 +1505,9 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
           )}
 
           {/* Cantidad + precio */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between" style={{ marginTop: GAP_LONG }}>
             <div>
-              <p className="text-[13px] font-semibold text-foreground mb-2">2. Selecciona Cantidad</p>
+              <p className="text-[13px] font-semibold text-foreground" style={{ marginBottom: GAP_SHORT }}>2. Selecciona Cantidad</p>
               <div className="flex items-center gap-4 bg-gray-50 border border-ui-border rounded-full px-2 py-1.5 w-fit">
                 <button
                   type="button"
@@ -1553,7 +1560,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               <p className="text-[29px] font-extrabold text-foreground tracking-tight">
                 {formatMXN(unitPrice)} <span className="text-sm font-normal text-ui-gray">MXN</span>
               </p>
-              <p className="text-[11px] text-ui-gray mt-2">IVA incluido c/u</p>
+              <p className="text-[11px] text-ui-gray" style={{ marginTop: GAP_SHORT }}>IVA incluido c/u</p>
               <p className="text-[11px] text-ui-gray">Total: {formatMXN(totalPrice)}</p>
             </div>
           </div>
@@ -1562,11 +1569,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               tallas. 1 pieza ya es una cantidad válida y completa: no hay
               ningún paso de confirmación ni un quantity > 1 de por medio. */}
           {showSizes && (
-            // mt inline para pisar el space-y-[29px] del padre solo aquí --
-            // pedido explícito (ver charla 2026-09-16): la mitad del
-            // espacio que había con "2. Selecciona Cantidad" arriba, sin
-            // tocar el resto de separaciones de la columna.
-            <div className="space-y-2" style={{ marginTop: "14.5px" }}>
+            <div className="space-y-2" style={{ marginTop: GAP_QTY_TO_TALLAS }}>
               <div className="space-y-3">
                 {sections.map((s) => (
                   <AnimatedSizeSection
@@ -1574,7 +1577,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                     leaving={s.leaving}
                     onExited={() => handleSectionExited(s.id)}
                   >
-                    <p className="text-[13px] font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
+                    <p className="text-[13px] font-semibold text-foreground" style={{ marginBottom: GAP_TALLAS_LABEL }}>Tallas - {s.variant.color_name}</p>
                     <div className="flex items-center gap-3 flex-nowrap">
                       {/* Con una sola talla real ("Único"), el chip +/- de
                           abajo sería el mismo número que la tarjeta de total
@@ -1624,7 +1627,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               agregaba superaban por mucho lo que los ajustes de
               tipografía de arriba lograban recuperar (~8-10px). Bajado a
               un valor mucho más conservador. */}
-          <div className="flex gap-3" style={{ marginTop: ctaMarginTop, marginBottom: ctaMarginBottom }}>
+          <div className="flex gap-3" style={{ marginTop: GAP_CTA_TOP, marginBottom: GAP_CTA_BOTTOM }}>
             <Link
               href={personalizarHref}
               aria-disabled={!canPersonalize}
@@ -1845,31 +1848,33 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
           Borrar este bloque completo (y sus 2 useEffect + useSearchParams)
           en cuanto el número final quede fijo en el style de arriba. */}
       {adjustMode && (
-        <div className="fixed bottom-4 right-4 z-[999] w-72 rounded-2xl bg-foreground/95 p-4 text-white shadow-2xl backdrop-blur">
-          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-white/60">Ajustar margen de los CTAs</p>
-          <label className="mb-3 block text-xs">
-            Arriba: <span className="font-mono font-bold">{ctaMarginTop}px</span>
-            <input
-              type="range"
-              min={0}
-              max={64}
-              value={ctaMarginTop}
-              onChange={(e) => setCtaMarginTop(Number(e.target.value))}
-              className="mt-1 w-full accent-primary"
-            />
-          </label>
+        <div className="fixed bottom-4 right-4 z-[999] w-80 rounded-2xl bg-foreground/95 p-4 text-white shadow-2xl backdrop-blur">
+          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-white/60">Escala de espacios (columna derecha)</p>
           <label className="block text-xs">
-            Abajo: <span className="font-mono font-bold">{ctaMarginBottom}px</span>
+            Escala: <span className="font-mono font-bold">{spacingScale.toFixed(2)}×</span>
             <input
               type="range"
-              min={0}
-              max={64}
-              value={ctaMarginBottom}
-              onChange={(e) => setCtaMarginBottom(Number(e.target.value))}
+              min={0.4}
+              max={2}
+              step={0.05}
+              value={spacingScale}
+              onChange={(e) => setSpacingScale(Number(e.target.value))}
               className="mt-1 w-full accent-primary"
             />
           </label>
-          <p className="mt-3 text-[11px] text-white/60">Cuando quede bien, dime estos 2 números y los dejo fijos en el código.</p>
+          <div className="mt-3 grid grid-cols-2 gap-y-1 gap-x-3 font-mono text-[11px] text-white/80">
+            <span>Cortos (etiqueta→contenido):</span>
+            <span className="text-right font-bold text-white">{GAP_SHORT.toFixed(1)}px</span>
+            <span>Largos (entre pasos):</span>
+            <span className="text-right font-bold text-white">{GAP_LONG.toFixed(1)}px</span>
+            <span>Cantidad→Tallas:</span>
+            <span className="text-right font-bold text-white">{GAP_QTY_TO_TALLAS.toFixed(1)}px</span>
+            <span>"Tallas" → chips:</span>
+            <span className="text-right font-bold text-white">{GAP_TALLAS_LABEL.toFixed(1)}px</span>
+            <span>CTA arriba / abajo:</span>
+            <span className="text-right font-bold text-white">{GAP_CTA_TOP.toFixed(1)} / {GAP_CTA_BOTTOM.toFixed(1)}px</span>
+          </div>
+          <p className="mt-3 text-[11px] text-white/60">Cuando quede bien, dime el número de "Escala" y lo dejo fijo en el código (multiplicando estos mismos valores base).</p>
         </div>
       )}
     </div>
