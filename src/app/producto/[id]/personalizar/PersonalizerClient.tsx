@@ -1435,11 +1435,11 @@ export default function PersonalizerClient({
       // cliente vuelve a personalizar este mismo producto después.
       removeItem(draftCartItemId);
       clearDraft(product.id);
-      // "Siguiente" ya no se queda en esta misma página -- pedido
-      // explícito: de aquí en adelante el flujo continúa directo en el
-      // checkout que se acaba de construir (/checkout), el mismo destino
-      // al que ya lleva "Finalizar compra" desde el carrito.
-      router.push("/checkout");
+      // Revertido -- pedido explícito (ver charla 2026-09-16): "Siguiente"
+      // vuelve a mandar al carrito, no directo a checkout. El carrito es
+      // justo la pantalla donde el cliente revisa/resume su compra (y
+      // ahora también ve la fecha estimada de entrega) antes de pagar.
+      router.push("/carrito");
     } finally {
       setAddingToCart(false);
     }

@@ -8,8 +8,16 @@ import PublicHeader from "@/components/PublicHeader";
 import { createClient } from "@/lib/supabase/client";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
 import { formatMXN, recomputeCartItemUnitPrice } from "@/lib/pricing";
+import { getShippingZone, computeEtaRange, formatEtaRange } from "@/lib/shipping";
 import CotizacionDoc from "./CotizacionDoc";
-import type { CartItem, PriceTier } from "@/types";
+import type { CartItem, PriceTier, ProductionTimeTier, ShippingZone } from "@/types";
+
+// Recuerda el último CP que este navegador usó para ver la fecha estimada
+// -- no hay cuentas de cliente reales en la tienda todavía (ver charla
+// 2026-09-16), así que esto es lo más parecido a "ya tiene una dirección
+// asignada" sin construir un sistema de perfiles nuevo: la próxima visita
+// desde el mismo navegador ya no tiene que volver a escribirlo.
+const LAST_CP_KEY = "merchy_last_cp";
 
 function CartEmptyIcon({ className = "" }: { className?: string }) {
   return (
@@ -60,6 +68,18 @@ export default function CarritoPage() {
   const [downloadingCotizacion, setDownloadingCotizacion] = useState(false);
   const cotizacionRef = useRef<HTMLDivElement>(null);
 
+  // Fecha estimada de entrega -- pedido explícito (ver charla 2026-09-16):
+  // el carrito es donde el cliente resume su compra, así que también debe
+  // ver cuándo le llega, con la misma lógica de zona+producción que ya usa
+  // el checkout (ver lib/shipping.ts). Envío estándar nada más aquí (un
+  // resumen, no el selector completo) -- el checkout sigue siendo donde se
+  // elige estándar/express de verdad.
+  const [cpInput, setCpInput] = useState("");
+  const [cpCveEnt, setCpCveEnt] = useState<string | null>(null);
+  const [cpStatus, setCpStatus] = useState<"idle" | "loading" | "notfound">("idle");
+  const [shippingZones, setShippingZones] = useState<ShippingZone[]>([]);
+  const [productionTiers, setProductionTiers] = useState<ProductionTimeTier[]>([]);
+
   useEffect(() => {
     const supabase = createClient();
     supabase
@@ -67,7 +87,54 @@ export default function CarritoPage() {
       .select("*")
       .order("qty_min")
       .then(({ data }) => setPriceTiers((data ?? []) as PriceTier[]));
+    supabase
+      .from("shipping_zones")
+      .select("*")
+      .order("sort_order")
+      .then(({ data }) => setShippingZones((data ?? []) as ShippingZone[]));
+    supabase
+      .from("production_time_tiers")
+      .select("*")
+      .order("qty_min")
+      .then(({ data }) => setProductionTiers((data ?? []) as ProductionTimeTier[]));
+    try {
+      const savedCp = localStorage.getItem(LAST_CP_KEY);
+      if (savedCp) setCpInput(savedCp);
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    const cp = cpInput.trim();
+    if (cp.length !== 5) {
+      setCpCveEnt(null);
+      setCpStatus("idle");
+      return;
+    }
+    setCpStatus("loading");
+    const timer = setTimeout(async () => {
+      try {
+        const { buscaCP } = await import("@webrek/mx-cp");
+        const r = await buscaCP(cp);
+        if (!r) {
+          setCpCveEnt(null);
+          setCpStatus("notfound");
+          return;
+        }
+        setCpCveEnt(r.cveEnt);
+        setCpStatus("idle");
+        try {
+          localStorage.setItem(LAST_CP_KEY, cp);
+        } catch {}
+      } catch {
+        setCpCveEnt(null);
+        setCpStatus("notfound");
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [cpInput]);
+
+  const shippingZone = cpCveEnt ? getShippingZone(cpCveEnt, shippingZones) : null;
+  const etaRange = shippingZone ? computeEtaRange(items, shippingZone, "standard", productionTiers) : null;
 
   function draftFor(item: CartItem) {
     return qtyDrafts[item.id] ?? String(item.total_quantity);
@@ -266,6 +333,30 @@ export default function CarritoPage() {
                 <span className="text-xl font-bold text-foreground">{formatMXN(total)} MXN</span>
               </div>
 
+              {/* Fecha estimada de entrega -- ver comentario donde se
+                  declaran cpInput/etaRange arriba. */}
+              <div className="mt-4 rounded-2xl border border-ui-border p-4">
+                <label className="mb-2 block text-xs font-semibold text-foreground">
+                  ¿Cuándo llega? Ingresa tu código postal
+                </label>
+                <input
+                  value={cpInput}
+                  onChange={(e) => setCpInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                  placeholder="00000"
+                  inputMode="numeric"
+                  className="w-full rounded-full border border-ui-border bg-gray-50 px-4 py-2 text-sm text-foreground outline-none focus:border-primary"
+                />
+                {cpStatus === "notfound" && cpInput.length === 5 && (
+                  <p className="mt-2 text-xs text-accent-coral">No encontramos ese código postal.</p>
+                )}
+                {cpInput.length === 5 && cpStatus === "idle" && !shippingZone && (
+                  <p className="mt-2 text-xs text-ui-gray">Todavía no tenemos cobertura de envío calculada para esa zona.</p>
+                )}
+                {etaRange && (
+                  <p className="mt-2 text-sm font-semibold text-primary-dark">{formatEtaRange(etaRange.min, etaRange.max)}</p>
+                )}
+              </div>
+
               <button
                 type="button"
                 onClick={handleDescargarCotizacion}
@@ -294,11 +385,18 @@ export default function CarritoPage() {
       </div>
 
       {/* Documento de la cotización, renderizado siempre (nunca solo al
-          descargar) pero fuera de pantalla -- toPng necesita el nodo real
-          ya pintado con sus imágenes cargadas; mismo criterio que usan los
-          PDFs de ONPOINT (VisualFinalSection.tsx). */}
+          descargar) pero invisible -- toPng necesita el nodo real ya
+          pintado con sus imágenes cargadas; mismo criterio que usan los
+          PDFs de ONPOINT (VisualFinalSection.tsx). Invisible con opacity
+          (no "left: -9999px") -- pedido explícito (ver charla
+          2026-09-16): posicionarlo fuera de pantalla hacía que
+          html-to-image calculara mal las cajas alineadas a la derecha
+          (precios, resumen), y esas simplemente no aparecían en el PDF
+          descargado. En coordenadas reales (0,0) + opacity:0 + z-index
+          negativo, el navegador lo sigue pintando normal (por eso toPng
+          lo captura completo) pero nunca se ve ni se puede tocar. */}
       {items.length > 0 && (
-        <div style={{ position: "fixed", left: -9999, top: 0, pointerEvents: "none" }} aria-hidden="true">
+        <div style={{ position: "fixed", top: 0, left: 0, opacity: 0, pointerEvents: "none", zIndex: -1 }} aria-hidden="true">
           <div ref={cotizacionRef}>
             <CotizacionDoc items={items} subtotalConIva={total} />
           </div>
