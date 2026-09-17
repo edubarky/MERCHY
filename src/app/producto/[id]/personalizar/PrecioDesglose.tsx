@@ -92,9 +92,7 @@ export default function PrecioDesglose({
           <div className="my-2 h-px bg-ui-border" />
           <div className="flex items-baseline justify-between gap-3 py-1 font-display text-[17px] font-bold text-foreground">
             <span>Total</span>
-            <span className="tabular-nums">
-              {formatMXN(total)} <span className="text-xs font-normal text-ui-gray">MXN</span>
-            </span>
+            <span className="tabular-nums">{formatMXN(total)} MXN</span>
           </div>
           <div className="my-2 h-px bg-foreground/15" />
           <Row label={<>Subtotal <span className="text-[11px] text-ui-gray">(sin IVA)</span></>} value={formatMXN(subtotal)} muted />
