@@ -7,19 +7,33 @@ import { formatMXN, splitIva } from "@/lib/pricing";
 // para sus PDFs) y toPng lo rasteriza tal cual se ve aquí. Fondo blanco
 // explícito porque esto nunca se pinta dentro del layout normal de la
 // página (donde heredaría el fondo del body).
+//
+// Todo lo alineado a la derecha (precios, fecha, resumen) va en <table>
+// en vez de flex justify-between/ml-auto/text-right -- confirmado en vivo
+// (ver charla 2026-09-16) que html-to-image calcula mal esas cajas y las
+// deja fuera del PNG capturado. Las tablas usan un algoritmo de layout
+// distinto (celdas con ancho fijo por columna) que sí se captura bien.
 export default function CotizacionDoc({ items, subtotalConIva }: { items: CartItem[]; subtotalConIva: number }) {
   const { subtotal, iva } = splitIva(subtotalConIva);
 
   return (
     <div className="w-[820px] bg-white p-10 text-foreground" style={{ fontFamily: "inherit" }}>
-      <div className="flex items-center justify-between border-b-2 border-foreground pb-4">
-        <span className="font-display text-2xl font-bold text-primary-dark">merchy</span>
-        <div className="text-right text-xs text-ui-gray">
-          <p className="font-display text-sm font-bold text-foreground">Cotización</p>
-          <p>{new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}</p>
-          <p>Válida sujeta a existencias — no es un comprobante fiscal.</p>
-        </div>
-      </div>
+      <table style={{ width: "100%", borderBottom: "2px solid #1a1a1a", paddingBottom: 16 }}>
+        <tbody>
+          <tr>
+            <td style={{ verticalAlign: "bottom", paddingBottom: 16 }}>
+              <span className="font-display text-2xl font-bold text-primary-dark">merchy</span>
+            </td>
+            <td style={{ verticalAlign: "bottom", textAlign: "right", paddingBottom: 16 }}>
+              <p className="font-display text-sm font-bold text-foreground">Cotización</p>
+              <p className="text-xs text-ui-gray">
+                {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}
+              </p>
+              <p className="text-xs text-ui-gray">Válida sujeta a existencias — no es un comprobante fiscal.</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <div className="mt-6 flex flex-col gap-4">
         {items.map((item) => {
@@ -32,53 +46,86 @@ export default function CotizacionDoc({ items, subtotalConIva }: { items: CartIt
           const techniqueTotal = (item.customization_snapshot?.selected_techniques ?? []).reduce((s, t) => s + (t.unit_price ?? 0), 0);
           const garmentUnit = Math.max(0, item.unit_price - techniqueTotal);
           return (
-            <div key={item.id} className="flex gap-4 border-b border-ui-border pb-4">
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50">
-                {thumb ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={thumb} alt={item.product.name} className="h-full w-full object-contain" />
-                ) : null}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-display text-sm font-bold uppercase text-foreground">{item.product.name}</p>
-                <p className="mt-0.5 text-xs text-ui-gray">
-                  {color?.color_name ?? "—"}
-                  {sizesLabel ? ` · ${sizesLabel}` : ""} · {item.technique?.name ?? "Sin personalizar"}
-                </p>
-                <div className="mt-2 space-y-0.5 text-xs">
-                  <p className="flex justify-between text-ui-gray"><span>Producto</span><span>{formatMXN(garmentUnit)}</span></p>
-                  {(item.customization_snapshot?.selected_techniques ?? []).map((t) => (
-                    <p key={t.technique_id} className="flex justify-between text-ui-gray">
-                      <span>
-                        {t.technique_name}
-                        {t.positions?.length ? ` · ${t.positions.join(", ")}` : ""}
-                        {t.tintas ? ` · ${t.tintas} ${t.tintas === 1 ? "tinta" : "tintas"}` : ""}
-                      </span>
-                      <span>{t.needs_quote || t.unit_price == null ? "Por cotizar" : formatMXN(t.unit_price)}</span>
+            <table key={item.id} style={{ width: "100%", borderBottom: "1px solid #E5E5E5", paddingBottom: 16 }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: 96, verticalAlign: "top" }}>
+                    <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50">
+                      {thumb ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={thumb} alt={item.product.name} className="h-full w-full object-contain" />
+                      ) : null}
+                    </div>
+                  </td>
+                  <td style={{ paddingLeft: 16, verticalAlign: "top" }}>
+                    <p className="font-display text-sm font-bold uppercase text-foreground">{item.product.name}</p>
+                    <p className="mt-0.5 text-xs text-ui-gray">
+                      {color?.color_name ?? "—"}
+                      {sizesLabel ? ` · ${sizesLabel}` : ""} · {item.technique?.name ?? "Sin personalizar"}
                     </p>
-                  ))}
-                  <p className="flex justify-between border-t border-dashed border-ui-border pt-0.5 font-semibold text-foreground">
-                    <span>Precio por pieza</span>
-                    <span>{formatMXN(item.unit_price)}</span>
-                  </p>
-                </div>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-xs text-ui-gray">{item.total_quantity} pzas</p>
-                <p className="font-display text-sm font-bold text-foreground">{formatMXN(item.total_price)}</p>
-              </div>
-            </div>
+                    <table style={{ width: "100%", marginTop: 8 }}>
+                      <tbody>
+                        <tr className="text-xs text-ui-gray">
+                          <td style={{ padding: "1px 0" }}>Producto</td>
+                          <td style={{ padding: "1px 0", textAlign: "right" }}>{formatMXN(garmentUnit)}</td>
+                        </tr>
+                        {(item.customization_snapshot?.selected_techniques ?? []).map((t) => (
+                          <tr key={t.technique_id} className="text-xs text-ui-gray">
+                            <td style={{ padding: "1px 0" }}>
+                              {t.technique_name}
+                              {t.positions?.length ? ` · ${t.positions.join(", ")}` : ""}
+                              {t.tintas ? ` · ${t.tintas} ${t.tintas === 1 ? "tinta" : "tintas"}` : ""}
+                            </td>
+                            <td style={{ padding: "1px 0", textAlign: "right" }}>
+                              {t.needs_quote || t.unit_price == null ? "Por cotizar" : formatMXN(t.unit_price)}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="text-xs font-semibold text-foreground" style={{ borderTop: "1px dashed #E5E5E5" }}>
+                          <td style={{ padding: "3px 0 0" }}>Precio por pieza</td>
+                          <td style={{ padding: "3px 0 0", textAlign: "right" }}>{formatMXN(item.unit_price)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                  <td style={{ width: 110, verticalAlign: "top", textAlign: "right", paddingLeft: 16 }}>
+                    <p className="text-xs text-ui-gray">{item.total_quantity} pzas</p>
+                    <p className="font-display text-sm font-bold text-foreground">{formatMXN(item.total_price)}</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           );
         })}
       </div>
 
-      <div className="ml-auto mt-2 w-64 space-y-1 text-sm">
-        <p className="flex justify-between text-ui-gray"><span>Subtotal <span className="text-xs">(sin IVA)</span></span><span>{formatMXN(subtotal)}</span></p>
-        <p className="flex justify-between text-ui-gray"><span>IVA 16%</span><span>{formatMXN(iva)}</span></p>
-        <p className="flex justify-between border-t-2 border-foreground pt-1.5 font-display text-lg font-bold text-foreground">
-          <span>Total</span><span>{formatMXN(subtotalConIva)}</span>
-        </p>
-      </div>
+      <table style={{ width: "100%", marginTop: 16 }}>
+        <tbody>
+          <tr>
+            <td style={{ width: 508 }} />
+            <td style={{ width: 212 }}>
+              <table style={{ width: "100%" }}>
+                <tbody>
+                  <tr className="text-sm text-ui-gray">
+                    <td style={{ padding: "2px 0" }}>
+                      Subtotal <span className="text-xs">(sin IVA)</span>
+                    </td>
+                    <td style={{ padding: "2px 0", textAlign: "right" }}>{formatMXN(subtotal)}</td>
+                  </tr>
+                  <tr className="text-sm text-ui-gray">
+                    <td style={{ padding: "2px 0" }}>IVA 16%</td>
+                    <td style={{ padding: "2px 0", textAlign: "right" }}>{formatMXN(iva)}</td>
+                  </tr>
+                  <tr className="font-display text-lg font-bold text-foreground" style={{ borderTop: "2px solid #1a1a1a" }}>
+                    <td style={{ padding: "6px 0 0" }}>Total</td>
+                    <td style={{ padding: "6px 0 0", textAlign: "right" }}>{formatMXN(subtotalConIva)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <p className="mt-6 border-t border-ui-border pt-3 text-center text-[10px] text-ui-gray">
         merchy.mx · Precios en MXN, IVA incluido. El envío se calcula al finalizar la compra.
