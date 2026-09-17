@@ -1206,17 +1206,6 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     if (!Number.isNaN(parsed)) setMainQuantity(parsed);
     setEditingMainQty(false);
   }
-  // El título de la sección de tallas es fijo — "Selecciona la talla" no
-  // cambia con la cantidad. La leyenda debajo sí, en tiempo real: como la
-  // cantidad total ahora ES la suma de tallas, solo hay dos estados
-  // posibles — nada asignado todavía, o ya asignado (siempre exacto, por
-  // definición no puede haber piezas "de más" ni "por asignar").
-  const sizeSectionTitle = "Selecciona la talla";
-  const sizeSectionHint =
-    sizeSum === 0
-      ? "Distribuye tu 1 pieza entre las tallas disponibles"
-      : `${sizeSum} pieza${sizeSum === 1 ? "" : "s"} asignada${sizeSum === 1 ? "" : "s"} ✓`;
-
   // El promedio y la distribución consideran tanto las reseñas escritas
   // como las calificaciones "solo estrellas" (sin tarjeta de comentario).
   const allRatingValues = [...reviews.map((r) => r.rating), ...standaloneRatings];
@@ -1291,9 +1280,12 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      {/* Breadcrumb */}
-      <nav className="text-sm text-ui-gray mb-6">
+    <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+      {/* Breadcrumb -- mb-6 -> mb-3 y el py-8 de arriba -> py-4 del
+          contenedor entero (pedido explícito, ver charla 2026-09-16): la
+          foto principal + este espacio empujaban la fila de miniaturas
+          fuera del viewport en laptops típicas. */}
+      <nav className="text-sm text-ui-gray mb-3">
         <a href="/catalogo" className="hover:text-primary transition-colors">Catálogo</a>
         <span className="mx-2">›</span>
         <span className="text-foreground">{product.name}</span>
@@ -1302,7 +1294,12 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* ── Galería ── */}
         <div className="space-y-4">
-          <div className="aspect-square rounded-[28px] overflow-hidden bg-white border border-[#F1F1F1] shadow-[0_20px_60px_rgba(0,0,0,0.05)] relative">
+          {/* Antes aspect-square (tan alta como ancha) -- con el ancho real
+              de esta columna eso empujaba las miniaturas de abajo fuera de
+              la pantalla. Altura fija más baja en su lugar; object-contain
+              en la <img> de dentro sigue mostrando la foto completa sin
+              recortarla, solo con un poco más de margen arriba/abajo. */}
+          <div className="h-[420px] rounded-[28px] overflow-hidden bg-white border border-[#F1F1F1] shadow-[0_20px_60px_rgba(0,0,0,0.05)] relative">
             {/* Halos de profundidad — iluminación ambiental muy sutil detrás del producto */}
             <div
               className="absolute inset-0 pointer-events-none"
@@ -1523,10 +1520,6 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               ningún paso de confirmación ni un quantity > 1 de por medio. */}
           {showSizes && (
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-foreground">{sizeSectionTitle}</p>
-              {sizeSectionHint && (
-                <p className="text-xs text-ui-gray">{sizeSectionHint}</p>
-              )}
               <div className="space-y-3">
                 {sections.map((s) => (
                   <AnimatedSizeSection
