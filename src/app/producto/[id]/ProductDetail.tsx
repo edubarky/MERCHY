@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Product, ProductVariant, PriceTier, CartItem } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
@@ -854,6 +854,35 @@ function TotalPzasCard({ total, onChange }: { total: number; onChange?: (next: n
 export default function ProductDetail({ product, priceTiers, resolvedGallery, modelShots }: Props) {
   const router = useRouter();
   const { items: cartItems, upsertItem, removeItem, hydrated } = useCart();
+
+  // Ajustador temporal de espaciado -- SOLO visible con ?ajustar=1 en la
+  // URL, nunca para un cliente real (ver charla 2026-09-16: 2 intentos a
+  // ciegas del margen de los CTAs fallaron, esto deja que se pruebe en
+  // vivo hasta que quede bien y luego se me pasa el número final para
+  // dejarlo fijo en el código -- después se puede borrar todo este
+  // bloque). Guardado en sessionStorage para que sobreviva un refresh
+  // mientras se está ajustando.
+  const searchParams = useSearchParams();
+  const adjustMode = searchParams.get("ajustar") === "1";
+  const [ctaMarginTop, setCtaMarginTop] = useState(24);
+  const [ctaMarginBottom, setCtaMarginBottom] = useState(8);
+  useEffect(() => {
+    if (!adjustMode) return;
+    try {
+      const saved = sessionStorage.getItem("merchy_cta_margins");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setCtaMarginTop(parsed.top);
+        setCtaMarginBottom(parsed.bottom);
+      }
+    } catch {}
+  }, [adjustMode]);
+  useEffect(() => {
+    if (!adjustMode) return;
+    try {
+      sessionStorage.setItem("merchy_cta_margins", JSON.stringify({ top: ctaMarginTop, bottom: ctaMarginBottom }));
+    } catch {}
+  }, [adjustMode, ctaMarginTop, ctaMarginBottom]);
   // Microinteracción minimalista al hacer clic en "Personalizar
   // producto" -- pedido explícito: reemplaza POR COMPLETO la versión
   // anterior ("MAGIC SWEEP", con franjas de luz de dos colores +
@@ -1595,7 +1624,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               agregaba superaban por mucho lo que los ajustes de
               tipografía de arriba lograban recuperar (~8-10px). Bajado a
               un valor mucho más conservador. */}
-          <div className="flex gap-3" style={{ marginTop: "24px", marginBottom: "8px" }}>
+          <div className="flex gap-3" style={{ marginTop: ctaMarginTop, marginBottom: ctaMarginBottom }}>
             <Link
               href={personalizarHref}
               aria-disabled={!canPersonalize}
@@ -1811,6 +1840,38 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         initialRating={modalInitialRating}
         onSubmit={handlePublishReview}
       />
+
+      {/* Ajustador temporal -- ver comentario donde se declara adjustMode.
+          Borrar este bloque completo (y sus 2 useEffect + useSearchParams)
+          en cuanto el número final quede fijo en el style de arriba. */}
+      {adjustMode && (
+        <div className="fixed bottom-4 right-4 z-[999] w-72 rounded-2xl bg-foreground/95 p-4 text-white shadow-2xl backdrop-blur">
+          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-white/60">Ajustar margen de los CTAs</p>
+          <label className="mb-3 block text-xs">
+            Arriba: <span className="font-mono font-bold">{ctaMarginTop}px</span>
+            <input
+              type="range"
+              min={0}
+              max={64}
+              value={ctaMarginTop}
+              onChange={(e) => setCtaMarginTop(Number(e.target.value))}
+              className="mt-1 w-full accent-primary"
+            />
+          </label>
+          <label className="block text-xs">
+            Abajo: <span className="font-mono font-bold">{ctaMarginBottom}px</span>
+            <input
+              type="range"
+              min={0}
+              max={64}
+              value={ctaMarginBottom}
+              onChange={(e) => setCtaMarginBottom(Number(e.target.value))}
+              className="mt-1 w-full accent-primary"
+            />
+          </label>
+          <p className="mt-3 text-[11px] text-white/60">Cuando quede bien, dime estos 2 números y los dejo fijos en el código.</p>
+        </div>
+      )}
     </div>
   );
 }
