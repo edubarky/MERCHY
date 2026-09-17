@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { CartItem } from "@/types";
+import { createClient } from "@/lib/supabase/client";
+import { deleteSavedLogoByUrl } from "@/lib/artLibrary/ArtLibraryContext";
 
 const STORAGE_KEY = "merchy_cart_v1";
 
@@ -29,6 +31,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const supabaseRef = useRef(createClient());
 
   useEffect(() => {
     try {
@@ -77,8 +80,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  // Al quitar un renglón, se borran también los logos que ese diseño haya
+  // subido -- pedido explícito (ver charla 2026-09-16): "no quiero que se
+  // guarden TODOS los logos que un usuario llene en su vida", solo
+  // mientras el diseño siga en el carrito. NUNCA se llama desde
+  // clearCart() (ver ahí abajo) -- ese se dispara también después de un
+  // checkout exitoso, donde el pedido YA guardó su propio
+  // customization_snapshot apuntando a estos mismos archivos; borrarlos
+  // ahí rompería la producción real del pedido.
   function removeItem(id: string) {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+    setItems((prev) => {
+      const item = prev.find((i) => i.id === id);
+      const urls = item?.customization_snapshot?.logos.map((l) => l.url).filter((u): u is string => !!u) ?? [];
+      new Set(urls).forEach((url) => deleteSavedLogoByUrl(supabaseRef.current, url));
+      return prev.filter((i) => i.id !== id);
+    });
   }
 
   function clearCart() {

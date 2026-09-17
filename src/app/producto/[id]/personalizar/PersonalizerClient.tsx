@@ -33,7 +33,6 @@ import { getPrintArea, getApplicableViews, isGarmentProduct } from "./printAreas
 import DesignElementView, { DEFAULT_FONT_SIZE_PX, FONT_SIZE_MIN_PX, FONT_SIZE_MAX_PX } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
 
-import ArtLibraryPanel from "./ArtLibraryPanel";
 import SelectionToolbar from "./SelectionToolbar";
 import DesignOptionsPanel from "./DesignOptionsPanel";
 import PrintTechniqueCards from "./PrintTechniqueCards";
@@ -401,7 +400,6 @@ export default function PersonalizerClient({
   // isWithinCanvas(); the notice shows only while true is false and
   // something is selected.
   const [interactionInBounds, setInteractionInBounds] = useState(true);
-  const [artLibraryOpen, setArtLibraryOpen] = useState(false);
   // Se pone en true recién después de que el efecto de restaurar el
   // borrador (ver más abajo) ya corrió una vez -- el efecto de GUARDAR usa
   // esto para no disparar en el primer render con los valores todavía
@@ -429,7 +427,7 @@ export default function PersonalizerClient({
   // carrito. Nunca choca con el id de un renglón ya confirmado (ver
   // handleAddToCart, que usa uid() para ese).
   const draftCartItemId = productDraftCartItemId(product.id);
-  const { assets: artAssets, loading: artLibraryLoading, addAsset, removeAsset } = useArtLibrary();
+  const { addAsset } = useArtLibrary();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1867,16 +1865,6 @@ export default function PersonalizerClient({
               className="hidden"
               onChange={(e) => handleLogoFiles(e.target.files)}
             />
-
-            {artAssets.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setArtLibraryOpen(true)}
-                className="mt-2.5 text-xs font-semibold text-primary-dark hover:underline"
-              >
-                Mis diseños guardados ({artAssets.length})
-              </button>
-            )}
           </div>
 
           <div>
@@ -2046,22 +2034,6 @@ export default function PersonalizerClient({
         );
       })()}
 
-      <ArtLibraryPanel
-        open={artLibraryOpen}
-        onClose={() => setArtLibraryOpen(false)}
-        assets={artAssets}
-        loading={artLibraryLoading}
-        onSelect={(asset) => {
-          placeAsset(asset);
-          setArtLibraryOpen(false);
-        }}
-        onRemove={removeAsset}
-        onAddNew={async (file) => {
-          const asset = await addAsset(file);
-          if (asset) placeAsset(asset);
-          setArtLibraryOpen(false);
-        }}
-      />
     </div>
   );
 }
