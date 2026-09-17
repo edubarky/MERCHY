@@ -10,7 +10,7 @@ import { formatMXN, splitIva } from "@/lib/pricing";
 // que se cobra); Subtotal e IVA se sacan de él (Total ÷ 1.16), así el IVA
 // queda como exactamente 16% del subtotal.
 
-export interface TechRow {
+interface TechRow {
   technique: PrintTechnique;
   unitPrice: number | null; // ya con IVA
   needsQuote: boolean;

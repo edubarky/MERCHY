@@ -2006,13 +2006,6 @@ export default function PersonalizerClient({
         technique={primaryTechnique}
         resolvedAssets={resolvedAssets}
         garmentColor={garmentColor}
-        product={product}
-        activeVariant={activeVariant}
-        garmentUnit={garmentUnit}
-        techniqueResults={techniqueResults}
-        quantity={quantity}
-        total={total}
-        anyTechniqueNeedsQuote={anyTechniqueNeedsQuote}
         onConfirm={() => {
           setPreviewOpen(false);
           handleAddToCart();
