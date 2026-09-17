@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Product, ProductVariant, PriceTier, CartItem } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
@@ -854,6 +854,12 @@ function TotalPzasCard({ total, onChange }: { total: number; onChange?: (next: n
 export default function ProductDetail({ product, priceTiers, resolvedGallery, modelShots }: Props) {
   const router = useRouter();
   const { items: cartItems, upsertItem, removeItem, hydrated } = useCart();
+  // Presente cuando se vuelve aquí con "Atrás" desde el Personalizador
+  // mientras se editaba un renglón YA CONFIRMADO del carrito (ver
+  // PersonalizerClient's "Atrás" y editarHref en carrito/page.tsx) -- el
+  // efecto de restauración de abajo lo usa para saber CUÁL renglón leer
+  // en vez de asumir siempre el borrador "en progreso".
+  const editarCartItemId = useSearchParams().get("editar");
 
   // Espaciado de la columna derecha -- escala 0.75 confirmada en vivo con
   // el ajustador (ver charla 2026-09-16), ya horneada como fija. Los 2
@@ -1028,13 +1034,16 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     setSections((prev) => prev.filter((s) => s.id !== id));
   }
 
-  // Restaura el draft "en curso" de este producto (ver
-  // productDraftCartItemId) al volver a esta página -- ej. con "Atrás"
-  // desde el Personalizador. Sin esto, cada vez que este componente se
-  // vuelve a montar arranca en blanco (color/cantidad/tallas en cero)
-  // aunque el carrito ya tuviera guardado lo que el cliente había elegido
-  // (bug real reportado: "me fui atrás y no funcionó la selección que
-  // tenía"). Corre UNA sola vez, apenas el carrito ya hidrató desde
+  // Restaura el renglón correspondiente de este producto al volver a esta
+  // página -- ej. con "Atrás" desde el Personalizador. Con
+  // editarCartItemId (un renglón YA CONFIRMADO que se estaba editando) lee
+  // ESE renglón exacto; sin él, cae al borrador "en progreso" (ver
+  // productDraftCartItemId) como antes. Sin esto, cada vez que este
+  // componente se vuelve a montar arranca en blanco (color/cantidad/
+  // tallas en cero) aunque el carrito ya tuviera guardado lo que el
+  // cliente había elegido (2 bugs reales reportados: primero con el
+  // borrador, después con un renglón ya confirmado -- editarCartItemId
+  // nunca se leía). Corre UNA sola vez, apenas el carrito ya hidrató desde
   // localStorage -- nunca antes (`cartItems` arranca vacío en el primer
   // render a propósito, ver CartContext) ni de nuevo después de esa
   // primera vez (evitaría pisar ediciones en vivo del cliente con el
@@ -1043,7 +1052,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   useEffect(() => {
     if (!hydrated || restoredDraftRef.current) return;
     restoredDraftRef.current = true;
-    const draft = cartItems.find((i) => i.id === productDraftCartItemId(product.id));
+    const draft = cartItems.find((i) => i.id === (editarCartItemId ?? productDraftCartItemId(product.id)));
     if (!draft || draft.variants.length === 0) return;
 
     const isMulticolor = draft.variants.length > 1;
@@ -1100,8 +1109,19 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // (ver handleAddToCartDirect) -- una sola fuente de verdad para armar el
   // renglón de 1-2, nunca dos copias de esta lógica que puedan divergir.
   function buildDraftCartItem(): CartItem {
+    const id = editarCartItemId ?? productDraftCartItemId(product.id);
+    // Con editarCartItemId (viniendo de "Atrás" mientras se editaba un
+    // renglón YA CONFIRMADO), escribe DIRECTO sobre ese mismo renglón --
+    // pedido explícito (ver charla 2026-09-16): usar siempre el id del
+    // borrador aquí creaba un renglón fantasma aparte, y el cambio de
+    // color/cantidad hecho en este paso nunca llegaba al renglón real.
+    // Preserva su diseño/técnica/precio EXACTOS (nunca los pisa a
+    // null/0 aquí) -- ese renglón ya tiene un diseño confirmado que este
+    // paso no toca; solo se recalculan de verdad al volver a confirmar
+    // en el Personalizador (ver handleAddToCart ahí).
+    const existing = cartItems.find((i) => i.id === id);
     return {
-      id: productDraftCartItemId(product.id),
+      id,
       product,
       variants: activeSections.map((s) => ({
         variant_id: s.variant.id,
@@ -1111,27 +1131,32 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         sizes_breakdown: Object.fromEntries(sizes.map((size) => [size, getSizeQty(s.variant, size)])),
       })),
       total_quantity: quantity,
-      technique_id: null,
-      technique: undefined,
-      num_elements: 0,
-      customization_snapshot: null,
-      unit_price: unitPrice,
-      total_price: totalPrice,
+      technique_id: existing?.technique_id ?? null,
+      technique: existing?.technique,
+      num_elements: existing?.num_elements ?? 0,
+      num_logo_elements: existing?.num_logo_elements,
+      customization_snapshot: existing?.customization_snapshot ?? null,
+      unit_price: existing?.unit_price ?? unitPrice,
+      total_price: existing?.total_price ?? totalPrice,
     };
   }
 
   useEffect(() => {
-    const id = productDraftCartItemId(product.id);
+    const id = editarCartItemId ?? productDraftCartItemId(product.id);
     const timer = setTimeout(() => {
-      if (sizeSum <= 0) {
+      // Un renglón YA CONFIRMADO (editarCartItemId) nunca se quita solo
+      // por bajar la cantidad a 0 -- eso sería borrar un pedido real que
+      // el cliente ya había armado, solo por estar de paso editándolo.
+      if (sizeSum <= 0 && !editarCartItemId) {
         removeItem(id);
         return;
       }
+      if (sizeSum <= 0) return;
       upsertItem(buildDraftCartItem());
     }, 400);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.id, sizeSum, sizeQuantities, multicolor, quantity, unitPrice, totalPrice, sections]);
+  }, [product.id, editarCartItemId, sizeSum, sizeQuantities, multicolor, quantity, unitPrice, totalPrice, sections]);
 
   // "Agregar al carrito" directo (sin personalizar) -- pedido explícito:
   // completar 1-2 y darle aquí debe dejar el renglón confirmado con eso

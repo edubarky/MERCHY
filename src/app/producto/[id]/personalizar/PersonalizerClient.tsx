@@ -1971,7 +1971,15 @@ export default function PersonalizerClient({
               onClick/disabled de siempre. */}
           <div className="flex gap-4">
             <Link
-              href={`/producto/${product.id}`}
+              // Con ?editar=<id> hay que devolver ese mismo parámetro --
+              // pedido explícito (ver charla 2026-09-16): sin él, el paso
+              // 1-2 no tenía ninguna pista de qué renglón YA CONFIRMADO
+              // restaurar (solo sabía buscar el borrador "en progreso",
+              // un id distinto) y arrancaba en blanco (color/cantidad en
+              // cero) aunque el renglón real seguía guardado en el
+              // carrito. Sin editarCartItemId (flujo normal, nunca
+              // confirmado todavía) se queda igual que siempre.
+              href={editarCartItemId ? `/producto/${product.id}?editar=${editarCartItemId}` : `/producto/${product.id}`}
               className="flex h-14 flex-1 items-center justify-center rounded-full border border-foreground bg-white text-base font-semibold text-foreground shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-foreground hover:text-white active:scale-[0.98]"
             >
               Atrás
