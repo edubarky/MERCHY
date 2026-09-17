@@ -53,6 +53,22 @@ function MiniLogoImage({ element }: { element: DesignElement }) {
   );
 }
 
+function DocIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`h-4 w-4 shrink-0 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+}
+
+function RulerIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`h-4 w-4 shrink-0 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8h18M3 8v8a1 1 0 001 1h16a1 1 0 001-1V8M7 8v3m4-3v3m4-3v3m4-3v3" />
+    </svg>
+  );
+}
+
 function DownloadIcon({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
@@ -308,17 +324,38 @@ export default function PreviewModal({
 
               {product.description && <p className="text-sm text-ui-gray leading-relaxed">{product.description}</p>}
 
-              <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-sm text-foreground">
-                {product.composition && (
-                  <span>
-                    <span className="font-semibold">Composición:</span> {product.composition}
+              <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-foreground">
+                <div className="flex flex-col gap-1.5">
+                  {product.composition && (
+                    <span className="flex items-start gap-1.5">
+                      <RulerIcon className="mt-0.5 text-ui-gray" />
+                      <span>
+                        <span className="font-semibold">Composición:</span> {product.composition}
+                      </span>
+                    </span>
+                  )}
+                  {sizesLabel && (
+                    <span className="flex items-center gap-1.5">
+                      <RulerIcon className="text-ui-gray" />
+                      <span>
+                        <span className="font-semibold">Tallas:</span> {sizesLabel}
+                      </span>
+                    </span>
+                  )}
+                </div>
+                {/* Solo informativas aquí (sin abrir su modal) -- pedido
+                    explícito: se quedan visibles, a diferencia de "Rango
+                    de precios" y "Multicolor" que sí se quitaron. */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <DocIcon className="text-ui-gray" />
+                    Ficha técnica
                   </span>
-                )}
-                {sizesLabel && (
-                  <span>
-                    <span className="font-semibold">Tallas:</span> {sizesLabel}
+                  <span className="flex items-center gap-1.5">
+                    <RulerIcon className="text-ui-gray" />
+                    Guía de Tallas
                   </span>
-                )}
+                </div>
               </div>
 
               {product.variants.length > 0 && (
