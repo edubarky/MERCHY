@@ -1790,27 +1790,74 @@ export default function PersonalizerClient({
           <div>
             <span className="mb-3 block text-base font-bold text-foreground">3. Personaliza tu producto</span>
 
-            {/* Sección compacta a propósito (ver charla 2026-09-10): se
-                quitaron la tarjeta "Tus diseños", el subtítulo y la lista
-                de elementos por vista -- el diseño ya se ve en el lienzo y
-                los elementos se manejan desde el panel de Capas. Así el
-                Desglose de precio no queda tan abajo. */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Grid de lo ya agregado en ESTA vista (logos/textos), igual
+                de tiles que "Mis artes" (ver ArtLibraryPanel) -- pedido
+                explícito (ver charla 2026-09-16): antes solo se veían
+                abriendo el panel de Capas; ahora se ven de un vistazo sin
+                ningún pop-up. Clic en un tile selecciona ese elemento
+                (mismo criterio que Capas); la "×" lo borra directo. */}
+            <div className="grid grid-cols-3 gap-3">
+              {[...elements[activeView]]
+                .sort((a, b) => b.zIndex - a.zIndex)
+                .map((el) => (
+                  <div
+                    key={el.id}
+                    className={`group relative aspect-square overflow-hidden rounded-2xl border bg-white transition-all duration-150 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] ${
+                      selectedId === el.id ? "border-primary ring-2 ring-primary/25" : "border-ui-border hover:border-primary/50"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(el.id)}
+                      aria-label={el.type === "logo" ? el.fileName : `Texto “${el.text}”`}
+                      className="flex h-full w-full items-center justify-center p-2.5"
+                    >
+                      {el.type === "logo" ? (
+                        el.src ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={el.src} alt={el.fileName} className="h-full w-full object-contain" draggable={false} />
+                        ) : (
+                          <div className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-md border border-dashed border-gray-400 bg-white/85 p-1 text-center">
+                            <span className="text-[9px] font-semibold uppercase text-ui-gray">{el.fileType}</span>
+                            <span className="truncate px-1 text-[8px] leading-tight text-ui-gray">{el.fileName}</span>
+                          </div>
+                        )
+                      ) : (
+                        <span
+                          className="line-clamp-3 break-words text-center text-xs leading-tight"
+                          style={{ color: el.color, fontFamily: el.fontFamily, fontWeight: el.bold ? 700 : 500, fontStyle: el.italic ? "italic" : "normal" }}
+                        >
+                          "{el.text}"
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteElement(el.id)}
+                      aria-label={el.type === "logo" ? `Eliminar ${el.fileName}` : "Eliminar texto"}
+                      className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-ui-gray opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-opacity duration-150 ease-out hover:text-accent-coral group-hover:opacity-100"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="group flex items-center justify-center gap-2 rounded-2xl border border-ui-border bg-white px-4 py-3 text-sm font-semibold text-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:bg-primary/5"
+                className="group flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-ui-border px-2 text-center text-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5"
               >
-                <ImageToolIcon className="h-4 w-4 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
-                Agregar imagen
+                <ImageToolIcon className="h-5 w-5 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                <span className="text-xs font-semibold leading-tight">Agregar imagen</span>
+                <span className="text-[10px] leading-tight text-ui-gray">PNG, SVG, PDF, AI</span>
               </button>
               <button
                 type="button"
                 onClick={handleAddText}
-                className="group flex items-center justify-center gap-2 rounded-2xl border border-ui-border bg-white px-4 py-3 text-sm font-semibold text-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:bg-primary/5"
+                className="group flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-ui-border px-2 text-center text-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5"
               >
-                <TextToolIcon className="h-4 w-4 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
-                Agregar texto
+                <TextToolIcon className="h-5 w-5 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                <span className="text-xs font-semibold leading-tight">Agregar texto</span>
               </button>
             </div>
             <input

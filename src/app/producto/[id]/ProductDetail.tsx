@@ -853,7 +853,7 @@ function TotalPzasCard({ total, onChange }: { total: number; onChange?: (next: n
 
 export default function ProductDetail({ product, priceTiers, resolvedGallery, modelShots }: Props) {
   const router = useRouter();
-  const { upsertItem, removeItem } = useCart();
+  const { items: cartItems, upsertItem, removeItem, hydrated } = useCart();
   // Microinteracción minimalista al hacer clic en "Personalizar
   // producto" -- pedido explícito: reemplaza POR COMPLETO la versión
   // anterior ("MAGIC SWEEP", con franjas de luz de dos colores +
@@ -1011,6 +1011,42 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   function handleSectionExited(id: string) {
     setSections((prev) => prev.filter((s) => s.id !== id));
   }
+
+  // Restaura el draft "en curso" de este producto (ver
+  // productDraftCartItemId) al volver a esta página -- ej. con "Atrás"
+  // desde el Personalizador. Sin esto, cada vez que este componente se
+  // vuelve a montar arranca en blanco (color/cantidad/tallas en cero)
+  // aunque el carrito ya tuviera guardado lo que el cliente había elegido
+  // (bug real reportado: "me fui atrás y no funcionó la selección que
+  // tenía"). Corre UNA sola vez, apenas el carrito ya hidrató desde
+  // localStorage -- nunca antes (`cartItems` arranca vacío en el primer
+  // render a propósito, ver CartContext) ni de nuevo después de esa
+  // primera vez (evitaría pisar ediciones en vivo del cliente con el
+  // draft viejo cada vez que el autoguardado de abajo actualiza `cartItems`).
+  const restoredDraftRef = useRef(false);
+  useEffect(() => {
+    if (!hydrated || restoredDraftRef.current) return;
+    restoredDraftRef.current = true;
+    const draft = cartItems.find((i) => i.id === productDraftCartItemId(product.id));
+    if (!draft || draft.variants.length === 0) return;
+
+    const isMulticolor = draft.variants.length > 1;
+    setMulticolor(isMulticolor);
+    if (isMulticolor) setSelectedColorIds(draft.variants.map((v) => v.variant_id));
+
+    const lastVariant = activeVariants.find((v) => v.id === draft.variants[draft.variants.length - 1].variant_id);
+    if (lastVariant) setSelectedVariant(lastVariant);
+
+    setSizeQuantities((prev) => {
+      const next = { ...prev };
+      draft.variants.forEach((v) => {
+        const key = isMulticolor ? v.variant_id : SINGLE_COLOR_QTY_KEY;
+        next[key] = { ...v.sizes_breakdown };
+      });
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, cartItems, product.id]);
 
   // Fuente de verdad ÚNICA para la cantidad total: la suma real de piezas
   // repartidas por talla, en las secciones de color visibles. Ya no existe
