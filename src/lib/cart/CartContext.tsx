@@ -88,12 +88,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // checkout exitoso, donde el pedido YA guardó su propio
   // customization_snapshot apuntando a estos mismos archivos; borrarlos
   // ahí rompería la producción real del pedido.
+  //
+  // BUG real encontrado (ver charla 2026-09-17): al confirmar un diseño,
+  // PersonalizerClient hace addItem(nuevo) + removeItem(draftCartItemId)
+  // -- pero el draft y el renglón recién confirmado comparten LA MISMA
+  // url de imagen (es el mismo archivo subido). Sin este chequeo, borrar
+  // el draft borraba también el archivo que el renglón nuevo YA estaba
+  // usando -- el logo desaparecía justo al confirmar. Ahora solo se borra
+  // una url si NINGÚN otro renglón restante la sigue usando.
   function removeItem(id: string) {
     setItems((prev) => {
       const item = prev.find((i) => i.id === id);
+      const remaining = prev.filter((i) => i.id !== id);
       const urls = item?.customization_snapshot?.logos.map((l) => l.url).filter((u): u is string => !!u) ?? [];
-      new Set(urls).forEach((url) => deleteSavedLogoByUrl(supabaseRef.current, url));
-      return prev.filter((i) => i.id !== id);
+      const stillUsed = new Set(
+        remaining.flatMap((i) => i.customization_snapshot?.logos.map((l) => l.url).filter((u): u is string => !!u) ?? [])
+      );
+      new Set(urls).forEach((url) => {
+        if (!stillUsed.has(url)) deleteSavedLogoByUrl(supabaseRef.current, url);
+      });
+      return remaining;
     });
   }
 
