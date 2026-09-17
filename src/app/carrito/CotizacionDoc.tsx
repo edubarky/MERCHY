@@ -107,8 +107,36 @@ export default function CotizacionDoc({
                       </tbody>
                     </table>
 
-                    {/* Color(es) -- con Multicolor, una fila por color con
-                        su propio reparto de tallas. */}
+                    {/* Colores disponibles del producto -- pedido
+                        explícito (ver charla 2026-09-17): para que el
+                        cliente vea en qué colores existe la prenda,
+                        además del que eligió (fila de abajo). Sin
+                        resaltar ninguno aquí -- es solo el catálogo real
+                        del producto, no la elección. */}
+                    {item.product.variants && item.product.variants.filter((v) => v.active).length > 1 && (
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <span className="text-xs text-ui-gray">Colores disponibles:</span>
+                        {item.product.variants
+                          .filter((v) => v.active)
+                          .map((v) => (
+                            <span
+                              key={v.id}
+                              title={v.color_name}
+                              style={{
+                                backgroundColor: v.color_hex,
+                                width: 14,
+                                height: 14,
+                                borderRadius: "50%",
+                                display: "inline-block",
+                                border: "1px solid #E5E5E5",
+                              }}
+                            />
+                          ))}
+                      </div>
+                    )}
+
+                    {/* Color(es) elegido(s) -- con Multicolor, una fila
+                        por color con su propio reparto de tallas. */}
                     <div className="mt-2.5 flex flex-wrap items-center gap-2">
                       {item.variants.map((v) => (
                         <span
