@@ -855,41 +855,42 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const router = useRouter();
   const { items: cartItems, upsertItem, removeItem, hydrated } = useCart();
 
+  // Espaciado de la columna derecha -- escala 0.75 confirmada en vivo con
+  // el ajustador (ver charla 2026-09-16), ya horneada como fija. Los 2
+  // tamaños base siguen igual de antes: "cortos" (etiqueta -> su propio
+  // contenido) y "largos" (entre pasos distintos).
+  const GAP_LONG = 15; // 20 * 0.75
+  const GAP_SHORT = 6; // 8 * 0.75
+  const GAP_QTY_TO_TALLAS = 10.875; // 14.5 * 0.75
+  const GAP_TALLAS_LABEL = 4.5; // 6 * 0.75
+  const GAP_CTA_TOP = 21; // 28 * 0.75
+  const GAP_CTA_BOTTOM = 6; // 8 * 0.75
+
   // Ajustador temporal de espaciado -- SOLO visible con ?ajustar=1 en la
-  // URL, nunca para un cliente real (ver charla 2026-09-16). UNA sola
-  // escala mueve TODOS los espacios de la columna derecha a la vez, en la
-  // misma proporción entre ellos -- hay 2 tamaños base a propósito: los
-  // "cortos" (etiqueta -> su propio contenido, ej. "Selecciona Color" ->
-  // los círculos) y los "largos" (entre pasos distintos, ej. colores ->
-  // "2. Selecciona Cantidad"), y multiplicar todos por el mismo número
-  // nunca rompe esa relación. Cuando quede bien, se me pasa el número
-  // final de `spacingScale` y se hornea directo en los estilos (se borra
-  // todo este bloque + los GAP_* de abajo se vuelven valores fijos).
+  // URL, nunca para un cliente real (ver charla 2026-09-16). Ahora para
+  // el lado IZQUIERDO (foto + miniaturas) -- el de la derecha ya quedó
+  // fijo arriba. Misma idea: una escala mueve los espacios de esa columna
+  // a la vez. Cuando quede bien, se me pasa el número final de
+  // `leftSpacingScale` y se hornea directo (se borra todo este bloque).
   const searchParams = useSearchParams();
   const adjustMode = searchParams.get("ajustar") === "1";
-  const [spacingScale, setSpacingScale] = useState(1);
+  const [leftSpacingScale, setLeftSpacingScale] = useState(1);
   useEffect(() => {
     if (!adjustMode) return;
     try {
-      const saved = sessionStorage.getItem("merchy_spacing_scale");
-      if (saved) setSpacingScale(Number(saved));
+      const saved = sessionStorage.getItem("merchy_left_spacing_scale");
+      if (saved) setLeftSpacingScale(Number(saved));
     } catch {}
   }, [adjustMode]);
   useEffect(() => {
     if (!adjustMode) return;
     try {
-      sessionStorage.setItem("merchy_spacing_scale", String(spacingScale));
+      sessionStorage.setItem("merchy_left_spacing_scale", String(leftSpacingScale));
     } catch {}
-  }, [adjustMode, spacingScale]);
+  }, [adjustMode, leftSpacingScale]);
 
-  // Valores base (px @ escala 1) de cada nivel de espacio -- ver
-  // comentario de arriba.
-  const GAP_LONG = 20 * spacingScale; // entre pasos distintos (title/desc/info/color/cantidad)
-  const GAP_SHORT = 8 * spacingScale; // etiqueta -> su propio contenido
-  const GAP_QTY_TO_TALLAS = 14.5 * spacingScale;
-  const GAP_TALLAS_LABEL = 6 * spacingScale;
-  const GAP_CTA_TOP = 28 * spacingScale;
-  const GAP_CTA_BOTTOM = 8 * spacingScale;
+  const GAP_IMG_TO_THUMBS = 16 * leftSpacingScale; // foto principal -> fila de miniaturas
+  const GAP_THUMB_GAP = 12 * leftSpacingScale; // entre cada miniatura
   // Microinteracción minimalista al hacer clic en "Personalizar
   // producto" -- pedido explícito: reemplaza POR COMPLETO la versión
   // anterior ("MAGIC SWEEP", con franjas de luz de dos colores +
@@ -1319,7 +1320,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* ── Galería ── */}
-        <div className="space-y-4">
+        <div>
           {/* Antes aspect-square (tan alta como ancha) -- con el ancho real
               de esta columna eso empujaba las miniaturas de abajo fuera de
               la pantalla. Altura fija más baja en su lugar; object-contain
@@ -1368,7 +1369,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
             // siquiera notaba que podía hacer ("se tiene que deslizar...
             // es un poco complicado"). Envolver a una segunda fila
             // elimina la necesidad de deslizar nada.
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap" style={{ gap: GAP_THUMB_GAP, marginTop: GAP_IMG_TO_THUMBS }}>
               {images.map((url, i) => (
                 <button
                   key={url}
@@ -1849,32 +1850,26 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
           en cuanto el número final quede fijo en el style de arriba. */}
       {adjustMode && (
         <div className="fixed bottom-4 right-4 z-[999] w-80 rounded-2xl bg-foreground/95 p-4 text-white shadow-2xl backdrop-blur">
-          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-white/60">Escala de espacios (columna derecha)</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-white/60">Escala de espacios (foto + miniaturas)</p>
           <label className="block text-xs">
-            Escala: <span className="font-mono font-bold">{spacingScale.toFixed(2)}×</span>
+            Escala: <span className="font-mono font-bold">{leftSpacingScale.toFixed(2)}×</span>
             <input
               type="range"
               min={0.4}
               max={2}
               step={0.05}
-              value={spacingScale}
-              onChange={(e) => setSpacingScale(Number(e.target.value))}
+              value={leftSpacingScale}
+              onChange={(e) => setLeftSpacingScale(Number(e.target.value))}
               className="mt-1 w-full accent-primary"
             />
           </label>
           <div className="mt-3 grid grid-cols-2 gap-y-1 gap-x-3 font-mono text-[11px] text-white/80">
-            <span>Cortos (etiqueta→contenido):</span>
-            <span className="text-right font-bold text-white">{GAP_SHORT.toFixed(1)}px</span>
-            <span>Largos (entre pasos):</span>
-            <span className="text-right font-bold text-white">{GAP_LONG.toFixed(1)}px</span>
-            <span>Cantidad→Tallas:</span>
-            <span className="text-right font-bold text-white">{GAP_QTY_TO_TALLAS.toFixed(1)}px</span>
-            <span>"Tallas" → chips:</span>
-            <span className="text-right font-bold text-white">{GAP_TALLAS_LABEL.toFixed(1)}px</span>
-            <span>CTA arriba / abajo:</span>
-            <span className="text-right font-bold text-white">{GAP_CTA_TOP.toFixed(1)} / {GAP_CTA_BOTTOM.toFixed(1)}px</span>
+            <span>Foto → miniaturas:</span>
+            <span className="text-right font-bold text-white">{GAP_IMG_TO_THUMBS.toFixed(1)}px</span>
+            <span>Entre miniaturas:</span>
+            <span className="text-right font-bold text-white">{GAP_THUMB_GAP.toFixed(1)}px</span>
           </div>
-          <p className="mt-3 text-[11px] text-white/60">Cuando quede bien, dime el número de "Escala" y lo dejo fijo en el código (multiplicando estos mismos valores base).</p>
+          <p className="mt-3 text-[11px] text-white/60">La columna derecha ya quedó fija (escala 0.75). Cuando esta también quede bien, dime el número de "Escala" y la dejo fija igual.</p>
         </div>
       )}
     </div>
