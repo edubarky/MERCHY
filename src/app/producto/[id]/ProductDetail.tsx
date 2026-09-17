@@ -1353,7 +1353,12 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         </div>
 
         {/* ── Info ── */}
-        <div className="space-y-[29px]">
+        {/* space-y-[29px] -> [20px] -- pedido explícito (ver charla
+            2026-09-16): para que "Personalizar producto"/"Agregar al
+            carrito" queden visibles junto con la foto principal, sin
+            scroll. Ningún tamaño de letra cambia -- el hueco entre
+            secciones era el verdadero sobrante, no la tipografía. */}
+        <div className="space-y-5">
           <div>
             {/* Reemplaza el breadcrumb de arriba de la página ("Catálogo ›
                 Sudadera Ocean") -- pedido explícito (ver charla
@@ -1382,7 +1387,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
           </div>
 
           {product.description && (
-            <p className="text-sm text-ui-gray leading-[1.9]">{product.description}</p>
+            <p className="text-sm text-ui-gray leading-[1.5]">{product.description}</p>
           )}
 
           {/* Info row */}
