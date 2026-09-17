@@ -314,6 +314,32 @@ export default function CarritoPage() {
                   </div>
                 );
               })}
+
+              {/* Fecha estimada de entrega -- ver comentario donde se
+                  declaran cpInput/etaRange arriba. Vive en esta columna
+                  (no en el Resumen de la derecha) -- pedido explícito
+                  (ver charla 2026-09-16): llenaba el espacio vacío que
+                  quedaba debajo de la lista de productos. */}
+              <div className="rounded-[20px] bg-white p-5 shadow-[0_2px_16px_rgba(0,0,0,0.05)]">
+                <p className="font-semibold text-foreground">¿Cuándo llegaría tu pedido?</p>
+                <p className="mt-0.5 text-sm text-ui-gray">Ingresa tu código postal</p>
+                <input
+                  value={cpInput}
+                  onChange={(e) => setCpInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                  placeholder="00000"
+                  inputMode="numeric"
+                  className="mt-3 w-full max-w-xs rounded-full border border-ui-border bg-gray-50 px-4 py-2 text-sm text-foreground outline-none focus:border-primary"
+                />
+                {cpStatus === "notfound" && cpInput.length === 5 && (
+                  <p className="mt-2 text-xs text-accent-coral">No encontramos ese código postal.</p>
+                )}
+                {cpInput.length === 5 && cpStatus === "idle" && !shippingZone && (
+                  <p className="mt-2 text-xs text-ui-gray">Todavía no tenemos cobertura de envío calculada para esa zona.</p>
+                )}
+                {etaRange && (
+                  <p className="mt-2 text-sm font-semibold text-primary-dark">{formatEtaRange(etaRange.min, etaRange.max)}</p>
+                )}
+              </div>
             </div>
 
             <div className="w-full rounded-[20px] bg-white p-6 shadow-[0_2px_16px_rgba(0,0,0,0.05)] lg:w-[340px] lg:sticky lg:top-8">
@@ -331,30 +357,6 @@ export default function CarritoPage() {
               <div className="mt-4 flex items-center justify-between rounded-2xl bg-primary/10 px-5 py-4">
                 <span className="font-bold text-foreground">Total</span>
                 <span className="text-xl font-bold text-foreground">{formatMXN(total)} MXN</span>
-              </div>
-
-              {/* Fecha estimada de entrega -- ver comentario donde se
-                  declaran cpInput/etaRange arriba. */}
-              <div className="mt-4 rounded-2xl border border-ui-border p-4">
-                <label className="mb-2 block text-xs font-semibold text-foreground">
-                  ¿Cuándo llega? Ingresa tu código postal
-                </label>
-                <input
-                  value={cpInput}
-                  onChange={(e) => setCpInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
-                  placeholder="00000"
-                  inputMode="numeric"
-                  className="w-full rounded-full border border-ui-border bg-gray-50 px-4 py-2 text-sm text-foreground outline-none focus:border-primary"
-                />
-                {cpStatus === "notfound" && cpInput.length === 5 && (
-                  <p className="mt-2 text-xs text-accent-coral">No encontramos ese código postal.</p>
-                )}
-                {cpInput.length === 5 && cpStatus === "idle" && !shippingZone && (
-                  <p className="mt-2 text-xs text-ui-gray">Todavía no tenemos cobertura de envío calculada para esa zona.</p>
-                )}
-                {etaRange && (
-                  <p className="mt-2 text-sm font-semibold text-primary-dark">{formatEtaRange(etaRange.min, etaRange.max)}</p>
-                )}
               </div>
 
               <button
