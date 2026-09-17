@@ -1366,7 +1366,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                 le faltaba el link a Catálogo para ser un breadcrumb
                 completo. Quitar el otro ahorra el espacio que empujaba las
                 miniaturas fuera del viewport. */}
-            <p className="mb-2 text-sm text-ui-gray">
+            <p className="mb-2 text-[13px] text-ui-gray">
               <Link href="/catalogo" className="transition-colors duration-200 hover:text-primary active:text-primary">
                 Catálogo
               </Link>
@@ -1382,16 +1382,19 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                 product.category?.name
               )}
             </p>
-            <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-foreground uppercase tracking-tight">{product.name}</h1>
-            <p className="text-xs text-ui-gray mt-2">{product.sku}</p>
+            {/* 1px más chica en ambos breakpoints -- pedido explícito (ver
+                charla 2026-09-16), para compensar la holgura nueva de los
+                CTAs de abajo sin que vuelva a hacer falta scroll. */}
+            <h1 className="font-display font-extrabold text-[23px] sm:text-[29px] text-foreground uppercase tracking-tight">{product.name}</h1>
+            <p className="text-[11px] text-ui-gray mt-2">{product.sku}</p>
           </div>
 
           {product.description && (
-            <p className="text-sm text-ui-gray leading-[1.5]">{product.description}</p>
+            <p className="text-[13px] text-ui-gray leading-[1.5]">{product.description}</p>
           )}
 
           {/* Info row */}
-          <div className="flex gap-x-6 text-sm text-foreground">
+          <div className="flex gap-x-6 text-[13px] text-foreground">
             <div className="flex-1 flex flex-col gap-3">
               {product.composition && (
                 <span className="flex items-start gap-1.5">
@@ -1428,7 +1431,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
           {activeVariants.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-foreground">
+                <p className="text-[13px] font-semibold text-foreground">
                   1. Selecciona Color: <span className="font-normal text-ui-gray">{selectedVariant?.color_name}</span>
                 </p>
                 {/* Un producto de un solo color no tiene nada que combinar --
@@ -1468,7 +1471,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
           {/* Cantidad + precio */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-foreground mb-2">2. Selecciona Cantidad</p>
+              <p className="text-[13px] font-semibold text-foreground mb-2">2. Selecciona Cantidad</p>
               <div className="flex items-center gap-4 bg-gray-50 border border-ui-border rounded-full px-2 py-1.5 w-fit">
                 <button
                   type="button"
@@ -1518,11 +1521,11 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                   unitario en negritas arriba (es el precio real que ve el
                   cliente por pieza), el total en gris abajo. Antes era al
                   revés. */}
-              <p className="text-3xl font-extrabold text-foreground tracking-tight">
+              <p className="text-[29px] font-extrabold text-foreground tracking-tight">
                 {formatMXN(unitPrice)} <span className="text-sm font-normal text-ui-gray">MXN</span>
               </p>
-              <p className="text-xs text-ui-gray mt-2">IVA incluido c/u</p>
-              <p className="text-xs text-ui-gray">Total: {formatMXN(totalPrice)}</p>
+              <p className="text-[11px] text-ui-gray mt-2">IVA incluido c/u</p>
+              <p className="text-[11px] text-ui-gray">Total: {formatMXN(totalPrice)}</p>
             </div>
           </div>
 
@@ -1542,7 +1545,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                     leaving={s.leaving}
                     onExited={() => handleSectionExited(s.id)}
                   >
-                    <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
+                    <p className="text-[13px] font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
                     <div className="flex items-center gap-3 flex-nowrap">
                       {/* Con una sola talla real ("Único"), el chip +/- de
                           abajo sería el mismo número que la tarjeta de total
@@ -1586,7 +1589,11 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               MISMO turquesa (decisión explícita ya tomada antes: "no usar
               otro color adicional" -- este ajuste solo cambia la técnica
               visual a sólida, no el color). */}
-          <div className="flex gap-3">
+          {/* mt/mb inline pisan el space-y del padre -- pedido explícito
+              (ver charla 2026-09-16): quedó "muy pegado" abajo del todo,
+              se le da el doble de holgura que el py-4 del contenedor de
+              la página a ambos lados de este bloque. */}
+          <div className="flex gap-3" style={{ marginTop: "32px", marginBottom: "32px" }}>
             <Link
               href={personalizarHref}
               aria-disabled={!canPersonalize}
