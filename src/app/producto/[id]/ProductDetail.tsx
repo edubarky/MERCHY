@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import type { Product, ProductVariant, PriceTier, CartItem } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
@@ -866,31 +866,10 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const GAP_CTA_TOP = 21; // 28 * 0.75
   const GAP_CTA_BOTTOM = 6; // 8 * 0.75
 
-  // Ajustador temporal de espaciado -- SOLO visible con ?ajustar=1 en la
-  // URL, nunca para un cliente real (ver charla 2026-09-16). Ahora para
-  // el lado IZQUIERDO (foto + miniaturas) -- el de la derecha ya quedó
-  // fijo arriba. Misma idea: una escala mueve los espacios de esa columna
-  // a la vez. Cuando quede bien, se me pasa el número final de
-  // `leftSpacingScale` y se hornea directo (se borra todo este bloque).
-  const searchParams = useSearchParams();
-  const adjustMode = searchParams.get("ajustar") === "1";
-  const [leftSpacingScale, setLeftSpacingScale] = useState(1);
-  useEffect(() => {
-    if (!adjustMode) return;
-    try {
-      const saved = sessionStorage.getItem("merchy_left_spacing_scale");
-      if (saved) setLeftSpacingScale(Number(saved));
-    } catch {}
-  }, [adjustMode]);
-  useEffect(() => {
-    if (!adjustMode) return;
-    try {
-      sessionStorage.setItem("merchy_left_spacing_scale", String(leftSpacingScale));
-    } catch {}
-  }, [adjustMode, leftSpacingScale]);
-
-  const GAP_IMG_TO_THUMBS = 16 * leftSpacingScale; // foto principal -> fila de miniaturas
-  const GAP_THUMB_GAP = 12 * leftSpacingScale; // entre cada miniatura
+  // Espaciado de la columna izquierda -- escala 0.60 confirmada en vivo
+  // con el ajustador (ver charla 2026-09-16), ya horneada como fija.
+  const GAP_IMG_TO_THUMBS = 9.6; // 16 * 0.6
+  const GAP_THUMB_GAP = 7.2; // 12 * 0.6
   // Microinteracción minimalista al hacer clic en "Personalizar
   // producto" -- pedido explícito: reemplaza POR COMPLETO la versión
   // anterior ("MAGIC SWEEP", con franjas de luz de dos colores +
@@ -1844,34 +1823,6 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         initialRating={modalInitialRating}
         onSubmit={handlePublishReview}
       />
-
-      {/* Ajustador temporal -- ver comentario donde se declara adjustMode.
-          Borrar este bloque completo (y sus 2 useEffect + useSearchParams)
-          en cuanto el número final quede fijo en el style de arriba. */}
-      {adjustMode && (
-        <div className="fixed bottom-4 right-4 z-[999] w-80 rounded-2xl bg-foreground/95 p-4 text-white shadow-2xl backdrop-blur">
-          <p className="mb-3 text-xs font-bold uppercase tracking-wide text-white/60">Escala de espacios (foto + miniaturas)</p>
-          <label className="block text-xs">
-            Escala: <span className="font-mono font-bold">{leftSpacingScale.toFixed(2)}×</span>
-            <input
-              type="range"
-              min={0.4}
-              max={2}
-              step={0.05}
-              value={leftSpacingScale}
-              onChange={(e) => setLeftSpacingScale(Number(e.target.value))}
-              className="mt-1 w-full accent-primary"
-            />
-          </label>
-          <div className="mt-3 grid grid-cols-2 gap-y-1 gap-x-3 font-mono text-[11px] text-white/80">
-            <span>Foto → miniaturas:</span>
-            <span className="text-right font-bold text-white">{GAP_IMG_TO_THUMBS.toFixed(1)}px</span>
-            <span>Entre miniaturas:</span>
-            <span className="text-right font-bold text-white">{GAP_THUMB_GAP.toFixed(1)}px</span>
-          </div>
-          <p className="mt-3 text-[11px] text-white/60">La columna derecha ya quedó fija (escala 0.75). Cuando esta también quede bien, dime el número de "Escala" y la dejo fija igual.</p>
-        </div>
-      )}
     </div>
   );
 }
