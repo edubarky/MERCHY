@@ -221,19 +221,21 @@ export default function CarritoPage() {
         i.onerror = () => reject(new Error("No se pudo generar la cotización."));
         i.src = dataUrl;
       });
-      // Página Carta apaisada de tamaño estándar (en vez de una página del
-      // tamaño exacto en píxeles de la captura) -- pedido explícito (ver
-      // charla 2026-09-17): con el tamaño-a-la-medida, algunos visores de
-      // PDF mostraban la página recortada/con scroll en vez de completa.
-      // La imagen se ajusta dentro de márgenes, conservando su proporción.
-      const pdf = new jsPDF({ unit: "pt", format: "letter", orientation: "landscape" });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
+      // Página a la medida del contenido, pero en puntos ("pt", la unidad
+      // real de PDF) -- pedido explícito (ver charla 2026-09-17). El
+      // primer intento de esto usaba unit:"px" para TODA la página, que
+      // varios visores interpretan de forma ambigua y mostraban recortada;
+      // ese era el bug real, no el tamaño a la medida en sí. Ancho fijo de
+      // 11" (792pt, el mismo que Carta apaisada) y alto calculado con la
+      // proporción real de la captura -- así no queda espacio de sobra ni
+      // arriba ni abajo, con el mismo margen fijo en los 4 lados.
       const margin = 24;
-      const scale = Math.min((pageWidth - margin * 2) / img.width, (pageHeight - margin * 2) / img.height);
-      const w = img.width * scale;
-      const h = img.height * scale;
-      pdf.addImage(dataUrl, "PNG", (pageWidth - w) / 2, margin, w, h);
+      const pageWidth = 792;
+      const contentWidth = pageWidth - margin * 2;
+      const contentHeight = contentWidth * (img.height / img.width);
+      const pageHeight = contentHeight + margin * 2;
+      const pdf = new jsPDF({ unit: "pt", format: [pageWidth, pageHeight] });
+      pdf.addImage(dataUrl, "PNG", margin, margin, contentWidth, contentHeight);
       pdf.save("cotizacion-merchy.pdf");
     } catch {
       // Silencioso -- mismo criterio que el resto de descargas del sitio
