@@ -1589,11 +1589,13 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               MISMO turquesa (decisión explícita ya tomada antes: "no usar
               otro color adicional" -- este ajuste solo cambia la técnica
               visual a sólida, no el color). */}
-          {/* mt/mb inline pisan el space-y del padre -- pedido explícito
-              (ver charla 2026-09-16): quedó "muy pegado" abajo del todo,
-              se le da el doble de holgura que el py-4 del contenedor de
-              la página a ambos lados de este bloque. */}
-          <div className="flex gap-3" style={{ marginTop: "32px", marginBottom: "32px" }}>
+          {/* mt/mb inline pisan el space-y del padre -- ver charla
+              2026-09-16. El intento anterior (32px arriba y abajo) empujó
+              los botones fuera del viewport otra vez -- los 44px que
+              agregaba superaban por mucho lo que los ajustes de
+              tipografía de arriba lograban recuperar (~8-10px). Bajado a
+              un valor mucho más conservador. */}
+          <div className="flex gap-3" style={{ marginTop: "24px", marginBottom: "8px" }}>
             <Link
               href={personalizarHref}
               aria-disabled={!canPersonalize}
