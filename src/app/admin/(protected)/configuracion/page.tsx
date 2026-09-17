@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { PageHeader, AdminCard, Table, Td, Btn, AdminInput } from "@/components/admin/ui";
+import { PageHeader, AdminCard, Table, Td, Btn, AdminInput, FieldLabel } from "@/components/admin/ui";
 import { formatMXN } from "@/lib/pricing";
-import type { Category, PriceTier, PrintTechnique, ShippingZone, TechniquePrice } from "@/types";
+import type { Category, PriceTier, PrintTechnique, ShippingZone, StoreSettings, TechniquePrice } from "@/types";
 
 // Costo base solo para la columna "Precio ejemplo" — un número redondo
 // hace obvio el efecto del margen (60% -> $2,500, 28% -> $1,389).
@@ -138,7 +138,29 @@ export default function ConfiguracionPage() {
     setBoxDrafts(Object.fromEntries(rows.map((c) => [c.id, String(c.pzas_per_box ?? 30)])));
   }
 
-  useEffect(() => { loadTiers(); loadTechniques(); loadZones(); loadCategories(); }, []);
+  // ---- Datos de contacto (store_settings, fila única) ----
+  const [settings, setSettings] = useState<StoreSettings | null>(null);
+  const [emailDraft, setEmailDraft] = useState("");
+  const [whatsappDraft, setWhatsappDraft] = useState("");
+  const [bankNameDraft, setBankNameDraft] = useState("");
+  const [clabeDraft, setClabeDraft] = useState("");
+  const [beneficiaryDraft, setBeneficiaryDraft] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactError, setContactError] = useState("");
+  const [contactSaved, setContactSaved] = useState(false);
+
+  async function loadSettings() {
+    const { data } = await supabase.from("store_settings").select("*").eq("id", "default").maybeSingle();
+    const row = data as StoreSettings | null;
+    setSettings(row);
+    setEmailDraft(row?.notification_email ?? "");
+    setWhatsappDraft(row?.whatsapp_number ?? "");
+    setBankNameDraft(row?.transfer_bank_name ?? "");
+    setClabeDraft(row?.transfer_clabe ?? "");
+    setBeneficiaryDraft(row?.transfer_beneficiary ?? "");
+  }
+
+  useEffect(() => { loadTiers(); loadTechniques(); loadZones(); loadCategories(); loadSettings(); }, []);
 
   function openTechnique(t: PrintTechnique) {
     setOpenTechId((id) => (id === t.id ? null : t.id));
@@ -302,6 +324,43 @@ export default function ConfiguracionPage() {
     setSavingBoxes(false);
   }
 
+  const contactChanged =
+    (settings?.notification_email ?? "") !== emailDraft.trim() ||
+    (settings?.whatsapp_number ?? "") !== whatsappDraft.trim() ||
+    (settings?.transfer_bank_name ?? "") !== bankNameDraft.trim() ||
+    (settings?.transfer_clabe ?? "") !== clabeDraft.trim() ||
+    (settings?.transfer_beneficiary ?? "") !== beneficiaryDraft.trim();
+  const contactInvalid =
+    (emailDraft.trim() !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailDraft.trim())) ||
+    (clabeDraft.trim() !== "" && clabeDraft.trim().length !== 18);
+
+  async function saveContact() {
+    if (!contactChanged || contactInvalid) return;
+    setSavingContact(true);
+    setContactError("");
+    const { data, error } = await supabase
+      .from("store_settings")
+      .upsert({
+        id: "default",
+        notification_email: emailDraft.trim() || null,
+        whatsapp_number: whatsappDraft.trim() || null,
+        transfer_bank_name: bankNameDraft.trim() || null,
+        transfer_clabe: clabeDraft.trim() || null,
+        transfer_beneficiary: beneficiaryDraft.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    setSavingContact(false);
+    if (error || !data) {
+      setContactError(error?.message ?? "No se pudo confirmar el guardado.");
+      return;
+    }
+    setSettings(data as StoreSettings);
+    setContactSaved(true);
+    setTimeout(() => setContactSaved(false), 1800);
+  }
+
   function precioEjemplo(pctStr: string): string {
     const pct = Number((pctStr ?? "").trim());
     if (!Number.isFinite(pct) || pct < 0 || pct >= 100) return "—";
@@ -312,10 +371,61 @@ export default function ConfiguracionPage() {
     <div className="p-6 max-w-4xl">
       <PageHeader title="Configuración" subtitle="Ajustes del sistema de producción" />
 
+      {/* Datos de contacto -- a dónde llega el correo de notificación de
+          cada pedido nuevo y el número que usa el botón de WhatsApp en
+          todo el sitio (ver charla 2026-09-16). */}
+      <AdminCard>
+        <div className="px-5 py-4 border-b border-ui-border flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-sm">Datos de contacto</h2>
+            <p className="text-xs text-ui-gray mt-0.5">A dónde llega la notificación de cada pedido y el WhatsApp que ve el cliente en el sitio</p>
+          </div>
+          {contactChanged && (
+            <Btn size="sm" onClick={saveContact} disabled={savingContact || contactInvalid} className="flex-shrink-0">
+              {savingContact ? "Guardando..." : "Guardar cambios"}
+            </Btn>
+          )}
+        </div>
+        {contactError && <p className="px-5 py-3 text-xs text-red-500 bg-red-50">{contactError}</p>}
+        <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>Correo de notificación de pedidos</FieldLabel>
+            <AdminInput type="email" value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} placeholder="pedidos@merchy.mx" />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>WhatsApp (botón flotante del sitio)</FieldLabel>
+            <AdminInput value={whatsappDraft} onChange={(e) => setWhatsappDraft(e.target.value)} placeholder="+525512345678" />
+          </label>
+        </div>
+        <div className="px-5 pb-2">
+          <p className="text-xs font-semibold text-ui-gray uppercase tracking-wider mb-3">Transferencia bancaria (se le muestra al cliente en el checkout)</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <label className="flex flex-col gap-1.5">
+              <FieldLabel>Banco</FieldLabel>
+              <AdminInput value={bankNameDraft} onChange={(e) => setBankNameDraft(e.target.value)} placeholder="BBVA" />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <FieldLabel>CLABE (18 dígitos)</FieldLabel>
+              <AdminInput
+                value={clabeDraft}
+                onChange={(e) => setClabeDraft(e.target.value.replace(/\D/g, "").slice(0, 18))}
+                placeholder="000000000000000000"
+                inputMode="numeric"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <FieldLabel>Beneficiario</FieldLabel>
+              <AdminInput value={beneficiaryDraft} onChange={(e) => setBeneficiaryDraft(e.target.value)} placeholder="ON POINT IMPORTADORA Y COMERCIALIZADORA" />
+            </label>
+          </div>
+        </div>
+        {contactSaved && <p className="px-5 pb-4 text-xs font-semibold text-primary-dark">✓ Guardado</p>}
+      </AdminCard>
+
       {/* Márgenes de utilidad por cantidad. El precio de venta de cada
           producto sale de costo / (1 − margen), redondeado hacia arriba
           (ver lib/pricing.getProductUnitPrice). */}
-      <AdminCard>
+      <AdminCard className="mt-6">
         <div className="px-5 py-4 border-b border-ui-border flex items-start justify-between gap-4">
           <div>
             <h2 className="font-semibold text-sm">Márgenes de utilidad</h2>

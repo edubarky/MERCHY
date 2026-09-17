@@ -231,6 +231,20 @@ export interface ProductionTimeTier {
 
 export type PaymentMethod = "card" | "paypal" | "mercadopago" | "transfer";
 
+// Fila única (id fijo "default") con datos de contacto editables en
+// Configuración -- a dónde llega la notificación de pedido nuevo y el
+// número de WhatsApp que se muestra en todo el sitio (ver charla
+// 2026-09-16). Nunca hardcodeados en el código.
+export interface StoreSettings {
+  id: string;
+  notification_email: string | null;
+  whatsapp_number: string | null;
+  transfer_bank_name: string | null;
+  transfer_clabe: string | null;
+  transfer_beneficiary: string | null;
+  updated_at: string;
+}
+
 export interface ShippingAddress {
   calle: string;
   numero_ext: string;
