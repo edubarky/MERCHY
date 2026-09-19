@@ -1034,6 +1034,18 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     setSections((prev) => prev.filter((s) => s.id !== id));
   }
 
+  // Quitar un color del multicolor desde su propio bloque de tallas (bote
+  // de basura junto a "PIEZAS") -- mismo efecto que destocarlo desde el
+  // swatch de arriba (quitarlo de selectedColorIds dispara la animación de
+  // salida de handleSectionExited de por sí), solo que más a la mano
+  // mientras se está repartiendo tallas. Nunca deja en 0 colores: con uno
+  // solo seleccionado, el multicolor deja de tener sentido (ver charla
+  // 2026-09-19: "cuando me quede con 1 color pues no lo puedo eliminar").
+  function removeColor(variantId: string) {
+    if (selectedColorIds.length <= 1) return;
+    setSelectedColorIds((prev) => prev.filter((id) => id !== variantId));
+  }
+
   // Restaura el renglón correspondiente de este producto al volver a esta
   // página -- ej. con "Atrás" desde el Personalizador. Con
   // editarCartItemId (un renglón YA CONFIRMADO que se estaba editando) lee
@@ -1611,6 +1623,19 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                         total={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)}
                         onChange={sizes.length === 1 ? (next) => setSizeQty(s.variant, sizes[0], next) : undefined}
                       />
+                      {multicolor && (
+                        <button
+                          type="button"
+                          onClick={() => removeColor(s.variant.id)}
+                          disabled={selectedColorIds.length <= 1}
+                          title={selectedColorIds.length <= 1 ? "Necesitas al menos 1 color" : `Quitar ${s.variant.color_name}`}
+                          className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-ui-gray hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ui-gray disabled:cursor-not-allowed transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </AnimatedSizeSection>
                 ))}
