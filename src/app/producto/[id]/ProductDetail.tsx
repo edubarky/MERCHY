@@ -897,6 +897,11 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const [quantityDiscountOpen, setQuantityDiscountOpen] = useState(false);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
+  // ¿El mismo diseño para todos los colores del multicolor, o uno
+  // distinto por color? (ver charla 2026-09-19). Solo importa con 2+
+  // colores elegidos -- default "mismo diseño" (comportamiento de
+  // siempre, un solo montaje de impresión sobre la cantidad combinada).
+  const [mismoDiseno, setMismoDiseno] = useState(true);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
   const [sizeQuantities, setSizeQuantities] = useState<Record<string, Record<string, number>>>({});
   const [reviews, setReviews] = useState<Review[]>(REVIEWS_SEED);
@@ -1303,6 +1308,9 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const personalizarParams = new URLSearchParams();
   if (personalizarVariantId) personalizarParams.set("variant", personalizarVariantId);
   if (multicolorIds) personalizarParams.set("colors", multicolorIds.join(","));
+  // Solo tiene sentido preguntar/mandar esto con 2+ colores de verdad --
+  // con 1 solo "distinto por color" no significa nada.
+  if (multicolorIds && !mismoDiseno) personalizarParams.set("porColor", "1");
   // La cantidad ya elegida en "2. Selecciona Cantidad" pasa también, para
   // que el Personalizador arranque con ella en vez de resetear a 1 --
   // confirmado explícitamente con el usuario.
@@ -1657,6 +1665,39 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               agregaba superaban por mucho lo que los ajustes de
               tipografía de arriba lograban recuperar (~8-10px). Bajado a
               un valor mucho más conservador. */}
+          {/* Pregunta explícita antes de personalizar -- solo tiene sentido
+              con 2+ colores elegidos de verdad (con 1 solo no hay nada que
+              "combinar"). Mockup aprobado, ver charla 2026-09-19: cambia
+              cómo se cotiza la impresión después (mismo montaje sobre la
+              cantidad combinada vs. uno por color). */}
+          {multicolor && selectedColorIds.length > 1 && (
+            <div className="rounded-2xl border border-ui-border bg-white p-4" style={{ marginTop: GAP_CTA_TOP }}>
+              <p className="text-sm font-semibold text-foreground mb-2.5">¿Mismo diseño para todos los colores?</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setMismoDiseno(true)}
+                  className={`text-left rounded-xl border-2 px-3 py-2.5 transition-colors ${
+                    mismoDiseno ? "border-primary bg-primary/5" : "border-ui-border hover:border-primary/40"
+                  }`}
+                >
+                  <p className="text-[13px] font-semibold text-foreground">Mismo diseño</p>
+                  <p className="text-[11px] text-ui-gray mt-0.5">Un solo montaje de impresión, sobre las {quantity} piezas combinadas.</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMismoDiseno(false)}
+                  className={`text-left rounded-xl border-2 px-3 py-2.5 transition-colors ${
+                    !mismoDiseno ? "border-primary bg-primary/5" : "border-ui-border hover:border-primary/40"
+                  }`}
+                >
+                  <p className="text-[13px] font-semibold text-foreground">Distinto por color</p>
+                  <p className="text-[11px] text-ui-gray mt-0.5">Personalizas cada color aparte -- la impresión se cotiza por color.</p>
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-3" style={{ marginTop: GAP_CTA_TOP, marginBottom: GAP_CTA_BOTTOM }}>
             <Link
               href={personalizarHref}

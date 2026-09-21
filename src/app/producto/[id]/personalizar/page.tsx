@@ -31,7 +31,11 @@ export default async function PersonalizarPage({
   // precio por tramos (ver PersonalizerClient) coincida desde el inicio
   // con lo que el cliente ya veía. Ausente/inválido -> 1, igual que
   // siempre.
-  searchParams: { variant?: string; colors?: string; qty?: string };
+  // ?porColor=1 -- el cliente eligió "Distinto por color" en la pregunta
+  // de la ficha (ver ProductDetail.tsx, charla 2026-09-19). Solo tiene
+  // efecto si además viene `colors` con 2+ ids; ausente = "Mismo diseño"
+  // (comportamiento de siempre).
+  searchParams: { variant?: string; colors?: string; qty?: string; porColor?: string };
 }) {
   const supabase = createClient();
 
@@ -72,6 +76,7 @@ export default async function PersonalizarPage({
   const rawColorIds = (searchParams.colors ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const validColorIds = rawColorIds.filter((id) => safeProduct.variants.some((v) => v.id === id));
   const multicolorVariantIds = validColorIds.length > 1 ? validColorIds : null;
+  const distintoPorColor = multicolorVariantIds !== null && searchParams.porColor === "1";
 
   // Mismo criterio de "nunca confiar ciegamente en la URL": un entero
   // positivo real, si no -> null (PersonalizerClient ya sabe caer a 1).
@@ -100,6 +105,7 @@ export default async function PersonalizarPage({
         initialVariantId={initialVariantId}
         multicolorVariantIds={multicolorVariantIds}
         initialQuantity={initialQuantity}
+        distintoPorColor={distintoPorColor}
       />
     </div>
   );

@@ -4,7 +4,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toPng } from "html-to-image";
-import type { Product, ProductVariant, PriceTier, PrintTechnique, CartItem, CustomizationElement } from "@/types";
+import type {
+  Product,
+  ProductVariant,
+  PriceTier,
+  PrintTechnique,
+  CartItem,
+  CustomizationElement,
+  PerColorCustomization,
+  SelectedTechniqueDetail,
+} from "@/types";
 import {
   getProductUnitPrice,
   findQtyPrice,
@@ -161,6 +170,33 @@ interface Props {
   // el query param, o un valor inválido) -> 1, mismo comportamiento de
   // siempre.
   initialQuantity: number | null;
+  // El cliente eligió "Distinto por color" en la pregunta de la ficha
+  // (ver ProductDetail.tsx / page.tsx ?porColor=1, charla 2026-09-19).
+  // Cambia `elements`/`techniqueTintas`/history de un solo diseño
+  // compartido a uno por color (ver SHARED_KEY/designKey en el
+  // componente) -- false (default) es el comportamiento de siempre.
+  distintoPorColor: boolean;
+}
+
+// Clave de diseño cuando "Mismo diseño" está activo (o el producto no es
+// multicolor) -- un solo diseño compartido, exactamente el
+// comportamiento de siempre. Con "Distinto por color" la clave real es
+// el variant_id de cada color.
+const SHARED_KEY = "__shared__";
+
+// Migra un `elements` guardado ANTES de "Distinto por color" (charla
+// 2026-09-19): en ese entonces era un ViewElements plano (llaves = nombres
+// de eje, ej. "frente"), no un diccionario por clave de diseño -- se
+// envuelve en SHARED_KEY en vez de descartarlo. Usado tanto por
+// loadDraft (borrador local) como por la restauración de ?editar= (renglón
+// ya confirmado en el carrito) -- las dos fuentes pueden traer la forma
+// vieja si se guardaron antes de este cambio.
+function migrateElementsShape(raw: unknown): Record<string, ViewElements> {
+  const obj = raw as Record<string, unknown> | null | undefined;
+  if (obj && !(SHARED_KEY in obj) && VIEW_ORDER.some((v) => v in obj)) {
+    return { [SHARED_KEY]: obj as unknown as ViewElements };
+  }
+  return (obj as Record<string, ViewElements>) ?? { [SHARED_KEY]: emptyViewElements() };
 }
 
 function uid() {
@@ -185,8 +221,18 @@ const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 días -- más viejo que
 
 interface PersonalizerDraft {
   savedAt: number;
-  elements: ViewElements;
+  // Diccionario por "clave de diseño" (SHARED_KEY en modo Mismo diseño, o
+  // variant_id por color en modo Distinto por color) -- ver designKey en
+  // el componente. Un borrador guardado antes de este cambio (un solo
+  // ViewElements plano) se descarta igual que cualquier otro borrador
+  // vencido/corrupto, ver loadDraft.
+  elements: Record<string, ViewElements>;
   selectedTechniqueIds: string[];
+  // Con "Distinto por color", la llave deja de ser solo technique.id --
+  // pasa a ser `${designKey}:${technique.id}` (ver tintasKey en el
+  // componente), para que la cuenta de tintas no colisione entre
+  // colores. Con "Mismo diseño" sigue siendo technique.id tal cual, sin
+  // cambio de forma.
   techniqueTintas: Record<string, string>;
   techniqueLogoSizeCm: Record<string, Record<string, { largo: string; alto: string }>>;
   groupOrientation: Partial<Record<string, ViewName>>;
@@ -214,9 +260,16 @@ function loadDraft(productId: string): PersonalizerDraft | null {
   try {
     const raw = window.localStorage.getItem(draftStorageKey(productId));
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as PersonalizerDraft;
+    const parsed = JSON.parse(raw) as PersonalizerDraft & { elements?: any };
     if (!parsed || typeof parsed.savedAt !== "number" || Date.now() - parsed.savedAt > DRAFT_TTL_MS) return null;
-    return parsed;
+    // Migración de un borrador viejo (antes de "Distinto por color", ver
+    // charla 2026-09-19): `elements` era un ViewElements plano (llaves =
+    // nombres de eje, ej. "frente"), no un diccionario por clave de
+    // diseño -- se envuelve en SHARED_KEY en vez de descartarlo.
+    // techniqueTintas NO necesita esta migración: sus llaves siguen
+    // siendo technique.id tal cual en modo "Mismo diseño" (ver tintasKey).
+    parsed.elements = migrateElementsShape(parsed.elements);
+    return parsed as PersonalizerDraft;
   } catch {
     return null;
   }
@@ -292,6 +345,7 @@ export default function PersonalizerClient({
   initialVariantId,
   multicolorVariantIds,
   initialQuantity,
+  distintoPorColor,
 }: Props) {
   const router = useRouter();
   // "frente" es el default de siempre, pero deja de ser válido para un
@@ -309,9 +363,16 @@ export default function PersonalizerClient({
   // de resetear siempre a la misma; un grupo sin elección guardada cae al
   // primer eje de ese grupo (ver tabGroups.map más abajo).
   const [groupOrientation, setGroupOrientation] = useState<Partial<Record<string, ViewName>>>({});
-  const [elements, setElements] = useState<ViewElements>(emptyViewElements());
-  const [history, setHistory] = useState<ViewElements[]>([emptyViewElements()]);
-  const [historyIndex, setHistoryIndex] = useState(0);
+  // Diccionario por "clave de diseño" (ver SHARED_KEY/designKey más abajo)
+  // -- con "Mismo diseño" (default) todo vive bajo SHARED_KEY, idéntico en
+  // los hechos al ViewElements plano de siempre. Con "Distinto por color"
+  // cada variant_id tiene su propio ViewElements independiente.
+  const [elements, setElements] = useState<Record<string, ViewElements>>({ [SHARED_KEY]: emptyViewElements() });
+  // Historial de undo/redo POR clave de diseño -- cambiar de color en modo
+  // "Distinto por color" no debe permitir deshacer hacia el diseño de otro
+  // color (ver commit()/undo()/redo() más abajo).
+  const [historyByKey, setHistoryByKey] = useState<Record<string, ViewElements[]>>({ [SHARED_KEY]: [emptyViewElements()] });
+  const [historyIndexByKey, setHistoryIndexByKey] = useState<Record<string, number>>({ [SHARED_KEY]: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // "Opciones de diseño" (rotar/girar/cambiar color/ajustes de un logo) --
   // pedido explícito: el usuario debe ver la prenda completa junto con el
@@ -427,29 +488,28 @@ export default function PersonalizerClient({
   // carrito. Nunca choca con el id de un renglón ya confirmado (ver
   // handleAddToCart, que usa uid() para ese).
   const draftCartItemId = productDraftCartItemId(product.id);
+  // Colores + desglose de tallas reales ya guardados por ProductDetail
+  // (pasos "1. Selecciona Color"/"2. Selecciona Cantidad") en este mismo
+  // renglón -- editarCartItemId si se está editando una línea ya
+  // confirmada, si no draftCartItemId (el renglón "en curso" que
+  // ProductDetail ya viene sincronizando). El Personalizador (pasos 3-4)
+  // NUNCA debe reconstruir esto desde cero: antes recreaba `variants` con
+  // un solo color activo y `sizes_breakdown: {}` fijo, así que en cuanto
+  // el cliente tocaba cualquier cosa aquí (incluso antes de poner un
+  // logo) se le borraban las tallas y, en Multicolor, se le colapsaban
+  // los demás colores a uno solo (ver charla 2026-09-16, bug real
+  // reportado). Solo si no hay NINGÚN renglón previo (ej. un link directo
+  // al Personalizador sin haber pasado por la ficha) cae al color activo
+  // como respaldo, sin desglose de tallas por no haber de dónde sacarlo.
+  // Declarado temprano (no junto a buildCartItem, donde vivía antes) para
+  // que colorQty (ver más abajo) lo pueda usar desde el bloque de precio
+  // en vivo, que se calcula antes que buildCartItem en el orden del
+  // componente.
+  const sourceVariantsItem = cartItems.find((i) => i.id === (editarCartItemId ?? draftCartItemId));
   const { addAsset } = useArtLibrary();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const historyRef = useRef({ history, historyIndex });
-  historyRef.current = { history, historyIndex };
-  // Mismo patrón que historyRef -- addElement/updateElement/etc. leen esto
-  // (nunca el `elements` cerrado en el render) para no perder un elemento.
-  // Bug real confirmado: dos subidas rápidas seguidas a la MISMA vista (ej.
-  // 2 logos en Frente) son asíncronas (addAsset sube a Supabase antes de
-  // poder colocarse) -- si la segunda `addElement` corría con el `elements`
-  // capturado en un render viejo (antes de que la primera terminara de
-  // re-renderizar), pisaba el arreglo y el primer logo desaparecía.
-  const elementsRef = useRef(elements);
-  elementsRef.current = elements;
-  // Portapapeles interno para Ctrl/Cmd+C + Ctrl/Cmd+V sobre el elemento
-  // seleccionado (logo o texto) -- pedido explícito para que duplicar sea
-  // tan fácil como en cualquier editor real. Guarda una copia de los datos
-  // del elemento en el momento del copy (no solo el id, porque el usuario
-  // puede seguir editándolo o incluso borrarlo antes de pegar). Vive fuera
-  // de React state a propósito: copiar/pegar no debe generar historial de
-  // undo por sí solo, solo el pegado (que sí crea un elemento real).
-  const copiedElementRef = useRef<DesignElement | null>(null);
 
   // El/los color(es) de la prenda YA se eligieron en la página del producto
   // (ver ProductDetail.tsx's "1. Selecciona Color" + el switch Multicolor)
@@ -484,6 +544,63 @@ export default function PersonalizerClient({
   const [activeVariantId, setActiveVariantId] = useState<string | null>(initialVariantId ?? fallbackVariant?.id ?? null);
   const activeVariant = product.variants.find((v) => v.id === activeVariantId) ?? fallbackVariant;
   const garmentColor: GarmentColor = (activeVariant && normalizeGarmentColorName(activeVariant.color_name)) ?? "blanco";
+
+  // "Clave de diseño" -- con "Mismo diseño" (default) siempre SHARED_KEY,
+  // sin importar qué color esté activo en la barra: cambiar de color ahí
+  // sigue siendo puramente visual, nunca toca `elements` (comportamiento
+  // de siempre). Con "Distinto por color" SÍ importa: cada color edita su
+  // propio diseño independiente.
+  const designKey = distintoPorColor ? (activeVariantId ?? SHARED_KEY) : SHARED_KEY;
+  const currentElements = elements[designKey] ?? emptyViewElements();
+  const currentHistory = historyByKey[designKey] ?? [emptyViewElements()];
+  const currentHistoryIndex = historyIndexByKey[designKey] ?? 0;
+  // Ver el comentario de techniqueTintas en PersonalizerDraft -- con
+  // "Distinto por color" la llave real es compuesta para que la cuenta de
+  // tintas de un color nunca pise la de otro.
+  function tintasKeyFor(dk: string, techniqueId: string) {
+    return distintoPorColor ? `${dk}:${techniqueId}` : techniqueId;
+  }
+  function tintasKey(techniqueId: string) {
+    return tintasKeyFor(designKey, techniqueId);
+  }
+  // Cantidad de ESTE color específico -- de sourceVariantsItem (el
+  // renglón real del carrito, ya sincronizado por ProductDetail, ver más
+  // abajo) si existe; si no (ej. link directo sin pasar por la ficha),
+  // cae a la cantidad total repartida entre los colores de la barra a
+  // partes iguales, mejor esfuerzo mientras no haya de dónde sacar el
+  // reparto real.
+  function colorQty(variantId: string): number {
+    const fromCart = sourceVariantsItem?.variants.find((v) => v.variant_id === variantId)?.qty;
+    if (fromCart != null) return fromCart;
+    return barVariants.length ? Math.round(quantity / barVariants.length) : quantity;
+  }
+
+  // designKey viaja junto con el historial -- undo/redo/commit siempre
+  // deben operar sobre la clave de diseño que estaba activa en el
+  // render MÁS RECIENTE al momento del clic/llamada, nunca una vieja
+  // cerrada por un useCallback con deps vacías.
+  const historyRef = useRef({ history: currentHistory, historyIndex: currentHistoryIndex, designKey });
+  historyRef.current = { history: currentHistory, historyIndex: currentHistoryIndex, designKey };
+  // Mismo patrón que historyRef -- addElement/updateElement/etc. leen esto
+  // (nunca el `elements`/`designKey` cerrados en el render) para no perder
+  // un elemento. Bug real confirmado: dos subidas rápidas seguidas a la
+  // MISMA vista (ej. 2 logos en Frente) son asíncronas (addAsset sube a
+  // Supabase antes de poder colocarse) -- si la segunda `addElement`
+  // corría con el `elements` capturado en un render viejo (antes de que
+  // la primera terminara de re-renderizar), pisaba el arreglo y el primer
+  // logo desaparecía.
+  const elementsRef = useRef(elements);
+  elementsRef.current = elements;
+  const designKeyRef = useRef(designKey);
+  designKeyRef.current = designKey;
+  // Portapapeles interno para Ctrl/Cmd+C + Ctrl/Cmd+V sobre el elemento
+  // seleccionado (logo o texto) -- pedido explícito para que duplicar sea
+  // tan fácil como en cualquier editor real. Guarda una copia de los datos
+  // del elemento en el momento del copy (no solo el id, porque el usuario
+  // puede seguir editándolo o incluso borrarlo antes de pegar). Vive fuera
+  // de React state a propósito: copiar/pegar no debe generar historial de
+  // undo por sí solo, solo el pegado (que sí crea un elemento real).
+  const copiedElementRef = useRef<DesignElement | null>(null);
 
   // No shared generic mockup fallback here on purpose: the Personalizador
   // must only ever show the actual selected product's own photography, per
@@ -536,7 +653,7 @@ export default function PersonalizerClient({
   // color ya elegido en la página del producto. No se resuelven ni cargan
   // los ejes de ningún otro color.
   const activeViewSrc = getViewSrc(activeView, garmentColor);
-  const selectedElement = elements[activeView].find((e) => e.id === selectedId) ?? null;
+  const selectedElement = currentElements[activeView].find((e) => e.id === selectedId) ?? null;
 
   // Fresh selection always starts "in bounds" (it was just placed/spawned
   // validly) — only an active drag/resize/rotate on it can mark it out.
@@ -544,41 +661,46 @@ export default function PersonalizerClient({
     setInteractionInBounds(true);
   }, [selectedId]);
 
+  // Todas escriben sobre historyRef.current.designKey -- la clave de
+  // diseño activa en el render más reciente, no la que estuviera cerrada
+  // en este useCallback (deps vacías a propósito, mismo motivo de
+  // siempre: el resto de handlers también los usan desde closures viejas).
   const commit = useCallback((next: ViewElements) => {
-    setElements(next);
-    setHistory((prev) => {
-      const truncated = prev.slice(0, historyRef.current.historyIndex + 1);
-      return [...truncated, next];
+    const key = historyRef.current.designKey;
+    setElements((prev) => ({ ...prev, [key]: next }));
+    setHistoryByKey((prev) => {
+      const truncated = (prev[key] ?? [emptyViewElements()]).slice(0, historyRef.current.historyIndex + 1);
+      return { ...prev, [key]: [...truncated, next] };
     });
-    setHistoryIndex((i) => i + 1);
+    setHistoryIndexByKey((prev) => ({ ...prev, [key]: historyRef.current.historyIndex + 1 }));
   }, []);
 
   const undo = useCallback(() => {
-    const { history: h, historyIndex: idx } = historyRef.current;
+    const { history: h, historyIndex: idx, designKey: key } = historyRef.current;
     if (idx === 0) return;
-    setHistoryIndex(idx - 1);
-    setElements(h[idx - 1]);
+    setHistoryIndexByKey((prev) => ({ ...prev, [key]: idx - 1 }));
+    setElements((prev) => ({ ...prev, [key]: h[idx - 1] }));
     setSelectedId(null);
   }, []);
 
   const redo = useCallback(() => {
-    const { history: h, historyIndex: idx } = historyRef.current;
+    const { history: h, historyIndex: idx, designKey: key } = historyRef.current;
     if (idx >= h.length - 1) return;
-    setHistoryIndex(idx + 1);
-    setElements(h[idx + 1]);
+    setHistoryIndexByKey((prev) => ({ ...prev, [key]: idx + 1 }));
+    setElements((prev) => ({ ...prev, [key]: h[idx + 1] }));
     setSelectedId(null);
   }, []);
 
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
+  const canUndo = currentHistoryIndex > 0;
+  const canRedo = currentHistoryIndex < currentHistory.length - 1;
 
   const deleteElement = useCallback(
     (id: string) => {
-      const next = { ...elements, [activeView]: elements[activeView].filter((e) => e.id !== id) };
+      const next = { ...currentElements, [activeView]: currentElements[activeView].filter((e) => e.id !== id) };
       commit(next);
       setSelectedId(null);
     },
-    [elements, activeView, commit]
+    [currentElements, activeView, commit]
   );
 
   // Shift+ArrowRight/ArrowLeft grows/shrinks the currently selected element
@@ -594,7 +716,7 @@ export default function PersonalizerClient({
   const LOGO_MIN_PCT = 1;
 
   function resizeSelectedElementByKeyboard(direction: 1 | -1) {
-    const el = elements[activeView].find((e) => e.id === selectedId);
+    const el = currentElements[activeView].find((e) => e.id === selectedId);
     if (!el) return;
     const factor = direction === 1 ? RESIZE_STEP_FACTOR : 1 / RESIZE_STEP_FACTOR;
 
@@ -625,7 +747,7 @@ export default function PersonalizerClient({
   const MOVE_STEP_PCT = 0.4;
 
   function moveSelectedElementByKeyboard(dxPct: number, dyPct: number) {
-    const el = elements[activeView].find((e) => e.id === selectedId);
+    const el = currentElements[activeView].find((e) => e.id === selectedId);
     if (!el) return;
     updateElement(el.id, { xPct: el.xPct + dxPct, yPct: el.yPct + dyPct });
   }
@@ -715,7 +837,7 @@ export default function PersonalizerClient({
       // tiene nada útil que copiar de todos modos.
       if (ctrlOrCmd && e.key.toLowerCase() === "c") {
         if (isTypingFreeText || !selectedId) return;
-        const el = elementsRef.current[activeView].find((item) => item.id === selectedId);
+        const el = elementsRef.current[designKeyRef.current][activeView].find((item) => item.id === selectedId);
         if (el) {
           copiedElementRef.current = el;
           e.preventDefault();
@@ -725,7 +847,7 @@ export default function PersonalizerClient({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [undo, redo, deleteElement, selectedId, elements, activeView]);
+  }, [undo, redo, deleteElement, selectedId, currentElements, activeView]);
 
   // Ctrl/Cmd+V hace dos cosas distintas con el mismo evento nativo "paste",
   // en este orden de prioridad: 1) si el portapapeles del SO trae una
@@ -792,7 +914,7 @@ export default function PersonalizerClient({
   }, [activeView, zCounter]);
 
   function addElement(el: DesignElement) {
-    const current = elementsRef.current;
+    const current = elementsRef.current[designKeyRef.current];
     const next = { ...current, [el.view]: [...current[el.view], el] };
     commit(next);
     setSelectedId(el.id);
@@ -808,13 +930,13 @@ export default function PersonalizerClient({
   }
 
   function updateElement(id: string, patch: Partial<DesignElement>) {
-    const current = elementsRef.current;
+    const current = elementsRef.current[designKeyRef.current];
     const next = { ...current, [activeView]: current[activeView].map((e) => (e.id === id ? { ...e, ...patch } : e)) };
     commit(next);
   }
 
   function duplicateElement(id: string) {
-    const el = elementsRef.current[activeView].find((e) => e.id === id);
+    const el = elementsRef.current[designKeyRef.current][activeView].find((e) => e.id === id);
     if (!el) return;
     const z = zCounter + 1;
     setZCounter(z);
@@ -834,7 +956,7 @@ export default function PersonalizerClient({
   }
 
   function sendToBack(id: string) {
-    const minZ = Math.min(0, ...elementsRef.current[activeView].map((e) => e.zIndex));
+    const minZ = Math.min(0, ...elementsRef.current[designKeyRef.current][activeView].map((e) => e.zIndex));
     updateElement(id, { zIndex: minZ - 1 });
   }
 
@@ -1010,6 +1132,101 @@ export default function PersonalizerClient({
     return roundUpToConfiguredSize(largo, alto, sizeOptions);
   }
 
+  interface TechniqueResult {
+    technique: PrintTechnique;
+    // unitPrice YA incluye IVA (la tabla de técnicas viene sin IVA -> ver
+    // techniquePriceWithIva). Se suma directo al precio del producto, que
+    // también viene con IVA.
+    unitPrice: number | null;
+    needsQuote: boolean;
+    // Texto corto para el desglose / la tarjeta confirmada, p.ej.
+    // "2 posiciones · 1 tinta" o "2 logos".
+    resumen: string;
+  }
+
+  // Calcula el desglose de precio de IMPRESIÓN de UN diseño (los
+  // elementos de UNA clave de diseño, ver designKey) a la cantidad que le
+  // corresponda -- con "Mismo diseño" se llama una sola vez, con el diseño
+  // compartido y la cantidad total (idéntico al comportamiento de
+  // siempre). Con "Distinto por color" se llama UNA VEZ POR COLOR (ver
+  // buildCartItem), cada una con los elementos y la cantidad de ESE color
+  // nada más -- el garment (tela) nunca pasa por aquí, siempre usa la
+  // cantidad total combinada (ver garmentUnit arriba).
+  function computeDesignPricing(elementsForDesign: ViewElements, qtyForDesign: number, dk: string) {
+    const numElements = applicableViews.reduce((sum, v) => sum + elementsForDesign[v].length, 0);
+    const allLogoElements = applicableViews.flatMap((v) => elementsForDesign[v].filter((e) => e.type === "logo"));
+    const numLogoElements = allLogoElements.length;
+    // "Posiciones" = número de logos colocados (1 logo = 1 posición,
+    // criterio acordado -- charla 2026-09-10). Es el mismo para las 4
+    // vistas.
+    const posiciones = numLogoElements;
+
+    // Precio de UNA técnica según su pricing_type (ver types/index.ts) --
+    // nunca se inventa un precio: si falta el parámetro (tintas/tamaño) o
+    // no hay un renglón que coincida exacto, unitPrice queda en null y
+    // needsQuote en true.
+    const priceTechnique = (technique: PrintTechnique): TechniqueResult => {
+      const logosTxt = `${posiciones} ${posiciones === 1 ? "logo" : "logos"}`;
+      if (technique.pricing_type === "by_qty") {
+        // Nota: by_qty (DTG) y by_size (DTF) NO llevan el ×1.16 de IVA
+        // todavía -- solo se aplicó a by_tintas (Serigrafía/Tampografía),
+        // que es lo que se acordó. Cuando se confirme que esas tablas
+        // también vienen sin IVA se envuelven igual con
+        // techniquePriceWithIva.
+        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
+        const price = findQtyPrice(technique, qtyForDesign);
+        return price === null
+          ? { technique, unitPrice: null, needsQuote: true, resumen: logosTxt }
+          : { technique, unitPrice: price * numElements, needsQuote: false, resumen: logosTxt };
+      }
+      if (technique.pricing_type === "by_tintas") {
+        if (posiciones === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
+        const posTxt = `${posiciones} ${posiciones === 1 ? "posición" : "posiciones"}`;
+        const tintas = parseInt(techniqueTintas[tintasKeyFor(dk, technique.id)] ?? "", 10);
+        if (!Number.isFinite(tintas) || tintas <= 0) return { technique, unitPrice: null, needsQuote: true, resumen: posTxt };
+        const resumen = `${posTxt} · ${tintas} ${tintas === 1 ? "tinta" : "tintas"}`;
+        // La fila de la tabla es posiciones × tintas y se cobra UNA vez
+        // (ver findTintasPrice) -- ya NO se multiplica por el número de
+        // logos como antes.
+        const price = findTintasPrice(technique, tintas, posiciones, qtyForDesign);
+        return price === null
+          ? { technique, unitPrice: null, needsQuote: true, resumen }
+          : { technique, unitPrice: techniquePriceWithIva(price), needsQuote: false, resumen };
+      }
+      if (technique.pricing_type === "by_size") {
+        // Suma el precio de cada logo por separado -- cada uno puede
+        // tener su propia medida (ver resolveLogoSize), a diferencia de
+        // by_qty/by_tintas donde un solo precio se multiplica por el
+        // total de elementos.
+        if (allLogoElements.length === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
+        let sum = 0;
+        let needsQuote = false;
+        for (const el of allLogoElements) {
+          const size = resolveLogoSize(technique, el.id);
+          const price = size ? findSizePrice(technique, size, qtyForDesign) : null;
+          if (price === null) needsQuote = true;
+          else sum += price;
+        }
+        return { technique, unitPrice: needsQuote ? null : sum, needsQuote, resumen: logosTxt };
+      }
+      // pricing_type null -> sin datos suficientes configurados todavía.
+      return { technique, unitPrice: null, needsQuote: true, resumen: "" };
+    };
+
+    const techniqueResults: TechniqueResult[] = selectedTechniqueIds
+      .map((id) => techniques.find((t) => t.id === id))
+      .filter((t): t is PrintTechnique => !!t)
+      .map(priceTechnique);
+    const anyTechniqueNeedsQuote = techniqueResults.some((r) => r.needsQuote);
+    const techniqueTotal = techniqueResults.reduce((sum, r) => sum + (r.unitPrice ?? 0), 0);
+
+    // `priceTechnique` también se expone -- lo usa el pop-up de
+    // TechniqueModal para previsualizar el precio de una técnica que
+    // TODAVÍA no está en selectedTechniqueIds (antes de "Confirmar
+    // técnica").
+    return { numElements, allLogoElements, numLogoElements, posiciones, techniqueResults, anyTechniqueNeedsQuote, techniqueTotal, priceTechnique };
+  }
+
   // ?editar=<id> -- reabre una línea del carrito YA confirmada tal cual se
   // guardó (editor_state, ver buildCartItem), en vez del borrador normal
   // de este producto. Espera a que el carrito termine de hidratar desde
@@ -1025,9 +1242,10 @@ export default function PersonalizerClient({
     const item = cartItems.find((i) => i.id === editarCartItemId);
     const estado = item?.customization_snapshot?.editor_state as EditorState | undefined;
     if (item && estado) {
-      setElements(estado.elements);
-      setHistory([estado.elements]);
-      setHistoryIndex(0);
+      const migrated = migrateElementsShape(estado.elements);
+      setElements(migrated);
+      setHistoryByKey(Object.fromEntries(Object.entries(migrated).map(([k, v]) => [k, [v]])));
+      setHistoryIndexByKey(Object.fromEntries(Object.keys(migrated).map((k) => [k, 0])));
       setSelectedTechniqueIds(estado.selectedTechniqueIds ?? []);
       setTechniqueTintas(estado.techniqueTintas ?? {});
       setTechniqueLogoSizeCm(estado.techniqueLogoSizeCm ?? {});
@@ -1052,8 +1270,8 @@ export default function PersonalizerClient({
     const draft = loadDraft(product.id);
     if (draft) {
       setElements(draft.elements);
-      setHistory([draft.elements]);
-      setHistoryIndex(0);
+      setHistoryByKey(Object.fromEntries(Object.entries(draft.elements).map(([k, v]) => [k, [v]])));
+      setHistoryIndexByKey(Object.fromEntries(Object.keys(draft.elements).map((k) => [k, 0])));
       setSelectedTechniqueIds(draft.selectedTechniqueIds ?? []);
       setTechniqueTintas(draft.techniqueTintas ?? {});
       setTechniqueLogoSizeCm(draft.techniqueLogoSizeCm ?? {});
@@ -1068,8 +1286,30 @@ export default function PersonalizerClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id]);
 
+  // El garment (tela/manufactura) SIEMPRE usa la cantidad TOTAL combinada
+  // de todos los colores -- nunca cambia entre colores, ni con "Distinto
+  // por color" (ver contexto del plan 2026-09-19): la tela escala igual
+  // sin importar el diseño.
   const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers);
-  const numElements = applicableViews.reduce((sum, v) => sum + elements[v].length, 0);
+  // Cantidad a usar para el precio de IMPRESIÓN del diseño que se está
+  // viendo/editando ahora mismo: con "Distinto por color" es la de ESE
+  // color nada más (colorQty); con "Mismo diseño" (o producto no
+  // multicolor) sigue siendo la cantidad total, igual que siempre.
+  const qtyForActiveDesign = distintoPorColor ? colorQty(activeVariantId ?? "") : quantity;
+  const activeDesignPricing = computeDesignPricing(currentElements, qtyForActiveDesign, designKey);
+  const { numElements, allLogoElements, numLogoElements, posiciones, techniqueResults, anyTechniqueNeedsQuote, techniqueTotal, priceTechnique } =
+    activeDesignPricing;
+
+  // Suma de elementos colocados en TODOS los diseños (todas las claves del
+  // diccionario `elements`, no solo el diseño activo) -- se usa nada más
+  // para decidir si el borrador completo tiene contenido que valga la pena
+  // guardar (ver el efecto de abajo). Cambiar de color sin haber puesto
+  // nada en ese color específico no debe borrar lo que ya se diseñó en
+  // otro color.
+  const numElementsAllDesigns = Object.values(elements).reduce(
+    (sum, ve) => sum + applicableViews.reduce((s, v) => s + ve[v].length, 0),
+    0
+  );
 
   // Guarda el borrador (debounced, 400ms) cada vez que algo del diseño
   // cambia -- solo después de que el efecto de arriba ya haya tenido
@@ -1080,7 +1320,7 @@ export default function PersonalizerClient({
   useEffect(() => {
     if (!draftReady) return;
     const timer = setTimeout(() => {
-      const hasContent = numElements > 0 || selectedTechniqueIds.length > 0;
+      const hasContent = numElementsAllDesigns > 0 || selectedTechniqueIds.length > 0;
       if (hasContent) {
         saveDraft(product.id, { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation, quantity });
       } else {
@@ -1088,20 +1328,19 @@ export default function PersonalizerClient({
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [draftReady, product.id, elements, numElements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation, quantity]);
-  const allLogoElements = applicableViews.flatMap((v) => elements[v].filter((e) => e.type === "logo"));
-  const numLogoElements = allLogoElements.length;
+  }, [draftReady, product.id, elements, numElementsAllDesigns, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation, quantity]);
+
   // "Posiciones" (tarjeta de detalle de cada técnica): los ejes reales
   // donde el cliente ya colocó algún LOGO en el canvas, agrupados con
   // cuántos logos hay en cada uno -- ya no un número que se escriba a
   // mano, ni una sola medida compartida. Mismos VIEW_LABELS que ya se
-  // usan en las pestañas Frente/Reverso/Izquierda/Derecha de arriba. Es
-  // el mismo para las 4 vistas sin importar cuál esté activa ahora mismo,
-  // porque la técnica aplica al diseño completo, no a una vista.
+  // usan en las pestañas Frente/Reverso/Izquierda/Derecha de arriba. Con
+  // "Distinto por color" es del diseño ACTIVO nada más -- cada color tiene
+  // los suyos.
   const logosByView = applicableViews.map((v) => ({
     view: v,
     viewLabel: VIEW_LABELS[v],
-    logos: elements[v].filter((e) => e.type === "logo"),
+    logos: currentElements[v].filter((e) => e.type === "logo"),
   })).filter((g) => g.logos.length > 0);
   const activePositionLabels = logosByView.map((g) => g.viewLabel);
 
@@ -1147,93 +1386,24 @@ export default function PersonalizerClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sizeSuggestKey, techniques]);
 
-  // Cada técnica calcula su propio precio según su pricing_type (ver
-  // types/index.ts) y se suma al total — nunca se inventa un precio: si
-  // falta el parámetro (tintas/tamaño) o no hay un renglón que coincida
-  // exacto, unitPrice queda en null y needsQuote en true.
-  // "Posiciones" = número de logos colocados (1 logo = 1 posición, criterio
-  // acordado -- charla 2026-09-10). Es el mismo para las 4 vistas.
-  const posiciones = numLogoElements;
-
-  interface TechniqueResult {
-    technique: PrintTechnique;
-    // unitPrice YA incluye IVA (la tabla de técnicas viene sin IVA -> ver
-    // techniquePriceWithIva). Se suma directo al precio del producto, que
-    // también viene con IVA.
-    unitPrice: number | null;
-    needsQuote: boolean;
-    // Texto corto para el desglose / la tarjeta confirmada, p.ej.
-    // "2 posiciones · 1 tinta" o "2 logos".
-    resumen: string;
-  }
-  // Precio de UNA técnica según su pricing_type (ver types/index.ts) --
-  // nunca se inventa un precio: si falta el parámetro (tintas/tamaño) o no
-  // hay un renglón que coincida exacto, unitPrice queda en null y
-  // needsQuote en true. Se usa tanto para la lista de técnicas ya elegidas
-  // como para la vista previa del pop-up (ver TechniqueModal).
-  const priceTechnique = (technique: PrintTechnique): TechniqueResult => {
-      const logosTxt = `${posiciones} ${posiciones === 1 ? "logo" : "logos"}`;
-      if (technique.pricing_type === "by_qty") {
-        // Nota: by_qty (DTG) y by_size (DTF) NO llevan el ×1.16 de IVA
-        // todavía -- solo se aplicó a by_tintas (Serigrafía/Tampografía),
-        // que es lo que se acordó. Cuando se confirme que esas tablas
-        // también vienen sin IVA se envuelven igual con
-        // techniquePriceWithIva.
-        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
-        const price = findQtyPrice(technique, quantity);
-        return price === null
-          ? { technique, unitPrice: null, needsQuote: true, resumen: logosTxt }
-          : { technique, unitPrice: price * numElements, needsQuote: false, resumen: logosTxt };
-      }
-      if (technique.pricing_type === "by_tintas") {
-        if (posiciones === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
-        const posTxt = `${posiciones} ${posiciones === 1 ? "posición" : "posiciones"}`;
-        const tintas = parseInt(techniqueTintas[technique.id] ?? "", 10);
-        if (!Number.isFinite(tintas) || tintas <= 0) return { technique, unitPrice: null, needsQuote: true, resumen: posTxt };
-        const resumen = `${posTxt} · ${tintas} ${tintas === 1 ? "tinta" : "tintas"}`;
-        // La fila de la tabla es posiciones × tintas y se cobra UNA vez
-        // (ver findTintasPrice) -- ya NO se multiplica por el número de
-        // logos como antes.
-        const price = findTintasPrice(technique, tintas, posiciones, quantity);
-        return price === null
-          ? { technique, unitPrice: null, needsQuote: true, resumen }
-          : { technique, unitPrice: techniquePriceWithIva(price), needsQuote: false, resumen };
-      }
-      if (technique.pricing_type === "by_size") {
-        // Suma el precio de cada logo por separado -- cada uno puede tener
-        // su propia medida (ver resolveLogoSize), a diferencia de
-        // by_qty/by_tintas donde un solo precio se multiplica por el total
-        // de elementos.
-        if (allLogoElements.length === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
-        let sum = 0;
-        let needsQuote = false;
-        for (const el of allLogoElements) {
-          const size = resolveLogoSize(technique, el.id);
-          const price = size ? findSizePrice(technique, size, quantity) : null;
-          if (price === null) needsQuote = true;
-          else sum += price;
-        }
-        return { technique, unitPrice: needsQuote ? null : sum, needsQuote, resumen: logosTxt };
-      }
-      // pricing_type null -> sin datos suficientes configurados todavía.
-      return { technique, unitPrice: null, needsQuote: true, resumen: "" };
-  };
-
-  const techniqueResults: TechniqueResult[] = selectedTechniqueIds
-    .map((id) => techniques.find((t) => t.id === id))
-    .filter((t): t is PrintTechnique => !!t)
-    .map(priceTechnique);
-  const anyTechniqueNeedsQuote = techniqueResults.some((r) => r.needsQuote);
   // Pedido explícito: no se puede avanzar a "Siguiente"/checkout sin
   // elegir una técnica de impresión Y completar sus datos (tintas para
   // Serigrafía/Tampografía, tamaño en cm por logo para DTF Textil/DTF
-  // UV) -- ambas condiciones ya las resuelve techniqueResults arriba:
-  // sin ninguna técnica elegida no hay nada en el arreglo, y needsQuote
-  // ya es true tanto para datos incompletos como para pricing_type sin
-  // configurar -- en cualquiera de los dos casos no hay un precio real
-  // que cobrar todavía, así que tampoco debería poder pasar a checkout.
+  // UV) -- ambas condiciones ya las resuelve techniqueResults (ver
+  // computeDesignPricing más abajo): sin ninguna técnica elegida no hay
+  // nada en el arreglo, y needsQuote ya es true tanto para datos
+  // incompletos como para pricing_type sin configurar -- en cualquiera de
+  // los dos casos no hay un precio real que cobrar todavía, así que
+  // tampoco debería poder pasar a checkout.
   const techniqueSelectionIncomplete = selectedTechniqueIds.length === 0 || anyTechniqueNeedsQuote;
-  const techniqueTotal = techniqueResults.reduce((sum, r) => sum + (r.unitPrice ?? 0), 0);
+  // Precio en vivo del diseño que se está viendo/editando ahora mismo --
+  // con "Mismo diseño" es EL precio real del renglón completo (igual que
+  // siempre). Con "Distinto por color" es solo una vista previa del color
+  // activo (usa el tier de precio de ESE color, pero multiplicado por la
+  // cantidad TOTAL para el subtotal en pantalla): el precio real y
+  // definitivo del renglón completo -- sumando cada color a su propio
+  // tier -- se calcula aparte en buildCartItem, ver customization_snapshot
+  // .per_color.
   const unitPrice = garmentUnit + techniqueTotal;
   const subtotal = unitPrice * quantity;
   const total = subtotal;
@@ -1256,27 +1426,18 @@ export default function PersonalizerClient({
   // carrito de compras", para que si el cliente sale sin terminar el
   // producto YA esté ahí, no solo recuperable al volver a entrar al
   // Personalizador (ver el autoguardado local, arriba).
-  // Colores + desglose de tallas reales ya guardados por ProductDetail
-  // (pasos "1. Selecciona Color"/"2. Selecciona Cantidad") en este mismo
-  // renglón -- editarCartItemId si se está editando una línea ya
-  // confirmada, si no draftCartItemId (el renglón "en curso" que
-  // ProductDetail ya viene sincronizando). El Personalizador (pasos 3-4)
-  // NUNCA debe reconstruir esto desde cero: antes recreaba `variants` con
-  // un solo color activo y `sizes_breakdown: {}` fijo, así que en cuanto
-  // el cliente tocaba cualquier cosa aquí (incluso antes de poner un
-  // logo) se le borraban las tallas y, en Multicolor, se le colapsaban
-  // los demás colores a uno solo (ver charla 2026-09-16, bug real
-  // reportado). Solo si no hay NINGÚN renglón previo (ej. un link directo
-  // al Personalizador sin haber pasado por la ficha) cae al color activo
-  // como respaldo, sin desglose de tallas por no haber de dónde sacarlo.
-  const sourceVariantsItem = cartItems.find((i) => i.id === (editarCartItemId ?? draftCartItemId));
+  // sourceVariantsItem (colores/tallas reales del renglón) se declaró
+  // arriba, junto a draftCartItemId -- lo sigue usando igual aquí abajo.
 
-  function buildCartItem(id: string, canvasDataUrl: string): CartItem {
-    const variant = activeVariant ?? product.variants.find((v) => v.active) ?? product.variants[0];
+  // Convierte los elementos de UN diseño (una clave del diccionario
+  // `elements`) al formato de producción logos/texts -- usado tanto para
+  // el modo "Mismo diseño" (una sola vez, sobre currentElements) como
+  // para "Distinto por color" (una vez por color, sobre elements[variantId]).
+  function buildElementsPayload(elementsForDesign: ViewElements) {
     const logos: CustomizationElement[] = [];
     const texts: CustomizationElement[] = [];
     VIEW_ORDER.forEach((v) => {
-      elements[v].forEach((el) => {
+      elementsForDesign[v].forEach((el) => {
         const shared = { x: el.xPct, y: el.yPct, width: el.widthPct, height: el.heightPct, rotation: el.rotation };
         if (el.type === "logo")
           logos.push({
@@ -1294,60 +1455,134 @@ export default function PersonalizerClient({
         else texts.push({ type: "text", text: el.text, ...shared });
       });
     });
+    return { logos, texts };
+  }
+
+  // Arma el detalle de técnicas seleccionadas (tintas/tamaños/precio) para
+  // UN diseño -- `dk` es la clave de diseño de ESE diseño (para resolver
+  // tintas con la llave compuesta correcta, ver tintasKeyFor).
+  function buildSelectedTechniques(pricing: ReturnType<typeof computeDesignPricing>, dk: string): SelectedTechniqueDetail[] {
+    const positionLabels = applicableViews
+      .filter((v) => pricing.allLogoElements.some((el) => el.view === v))
+      .map((v) => VIEW_LABELS[v]);
+    return pricing.techniqueResults.map((r) => {
+      const tintasRaw = parseInt(techniqueTintas[tintasKeyFor(dk, r.technique.id)] ?? "", 10);
+      const logoSizes: Record<string, string> = {};
+      const sizeCmByElement: Record<string, { largo: number; alto: number }> = {};
+      for (const el of pricing.allLogoElements) {
+        const dims = techniqueLogoSizeCm[r.technique.id]?.[el.id];
+        const largo = parseFloat(dims?.largo ?? "");
+        const alto = parseFloat(dims?.alto ?? "");
+        if (largo > 0 && alto > 0) sizeCmByElement[el.id] = { largo, alto };
+        const resolved = resolveLogoSize(r.technique, el.id);
+        if (resolved) logoSizes[el.id] = resolved;
+      }
+      return {
+        technique_id: r.technique.id,
+        technique_name: r.technique.name,
+        tintas: Number.isFinite(tintasRaw) && tintasRaw > 0 ? tintasRaw : undefined,
+        positions: positionLabels.length > 0 ? positionLabels : undefined,
+        logo_sizes: Object.keys(logoSizes).length > 0 ? logoSizes : undefined,
+        size_cm: Object.keys(sizeCmByElement).length > 0 ? sizeCmByElement : undefined,
+        unit_price: r.unitPrice,
+        needs_quote: r.needsQuote,
+      };
+    });
+  }
+
+  function buildCartItem(id: string, canvasDataUrl: string): CartItem {
+    const variant = activeVariant ?? product.variants.find((v) => v.active) ?? product.variants[0];
+    const variantsForItem = sourceVariantsItem?.variants.length
+      ? sourceVariantsItem.variants
+      : variant
+      ? [{ variant_id: variant.id, color_name: variant.color_name, color_hex: variant.color_hex, qty: quantity, sizes_breakdown: {} }]
+      : [];
+    const totalQty = sourceVariantsItem?.total_quantity ?? quantity;
+
+    // "Mismo diseño" -- comportamiento de siempre, sin cambio: un solo
+    // diseño compartido (currentElements === elements[SHARED_KEY], porque
+    // designKey es SHARED_KEY cuando !distintoPorColor).
+    if (!distintoPorColor) {
+      const { logos, texts } = buildElementsPayload(currentElements);
+      return {
+        id,
+        product,
+        variants: variantsForItem,
+        total_quantity: totalQty,
+        technique_id: primaryTechnique?.id ?? null,
+        technique: primaryTechnique ?? undefined,
+        num_elements: numElements,
+        num_logo_elements: allLogoElements.length,
+        customization_snapshot:
+          numElements > 0
+            ? {
+                canvas_data_url: canvasDataUrl,
+                logos,
+                texts,
+                applied_to: "all",
+                // Estado completo del editor -- para que "Editar" desde el
+                // carrito reabra el lienzo EXACTO (ver el efecto de
+                // ?editar= arriba). logos/texts arriba son informativos
+                // (producción) y no alcanzan para reconstruir el lienzo:
+                // no llevan a qué vista pertenecen ni el estilo del texto.
+                editor_state: { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation } satisfies EditorState,
+                selected_techniques: buildSelectedTechniques(activeDesignPricing, designKey),
+              }
+            : null,
+        unit_price: unitPrice,
+        total_price: total,
+      };
+    }
+
+    // "Distinto por color" -- un sub-objeto por color, cada uno calculado
+    // con SU PROPIA cantidad (colorQty) y SUS PROPIOS elementos
+    // (elements[variantId]). El garment sigue siempre al tier de la
+    // cantidad TOTAL combinada (garmentUnit, calculado arriba, igual para
+    // todos los colores) -- solo la parte de impresión cambia por color.
+    const perColor: Record<string, PerColorCustomization> = {};
+    let totalPrice = 0;
+    let anyElements = false;
+    variantsForItem.forEach((v) => {
+      const elementsForColor = elements[v.variant_id] ?? emptyViewElements();
+      const qty = v.qty;
+      const pricing = computeDesignPricing(elementsForColor, qty, v.variant_id);
+      const { logos, texts } = buildElementsPayload(elementsForColor);
+      if (pricing.numElements > 0) anyElements = true;
+      const colorUnitPrice = garmentUnit + pricing.techniqueTotal;
+      totalPrice += colorUnitPrice * qty;
+      perColor[v.variant_id] = {
+        logos,
+        texts,
+        selected_techniques: buildSelectedTechniques(pricing, v.variant_id),
+        num_elements: pricing.numElements,
+        num_logo_elements: pricing.allLogoElements.length,
+        unit_price: colorUnitPrice,
+      };
+    });
 
     return {
       id,
       product,
-      variants: sourceVariantsItem?.variants.length
-        ? sourceVariantsItem.variants
-        : variant
-        ? [{ variant_id: variant.id, color_name: variant.color_name, color_hex: variant.color_hex, qty: quantity, sizes_breakdown: {} }]
-        : [],
-      total_quantity: sourceVariantsItem?.total_quantity ?? quantity,
+      variants: variantsForItem,
+      total_quantity: totalQty,
       technique_id: primaryTechnique?.id ?? null,
       technique: primaryTechnique ?? undefined,
       num_elements: numElements,
       num_logo_elements: allLogoElements.length,
-      customization_snapshot:
-        numElements > 0
-          ? {
-              canvas_data_url: canvasDataUrl,
-              logos,
-              texts,
-              applied_to: "all",
-              // Estado completo del editor -- para que "Editar" desde el
-              // carrito reabra el lienzo EXACTO (ver el efecto de
-              // ?editar= arriba). logos/texts arriba son informativos
-              // (producción) y no alcanzan para reconstruir el lienzo:
-              // no llevan a qué vista pertenecen ni el estilo del texto.
-              editor_state: { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation } satisfies EditorState,
-              selected_techniques: techniqueResults.map((r) => {
-                const tintasRaw = parseInt(techniqueTintas[r.technique.id] ?? "", 10);
-                const logoSizes: Record<string, string> = {};
-                const sizeCmByElement: Record<string, { largo: number; alto: number }> = {};
-                for (const el of allLogoElements) {
-                  const dims = techniqueLogoSizeCm[r.technique.id]?.[el.id];
-                  const largo = parseFloat(dims?.largo ?? "");
-                  const alto = parseFloat(dims?.alto ?? "");
-                  if (largo > 0 && alto > 0) sizeCmByElement[el.id] = { largo, alto };
-                  const resolved = resolveLogoSize(r.technique, el.id);
-                  if (resolved) logoSizes[el.id] = resolved;
-                }
-                return {
-                  technique_id: r.technique.id,
-                  technique_name: r.technique.name,
-                  tintas: Number.isFinite(tintasRaw) && tintasRaw > 0 ? tintasRaw : undefined,
-                  positions: activePositionLabels.length > 0 ? activePositionLabels : undefined,
-                  logo_sizes: Object.keys(logoSizes).length > 0 ? logoSizes : undefined,
-                  size_cm: Object.keys(sizeCmByElement).length > 0 ? sizeCmByElement : undefined,
-                  unit_price: r.unitPrice,
-                  needs_quote: r.needsQuote,
-                };
-              }),
-            }
-          : null,
-      unit_price: unitPrice,
-      total_price: total,
+      customization_snapshot: anyElements
+        ? {
+            canvas_data_url: canvasDataUrl,
+            logos: [],
+            texts: [],
+            applied_to: "per_color",
+            per_color: perColor,
+            editor_state: { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation } satisfies EditorState,
+          }
+        : null,
+      // Promedio nada más (ver comentario en CartItem.unit_price) -- el
+      // total real a cobrar es total_price, siempre.
+      unit_price: totalQty > 0 ? totalPrice / totalQty : 0,
+      total_price: totalPrice,
     };
   }
 
@@ -1539,11 +1774,15 @@ export default function PersonalizerClient({
               color (`showColorBar`, ver arriba). NO es un selector de
               colores de la prenda en general -- únicamente permite
               alternar entre los colores que ya se eligieron antes de
-              entrar aquí; nunca muestra los 6 colores completos. Cambiar
-              de color en esta barra SOLO cambia `activeVariantId` (y por lo
-              tanto `garmentColor`): nunca toca `elements`, así que el
-              diseño colocado por el usuario se mantiene intacto (misma
-              posición/escala/rotación %) al alternar de prenda. */}
+              entrar aquí; nunca muestra los 6 colores completos. Con
+              "Mismo diseño" (default), cambiar de color en esta barra SOLO
+              cambia `activeVariantId` (y por lo tanto `garmentColor`):
+              nunca toca `elements`, así que el diseño colocado por el
+              usuario se mantiene intacto (misma posición/escala/rotación
+              %) al alternar de prenda. Con "Distinto por color" (ver
+              designKey más arriba) SÍ importa: cambiar de color aquí
+              también cambia QUÉ diseño se está editando -- por eso el
+              label "Editando: {color}" debajo, para que quede claro. */}
           {showColorBar && (
             <div className="mb-5 flex flex-wrap items-center gap-2">
               <span className="mr-1 text-xs font-semibold text-ui-gray">Color de la prenda:</span>
@@ -1563,6 +1802,11 @@ export default function PersonalizerClient({
                   }`}
                 />
               ))}
+              {distintoPorColor && activeVariant && (
+                <span className="ml-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary-dark">
+                  Editando: {activeVariant.color_name}
+                </span>
+              )}
             </div>
           )}
 
@@ -1680,7 +1924,7 @@ export default function PersonalizerClient({
                 </div>
               )}
 
-              {elements[activeView].map((el) => (
+              {currentElements[activeView].map((el) => (
                 <DesignElementView
                   key={el.id}
                   element={el}
@@ -1698,11 +1942,11 @@ export default function PersonalizerClient({
             {layersOpen && (
               <div className="absolute right-6 top-0 z-20 w-60 rounded-2xl border border-ui-border bg-white p-4 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ui-gray">Capas — {VIEW_LABELS[activeView]}</p>
-                {elements[activeView].length === 0 ? (
+                {currentElements[activeView].length === 0 ? (
                   <p className="text-xs text-ui-gray">Sin elementos.</p>
                 ) : (
                   <div className="space-y-1">
-                    {[...elements[activeView]]
+                    {[...currentElements[activeView]]
                       .sort((a, b) => b.zIndex - a.zIndex)
                       .map((el) => (
                         <button
@@ -1795,7 +2039,7 @@ export default function PersonalizerClient({
                 ningún pop-up. Clic en un tile selecciona ese elemento
                 (mismo criterio que Capas); la "×" lo borra directo. */}
             <div className="grid grid-cols-3 gap-3">
-              {[...elements[activeView]]
+              {[...currentElements[activeView]]
                 .sort((a, b) => b.zIndex - a.zIndex)
                 .map((el) => (
                   <div
@@ -1927,8 +2171,8 @@ export default function PersonalizerClient({
                             setActiveView(view);
                             setSelectedId(elementId);
                           }}
-                          tintas={techniqueTintas[technique.id] ?? ""}
-                          onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [technique.id]: v }))}
+                          tintas={techniqueTintas[tintasKey(technique.id)] ?? ""}
+                          onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [tintasKey(technique.id)]: v }))}
                           onRemove={() => toggleTechnique(technique.id)}
                         />
                       )
@@ -2001,7 +2245,7 @@ export default function PersonalizerClient({
       <PreviewModal
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
-        elements={elements}
+        elements={currentElements}
         productName={product.name}
         technique={primaryTechnique}
         resolvedAssets={resolvedAssets}
@@ -2028,8 +2272,8 @@ export default function PersonalizerClient({
             logosByView={logosByView}
             posiciones={posiciones}
             quantity={quantity}
-            tintas={techniqueTintas[modalTechnique.id] ?? ""}
-            onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [modalTechnique.id]: v }))}
+            tintas={techniqueTintas[tintasKey(modalTechnique.id)] ?? ""}
+            onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [tintasKey(modalTechnique.id)]: v }))}
             unitPrice={preview.unitPrice}
             needsQuote={preview.needsQuote}
             resumen={preview.resumen}

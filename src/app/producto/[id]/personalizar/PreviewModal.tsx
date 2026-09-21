@@ -7,6 +7,7 @@ import { VIEW_ORDER, VIEW_LABELS, type ViewElements, type DesignElement, type Ga
 import { resolveFontFamilyCss } from "./textFonts";
 import { DEFAULT_FONT_SIZE_RATIO } from "./DesignElementView";
 import { needsLogoProcessing, processLogoSrc } from "./logoImagePipeline";
+import { VIEW_ASSETS } from "./viewAssets";
 
 // Mismas "Opciones de diseño" (fondo/color/espejo/opacidad/brillo-
 // contraste) que ya aplica el lienzo real (ver DesignElementView) -- si no
@@ -81,17 +82,39 @@ function MiniView({
   // only ever the selected product's own photography, or nothing.
   const imgSrc = resolvedAssets[view][garmentColor];
   const viewElements = elements[view];
+  const asset = VIEW_ASSETS[view];
 
   return (
     <div
-      // aspectRatio fijo (1:1), NUNCA asset.aspect por vista: cada eje
-      // trae su propia relación de aspecto real de foto, así que dos
-      // caras lado a lado terminaban con alturas distintas. Un cuadrado
-      // fijo + object-contain deja todas iguales.
-      className="relative mx-auto w-full overflow-hidden bg-white"
+      // Cuadrado fijo (1:1) SOLO en este contenedor exterior -- para que
+      // dos caras lado a lado en la cuadrícula terminen con la misma
+      // altura (mismo motivo de siempre). El bug real (charla 2026-09-21:
+      // "el de la derecha y atrás se distorsionaron") era que las
+      // posiciones/tamaños de los elementos (xPct/yPct/widthPct/heightPct)
+      // se calcularon en el lienzo real, cuyo contenedor SIEMPRE tiene el
+      // aspecto real de la foto (asset.aspect, ver PersonalizerClient) --
+      // nunca cuadrado. Aplicar esos mismos porcentajes directo sobre un
+      // cuadrado los distorsiona en cualquier vista cuyo aspecto real no
+      // sea ~1:1 (Reverso/Izquierda/Derecha, todas más angostas que altas
+      // -- Frente casi no se notaba porque su aspecto ya es casi cuadrado).
+      // La corrección: un contenedor INTERNO con el aspecto real de la
+      // foto (igual que el lienzo), centrado dentro del cuadrado exterior
+      // -- ahí sí, los mismos porcentajes caen exactamente en el mismo
+      // lugar relativo que en el editor.
+      className="relative mx-auto flex w-full items-center justify-center overflow-hidden bg-white"
       style={{ aspectRatio: 1 }}
     >
-      {imgSrc ? (
+      <div
+        className="relative"
+        style={{
+          aspectRatio: asset.aspect,
+          width: asset.aspect >= 1 ? "100%" : "auto",
+          height: asset.aspect >= 1 ? "auto" : "100%",
+          maxWidth: "100%",
+          maxHeight: "100%",
+        }}
+      >
+        {imgSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imgSrc} alt={VIEW_LABELS[view]} className="absolute inset-0 h-full w-full select-none object-contain" draggable={false} />
         ) : (
@@ -144,6 +167,7 @@ function MiniView({
           </div>
         ))}
       </div>
+    </div>
   );
 }
 
