@@ -58,6 +58,18 @@ export function RedoIcon({ className = "" }: { className?: string }) {
   );
 }
 
+// Disquete clásico -- botón "Guardar" (ver charla 2026-09-22: guardar en
+// carrito como borrador desde cualquier vista).
+export function SaveIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 4h11l3 3v13H5z" />
+      <path d="M8 4v5h8V4" />
+      <path d="M7 14h10v6H7z" />
+    </svg>
+  );
+}
+
 export function ArrowRightIcon({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">

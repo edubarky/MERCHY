@@ -11,6 +11,17 @@ interface CartContextValue {
   items: CartItem[];
   addItem: (item: CartItem) => void;
   upsertItem: (item: CartItem) => void;
+  // Igual que upsertItem, pero escribe a localStorage de forma SINCRÓNICA
+  // (lee-modifica-escribe directo, sin pasar por setState + el useEffect
+  // de arriba) -- para usar en un listener de "pagehide" (ver
+  // PersonalizerClient), donde no hay garantía de que React llegue a
+  // aplicar el efecto normal antes de que la pestaña ya se haya cerrado.
+  // `removeId` (opcional) quita ese otro renglón en la MISMA escritura --
+  // usado para reemplazar el placeholder "en progreso" (ver
+  // productDraftCartItemId) por el renglón real recién creado, sin dos
+  // escrituras separadas que pudieran perder la segunda si la página
+  // cierra entre una y otra.
+  upsertItemSync: (item: CartItem, removeId?: string) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
   totalItems: number;
@@ -80,6 +91,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  function upsertItemSync(item: CartItem, removeId?: string) {
+    function merge(prev: CartItem[]): CartItem[] {
+      const withoutRemoved = removeId ? prev.filter((i) => i.id !== removeId) : prev;
+      const idx = withoutRemoved.findIndex((i) => i.id === item.id);
+      return idx === -1 ? [...withoutRemoved, item] : withoutRemoved.map((i, k) => (k === idx ? item : i));
+    }
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const current: CartItem[] = raw ? JSON.parse(raw) : [];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merge(current)));
+    } catch {
+      // ver upsertItem -- storage lleno/bloqueado, no debe romper nada
+    }
+    // Espejo best-effort en el estado de React -- por si la página en
+    // realidad no se cerró (ej. solo se puso en segundo plano en móvil) y
+    // el usuario vuelve a esta misma pestaña ya montada.
+    setItems(merge);
+  }
+
   // Al quitar un renglón, se borran también los logos que ese diseño haya
   // subido -- pedido explícito (ver charla 2026-09-16): "no quiero que se
   // guarden TODOS los logos que un usuario llene en su vida", solo
@@ -120,7 +150,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const total = subtotal;
 
   return (
-    <CartContext.Provider value={{ items, addItem, upsertItem, removeItem, clearCart, totalItems, subtotal, total, justAdded, hydrated }}>
+    <CartContext.Provider value={{ items, addItem, upsertItem, upsertItemSync, removeItem, clearCart, totalItems, subtotal, total, justAdded, hydrated }}>
       {children}
     </CartContext.Provider>
   );

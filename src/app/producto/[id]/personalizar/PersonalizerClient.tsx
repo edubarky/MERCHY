@@ -55,6 +55,7 @@ import {
   LayersIcon,
   UndoIcon,
   RedoIcon,
+  SaveIcon,
   ArrowRightIcon,
   FrenteTabIcon,
   ReversoTabIcon,
@@ -187,10 +188,10 @@ const SHARED_KEY = "__shared__";
 // Migra un `elements` guardado ANTES de "Distinto por color" (charla
 // 2026-09-19): en ese entonces era un ViewElements plano (llaves = nombres
 // de eje, ej. "frente"), no un diccionario por clave de diseño -- se
-// envuelve en SHARED_KEY en vez de descartarlo. Usado tanto por
-// loadDraft (borrador local) como por la restauración de ?editar= (renglón
-// ya confirmado en el carrito) -- las dos fuentes pueden traer la forma
-// vieja si se guardaron antes de este cambio.
+// envuelve en SHARED_KEY en vez de descartarlo. Usado por la restauración
+// de ?editar= (renglón ya guardado en el carrito, ver customization_
+// snapshot.editor_state) -- un renglón guardado antes de este cambio
+// puede traer la forma vieja.
 function migrateElementsShape(raw: unknown): Record<string, ViewElements> {
   const obj = raw as Record<string, unknown> | null | undefined;
   if (obj && !(SHARED_KEY in obj) && VIEW_ORDER.some((v) => v in obj)) {
@@ -203,29 +204,19 @@ function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// Autoguardado del diseño en curso -- pedido explícito: si el cliente sale
-// de esta página (botón atrás, cierra la pestaña, navega a otra parte del
-// sitio) sin llegar a "Confirmar diseño", antes todo lo que llevaba
-// colocado se perdía para siempre. Se guarda por PRODUCTO (no por color:
-// `elements` ya es una sola cosa compartida entre colores, ver
-// activeVariantId en el componente) en localStorage -- nunca en el
-// carrito ni en Supabase, esto es solo un borrador en el propio navegador.
-// `quantity`/`activeVariantId` a propósito NO se guardan aquí: esos ya
-// llegan de la ficha del producto vía props (initialQuantity/
-// initialVariantId, ver Props) cada vez que se entra, y esa sigue siendo
-// la fuente de verdad -- este autoguardado protege el TRABAJO (logos/
-// texto/técnica elegida), no la selección de color/cantidad.
-const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 días -- más viejo que
-// esto se descarta en vez de restaurar algo potencialmente obsoleto (ej.
-// un logo ya borrado de "Mis diseños" desde entonces).
-
+// Ya NO hay borrador local en localStorage (ver charla 2026-09-22: "el
+// carrito pasa a ser el único lugar donde vive cualquier borrador") --
+// "Guardar"/"Siguiente"/cerrar la página guardan directo en un renglón
+// real del carrito (ver persistToCart en el componente). Este tipo se
+// queda porque sigue siendo la forma exacta de
+// customization_snapshot.editor_state (ver buildCartItem), para que
+// "Editar" desde el carrito pueda reabrir el lienzo EXACTO.
 interface PersonalizerDraft {
-  savedAt: number;
   // Diccionario por "clave de diseño" (SHARED_KEY en modo Mismo diseño, o
   // variant_id por color en modo Distinto por color) -- ver designKey en
-  // el componente. Un borrador guardado antes de este cambio (un solo
-  // ViewElements plano) se descarta igual que cualquier otro borrador
-  // vencido/corrupto, ver loadDraft.
+  // el componente. Un renglón guardado antes de este cambio (un solo
+  // ViewElements plano) se migra en vez de descartarse, ver
+  // migrateElementsShape.
   elements: Record<string, ViewElements>;
   selectedTechniqueIds: string[];
   // Con "Distinto por color", la llave deja de ser solo technique.id --
@@ -236,63 +227,9 @@ interface PersonalizerDraft {
   techniqueTintas: Record<string, string>;
   techniqueLogoSizeCm: Record<string, Record<string, { largo: string; alto: string }>>;
   groupOrientation: Partial<Record<string, ViewName>>;
-  // La cantidad ya no se puede cambiar dentro del personalizador (solo en
-  // el paso 1). Se guarda aquí como respaldo para que "salir y volver"
-  // conserve la cantidad aunque el link ya no traiga ?qty (ver charla
-  // 2026-09-10). El ?qty de la ficha del producto sigue mandando cuando
-  // viene presente.
-  quantity?: number;
 }
 
-// Mismo contenido que el borrador de localStorage, sin savedAt/quantity
-// (la cantidad de una línea de carrito ya confirmada vive en su propio
-// total_quantity) -- es lo que se guarda en
-// customization_snapshot.editor_state (ver buildCartItem) para que
-// "Editar" desde el carrito pueda reabrir el lienzo EXACTO.
-type EditorState = Omit<PersonalizerDraft, "savedAt" | "quantity">;
-
-function draftStorageKey(productId: string) {
-  return `merchy:personalizador-draft:${productId}`;
-}
-
-function loadDraft(productId: string): PersonalizerDraft | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(draftStorageKey(productId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as PersonalizerDraft & { elements?: any };
-    if (!parsed || typeof parsed.savedAt !== "number" || Date.now() - parsed.savedAt > DRAFT_TTL_MS) return null;
-    // Migración de un borrador viejo (antes de "Distinto por color", ver
-    // charla 2026-09-19): `elements` era un ViewElements plano (llaves =
-    // nombres de eje, ej. "frente"), no un diccionario por clave de
-    // diseño -- se envuelve en SHARED_KEY en vez de descartarlo.
-    // techniqueTintas NO necesita esta migración: sus llaves siguen
-    // siendo technique.id tal cual en modo "Mismo diseño" (ver tintasKey).
-    parsed.elements = migrateElementsShape(parsed.elements);
-    return parsed as PersonalizerDraft;
-  } catch {
-    return null;
-  }
-}
-
-function saveDraft(productId: string, draft: Omit<PersonalizerDraft, "savedAt">) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(draftStorageKey(productId), JSON.stringify({ ...draft, savedAt: Date.now() }));
-  } catch {
-    // localStorage lleno/bloqueado (modo privado, cuotas, etc.) -- el
-    // autoguardado es una mejora, nunca debe romper el editor.
-  }
-}
-
-function clearDraft(productId: string) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(draftStorageKey(productId));
-  } catch {
-    // ver saveDraft
-  }
-}
+type EditorState = PersonalizerDraft;
 
 // Reads an image's real natural pixel dimensions — the source of truth for
 // sizing a newly-placed logo's box to its own actual aspect ratio (see
@@ -497,7 +434,7 @@ export default function PersonalizerClient({
   // page.tsx), que ya usa este mismo CartContext, así que el conteo/pulso
   // sigue siendo el carrito real de la plataforma, no uno nuevo. `addItem`
   // es lo único que este componente todavía necesita del contexto.
-  const { addItem, upsertItem, removeItem, items: cartItems, hydrated: cartHydrated } = useCart();
+  const { addItem, upsertItem, upsertItemSync, removeItem, items: cartItems, hydrated: cartHydrated } = useCart();
   // ?editar=<id> -- "Editar" desde el carrito de una línea YA
   // personalizada (ver carrito/page.tsx) -- distinto del renglón "en
   // curso" de arriba (draftCartItemId, id fijo, todavía sin confirmar).
@@ -1306,33 +1243,18 @@ export default function PersonalizerClient({
     setDraftReady(true);
   }, [editarCartItemId, cartHydrated, cartItems]);
 
-  // Restaura el borrador guardado de ESTE producto (si hay uno vigente) al
-  // entrar -- una sola vez, al montar. `setHistory([draft.elements])` deja
-  // el punto restaurado como nuevo inicio del undo (nunca "deshacer" hacia
-  // un vacío que el cliente ni siquiera vio en esta sesión). Se salta por
-  // completo si viene ?editar= -- ese caso ya lo resuelve el efecto de
-  // arriba, con su propia fuente de verdad (nunca las dos a la vez, o el
-  // borrador normal pisaría el diseño que se está editando).
+  // Ya NO hay borrador local por producto (ver charla 2026-09-22: el
+  // carrito pasa a ser el único lugar donde vive un diseño sin terminar
+  // -- "Guardar"/"Siguiente"/cerrar la página lo dejan ahí, ver
+  // persistToCart más abajo). Entrar a personalizar este producto desde
+  // cero (sin ?editar=) por eso siempre arranca vacío, aunque ya exista
+  // un renglón guardado de este mismo producto en el carrito -- para
+  // retomar ESE hay que entrar por "Editar" desde el carrito, que sí
+  // trae `editarCartItemId` y cae en el efecto de arriba.
   useEffect(() => {
     if (editarCartItemId) return;
-    const draft = loadDraft(product.id);
-    if (draft) {
-      setElements(draft.elements);
-      setHistoryByKey(Object.fromEntries(Object.entries(draft.elements).map(([k, v]) => [k, [v]])));
-      setHistoryIndexByKey(Object.fromEntries(Object.keys(draft.elements).map((k) => [k, 0])));
-      setSelectedTechniqueIds(draft.selectedTechniqueIds ?? []);
-      setTechniqueTintas(draft.techniqueTintas ?? {});
-      setTechniqueLogoSizeCm(draft.techniqueLogoSizeCm ?? {});
-      setGroupOrientation(draft.groupOrientation ?? {});
-      // ?qty de la ficha manda; si no vino, se recupera del borrador.
-      if (initialQuantity == null && typeof draft.quantity === "number" && draft.quantity > 0) {
-        setQuantity(draft.quantity);
-        setQtyDraft(String(draft.quantity));
-      }
-    }
     setDraftReady(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.id]);
+  }, [editarCartItemId]);
 
   // El garment (tela/manufactura) SIEMPRE usa la cantidad TOTAL combinada
   // de todos los colores -- nunca cambia entre colores, ni con "Distinto
@@ -1350,33 +1272,15 @@ export default function PersonalizerClient({
 
   // Suma de elementos colocados en TODOS los diseños (todas las claves del
   // diccionario `elements`, no solo el diseño activo) -- se usa nada más
-  // para decidir si el borrador completo tiene contenido que valga la pena
-  // guardar (ver el efecto de abajo). Cambiar de color sin haber puesto
-  // nada en ese color específico no debe borrar lo que ya se diseñó en
-  // otro color.
+  // para decidir si hay algo que valga la pena guardar (ver
+  // hasContentToSave/handleGuardar y el guardado al cerrar la página más
+  // abajo). Cambiar de color sin haber puesto nada en ese color
+  // específico no debe borrar lo que ya se diseñó en otro color.
   const numElementsAllDesigns = Object.values(elements).reduce(
     (sum, ve) => sum + applicableViews.reduce((s, v) => s + ve[v].length, 0),
     0
   );
-
-  // Guarda el borrador (debounced, 400ms) cada vez que algo del diseño
-  // cambia -- solo después de que el efecto de arriba ya haya tenido
-  // oportunidad de restaurar (ver draftReady), para no pisar un borrador
-  // real con el estado vacío inicial del primer render. Sin nada colocado
-  // ni técnica elegida, borra el borrador en vez de guardar uno vacío --
-  // si el cliente quitó todo a propósito y se fue, no debe reaparecer.
-  useEffect(() => {
-    if (!draftReady) return;
-    const timer = setTimeout(() => {
-      const hasContent = numElementsAllDesigns > 0 || selectedTechniqueIds.length > 0;
-      if (hasContent) {
-        saveDraft(product.id, { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation, quantity });
-      } else {
-        clearDraft(product.id);
-      }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [draftReady, product.id, elements, numElementsAllDesigns, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation, quantity]);
+  const hasContentToSave = numElementsAllDesigns > 0 || selectedTechniqueIds.length > 0;
 
   // "Posiciones" (tarjeta de detalle de cada técnica): los ejes reales
   // donde el cliente ya colocó algún LOGO en el canvas, agrupados con
@@ -1634,42 +1538,85 @@ export default function PersonalizerClient({
     };
   }
 
-  // Mantiene el renglón "en curso" del carrito sincronizado con el diseño
-  // (debounced 400ms, mismo criterio/gate `draftReady` que el autoguardado
-  // local de arriba -- para no disparar en el primer render con el estado
-  // vacío inicial antes de que ese efecto tenga oportunidad de restaurar).
-  // Sin captura de canvas aquí (queda "" -- el carrito ya cae a la foto
-  // normal del producto como miniatura, ver /carrito): generar el PNG real
-  // en cada cambio sería costoso: la captura real solo se hace una vez, al
-  // confirmar (ver handleAddToCart).
-  //
-  // A diferencia del autoguardado local de arriba, este SIEMPRE actualiza
-  // (nunca quita el renglón por falta de diseño): llegar a esta página ya
-  // implica una cantidad/color/talla reales elegidos (ver
-  // productDraftCartItemId -- el mismo renglón que ProductDetail ya venía
-  // sincronizando desde la ficha, o los valores por defecto de un link
-  // directo), así que el producto sigue siendo una selección válida
-  // aunque todavía no tenga ningún logo/texto colocado -- quitarlo aquí
-  // borraría justo lo que ProductDetail acaba de guardar. Solo
-  // handleAddToCart (al confirmar) reemplaza este renglón.
+  // Id REAL y permanente de este renglón en el carrito, una vez que ya se
+  // guardó una vez en esta sesión (por "Guardar" o por "Siguiente") -- ver
+  // charla 2026-09-22: el carrito pasa a ser el único lugar donde vive
+  // cualquier borrador, así que el PRIMER guardado de una sesión nueva
+  // mintea un id real (igual que "Siguiente" ya hacía) y todo guardado
+  // posterior en la MISMA sesión actualiza ese mismo id, nunca uno nuevo.
+  // Nunca es igual a draftCartItemId (el placeholder de qty/color que ya
+  // viene de la ficha, ver productDraftCartItemId) ni aplica cuando se
+  // está editando un renglón ya existente (?editar=, que siempre usa
+  // editarCartItemId directo).
+  const savedItemIdRef = useRef<string | null>(null);
+
+  // "Guardado en carrito como borrador" / "Actualizado en carrito" (ver
+  // charla 2026-09-22) -- un pill flotante simple, se auto-oculta solo.
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function showNotice(message: string) {
+    setNotice(message);
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = setTimeout(() => setNotice(null), 2500);
+  }
+  useEffect(() => () => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+  }, []);
+
+  // Único punto que decide A CUÁL renglón del carrito se escribe --
+  // usado por "Guardar" (cualquier vista), "Siguiente", y el guardado
+  // automático al cerrar la página (ver el efecto de abajo). `isNew` es
+  // lo que decide el texto de la notificación.
+  function persistToCart(canvasDataUrl: string): { id: string; isNew: boolean } {
+    if (editarCartItemId) {
+      upsertItem(buildCartItem(editarCartItemId, canvasDataUrl));
+      return { id: editarCartItemId, isNew: false };
+    }
+    if (savedItemIdRef.current) {
+      upsertItem(buildCartItem(savedItemIdRef.current, canvasDataUrl));
+      return { id: savedItemIdRef.current, isNew: false };
+    }
+    const newId = uid();
+    addItem(buildCartItem(newId, canvasDataUrl));
+    // Reemplaza el placeholder de qty/color de la ficha (ver
+    // productDraftCartItemId) -- ya quedó su propio renglón real, dos a
+    // la vez se verían como el mismo producto duplicado en el carrito.
+    removeItem(draftCartItemId);
+    savedItemIdRef.current = newId;
+    return { id: newId, isNew: true };
+  }
+
+  // Red de seguridad si se cierra la pestaña/página sin darle a "Guardar"
+  // ni a "Siguiente" -- mismo `persistToCart` de arriba, pero escribiendo
+  // de forma SINCRÓNICA (ver upsertItemSync en CartContext) porque un
+  // "pagehide" no da garantía de que React llegue a aplicar un setState
+  // normal antes de que la página ya se haya ido. Nunca mientras se está
+  // restaurando (`draftReady`) ni si no hay nada que valga la pena
+  // guardar todavía.
   useEffect(() => {
-    // Editando una línea YA confirmada (?editar=) -- nunca crear/actualizar
-    // en paralelo el renglón "en curso" (draftCartItemId es un id
-    // DISTINTO); handleAddToCart ya reemplaza la línea real que se está
-    // editando, este efecto no debe tocar nada más mientras tanto.
-    if (!draftReady || editarCartItemId) return;
-    const timer = setTimeout(() => {
-      upsertItem(buildCartItem(draftCartItemId, ""));
-    }, 400);
-    return () => clearTimeout(timer);
+    function handlePageHide() {
+      if (!draftReady) return;
+      const hasContent = numElementsAllDesigns > 0 || selectedTechniqueIds.length > 0;
+      if (!hasContent) return;
+      const targetId = editarCartItemId ?? savedItemIdRef.current;
+      if (targetId) {
+        upsertItemSync(buildCartItem(targetId, ""));
+      } else {
+        const newId = uid();
+        upsertItemSync(buildCartItem(newId, ""), draftCartItemId);
+        savedItemIdRef.current = newId;
+      }
+    }
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     draftReady,
     editarCartItemId,
     draftCartItemId,
-    numElements,
-    elements,
+    numElementsAllDesigns,
     selectedTechniqueIds,
+    elements,
     techniqueTintas,
     techniqueLogoSizeCm,
     quantity,
@@ -1677,6 +1624,24 @@ export default function PersonalizerClient({
     unitPrice,
     total,
   ]);
+
+  const [guardando, setGuardando] = useState(false);
+  // "Guardar" -- visible sin importar la vista activa (Frente/Reverso/
+  // Izquierda/Derecha, ver charla 2026-09-22), siempre guarda el producto
+  // COMPLETO (las 4 vistas), no solo la vista donde se dio clic. A
+  // diferencia de "Siguiente", nunca exige que la técnica esté completa
+  // (es justo para no perder trabajo a medias) y no captura una foto real
+  // del lienzo -- esa solo hace falta al confirmar de verdad.
+  function handleGuardar() {
+    if (guardando || !hasContentToSave) return;
+    setGuardando(true);
+    try {
+      const { isNew } = persistToCart("");
+      showNotice(isNew ? "Guardado en carrito como borrador" : "Actualizado en carrito");
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   async function handleAddToCart() {
     // Segunda barrera además del disabled del botón (ver
@@ -1696,28 +1661,15 @@ export default function PersonalizerClient({
         }
       }
 
-      // ?editar=<id> (ver carrito/page.tsx): esto es una edición de una
-      // línea YA confirmada -- se reemplaza ESA misma línea (mismo id,
-      // upsertItem) y se vuelve al carrito a verla actualizada, en vez de
-      // crear un renglón nuevo y seguir a /checkout.
-      if (editarCartItemId) {
-        upsertItem(buildCartItem(editarCartItemId, canvasDataUrl));
-        selectOnly(null);
-        router.push("/carrito");
-        return;
-      }
-
-      // Ya no se abre ningún popover local -- el badge/pulso del carrito en
-      // PublicHeader (barra superior) es la única confirmación visual, y
-      // ya reacciona solo porque comparte el mismo CartContext.
-      addItem(buildCartItem(uid(), canvasDataUrl));
+      const { isNew } = persistToCart(canvasDataUrl);
       selectOnly(null);
-      // Ya quedó como su propio renglón confirmado (id nuevo) -- el
-      // renglón "en curso" (id fijo, ver draftCartItemId) y el borrador
-      // local dejan de tener sentido, así que no deben reaparecer si el
-      // cliente vuelve a personalizar este mismo producto después.
-      removeItem(draftCartItemId);
-      clearDraft(product.id);
+      // Ya no se abre ningún popover local -- el badge/pulso del carrito en
+      // PublicHeader (barra superior) ya reacciona solo porque comparte el
+      // mismo CartContext. La leyenda de abajo sí se deja ver un momento
+      // antes de navegar (ver charla 2026-09-22: "Siguiente" también debe
+      // mostrarla).
+      showNotice(isNew ? "Guardado en carrito como borrador" : "Actualizado en carrito");
+      await new Promise((resolve) => setTimeout(resolve, 700));
       // Revertido -- pedido explícito (ver charla 2026-09-16): "Siguiente"
       // vuelve a mandar al carrito, no directo a checkout. El carrito es
       // justo la pantalla donde el cliente revisa/resume su compra (y
@@ -2263,6 +2215,21 @@ export default function PersonalizerClient({
               volver no pierde nada; la cantidad se restaura del mismo
               borrador si el link ya no trae ?qty. */}
 
+          {/* "Guardar" -- visible sin importar la vista activa (ver charla
+              2026-09-22), siempre guarda el producto completo en el
+              carrito como borrador, sin exigir que la técnica esté
+              completa (a diferencia de "Siguiente" de abajo). */}
+          <button
+            type="button"
+            onClick={handleGuardar}
+            disabled={guardando || !hasContentToSave}
+            title={hasContentToSave ? undefined : "Coloca algo primero para poder guardarlo"}
+            className="mb-3 flex h-11 w-full items-center justify-center gap-2 rounded-full border border-ui-border bg-white text-sm font-semibold text-foreground transition-all duration-200 ease-out hover:border-primary hover:text-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <SaveIcon className="h-4 w-4" />
+            {guardando ? "Guardando..." : "Guardar"}
+          </button>
+
           {/* "Minimal Sólido" (pedido explícito, reemplaza el tratamiento
               glass/glow de antes) -- colores sólidos únicamente, sin
               degradados/glass/glow. Tamaño/posición/separación/texto/
@@ -2340,6 +2307,16 @@ export default function PersonalizerClient({
           />
         );
       })()}
+
+      {/* "Guardado en carrito como borrador" / "Actualizado en carrito"
+          (ver charla 2026-09-22) -- pill flotante simple, se oculta solo. */}
+      {notice && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[100] flex justify-center">
+          <span className="pointer-events-auto rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+            {notice}
+          </span>
+        </div>
+      )}
 
     </div>
   );
