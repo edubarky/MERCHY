@@ -82,14 +82,23 @@ export default function DesignElementView({
   element,
   containerRef,
   selected,
+  interactive = true,
   onSelect,
   onChange,
   onInteraction,
 }: {
   element: DesignElement;
   containerRef: React.RefObject<HTMLDivElement>;
+  // Aro visual de "seleccionado" -- true para CADA elemento de una
+  // multi-selección (ver charla 2026-09-22: Shift+clic).
   selected: boolean;
-  onSelect: (id: string) => void;
+  // Manijas reales de mouse (arrastrar/redimensionar/rotar vía
+  // react-moveable) -- solo tiene sentido con exactamente 1 elemento
+  // seleccionado (nunca se construyó arrastre de grupo); con 2+
+  // seleccionados cada uno se queda solo con el aro, y Shift+flecha
+  // (PersonalizerClient) sigue escalando a todos por igual.
+  interactive?: boolean;
+  onSelect: (id: string, shift: boolean) => void;
   onChange: (id: string, patch: Partial<DesignElement>) => void;
   onInteraction: (active: boolean, inBounds: boolean) => void;
 }) {
@@ -303,16 +312,16 @@ export default function DesignElementView({
         ref={targetRef}
         onMouseDown={(e) => {
           e.stopPropagation();
-          onSelect(element.id);
+          onSelect(element.id, e.shiftKey);
         }}
         onTouchStart={(e) => {
           e.stopPropagation();
-          onSelect(element.id);
+          onSelect(element.id, false);
         }}
         onDoubleClick={(e) => {
           if (element.type !== "text") return;
           e.stopPropagation();
-          onSelect(element.id);
+          onSelect(element.id, false);
           setEditingText(true);
         }}
         className={`absolute select-none transition-shadow duration-150 ${editingText ? "cursor-text" : "cursor-move"} ${
@@ -400,7 +409,7 @@ export default function DesignElementView({
         )}
       </div>
 
-      {selected && !editingText && (
+      {selected && interactive && !editingText && (
         <Moveable
           ref={moveableRef}
           target={targetRef}

@@ -373,7 +373,31 @@ export default function PersonalizerClient({
   // color (ver commit()/undo()/redo() más abajo).
   const [historyByKey, setHistoryByKey] = useState<Record<string, ViewElements[]>>({ [SHARED_KEY]: [emptyViewElements()] });
   const [historyIndexByKey, setHistoryIndexByKey] = useState<Record<string, number>>({ [SHARED_KEY]: 0 });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Multi-selección (charla 2026-09-22: "seleccionar varios logos con
+  // shift + click"). `selectedId` se sigue derivando aquí mismo (null
+  // salvo que haya EXACTO un elemento seleccionado) -- todo lo que ya
+  // dependía de un solo id (SelectionToolbar, DesignOptionsPanel, el
+  // Moveable interactivo con manijas de mouse) sigue funcionando igual
+  // sin tocarlo, y automáticamente se oculta en cuanto hay 2+ (nunca se
+  // implementó arrastre/rotación de grupo con el mouse -- fuera de
+  // alcance de este pedido, que solo pide seleccionar y escalar con
+  // Shift+flecha). selectOnly reemplaza cada `setSelectedId` de antes
+  // (mismo comportamiento: un clic normal siempre reduce la selección a
+  // un solo elemento); toggleSelect es nuevo, solo lo usa el
+  // Shift+clic en el lienzo.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : null;
+  function selectOnly(id: string | null) {
+    setSelectedIds(id ? new Set([id]) : new Set());
+  }
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   // "Opciones de diseño" (rotar/girar/cambiar color/ajustes de un logo) --
   // pedido explícito: el usuario debe ver la prenda completa junto con el
   // logo MIENTRAS edita. Ni un overlay flotando encima del lienzo ni
@@ -680,7 +704,7 @@ export default function PersonalizerClient({
     if (idx === 0) return;
     setHistoryIndexByKey((prev) => ({ ...prev, [key]: idx - 1 }));
     setElements((prev) => ({ ...prev, [key]: h[idx - 1] }));
-    setSelectedId(null);
+    selectOnly(null);
   }, []);
 
   const redo = useCallback(() => {
@@ -688,7 +712,7 @@ export default function PersonalizerClient({
     if (idx >= h.length - 1) return;
     setHistoryIndexByKey((prev) => ({ ...prev, [key]: idx + 1 }));
     setElements((prev) => ({ ...prev, [key]: h[idx + 1] }));
-    setSelectedId(null);
+    selectOnly(null);
   }, []);
 
   const canUndo = currentHistoryIndex > 0;
@@ -698,10 +722,21 @@ export default function PersonalizerClient({
     (id: string) => {
       const next = { ...currentElements, [activeView]: currentElements[activeView].filter((e) => e.id !== id) };
       commit(next);
-      setSelectedId(null);
+      selectOnly(null);
     },
     [currentElements, activeView, commit]
   );
+
+  // Elimina TODOS los seleccionados a la vez (Suprimir/Backspace con una
+  // multi-selección, ver charla 2026-09-22) -- deleteElement de arriba se
+  // queda igual, la sigue usando el botón "Eliminar" de SelectionToolbar
+  // (que solo se muestra con exactamente 1 seleccionado).
+  const deleteSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    const next = { ...currentElements, [activeView]: currentElements[activeView].filter((e) => !selectedIds.has(e.id)) };
+    commit(next);
+    selectOnly(null);
+  }, [currentElements, activeView, commit, selectedIds]);
 
   // Shift+ArrowRight/ArrowLeft grows/shrinks the currently selected element
   // — same keepRatio-preserving scaling react-moveable's own corner-drag
@@ -715,28 +750,38 @@ export default function PersonalizerClient({
   const RESIZE_STEP_FACTOR = 1.06;
   const LOGO_MIN_PCT = 1;
 
+  // Con 2+ seleccionados escala a TODOS a la vez (ver charla 2026-09-22)
+  // -- cada uno alrededor de su PROPIO centro, igual que con 1 solo, así
+  // que no se juntan ni se separan entre ellos, solo cada uno crece o
+  // encoge en su lugar. Un solo `commit` al final (no un updateElement
+  // por elemento): éste lee/escribe el mismo `elements[designKey]`
+  // completo, así que llamarlo varias veces seguidas de forma síncrona
+  // pisaría los cambios anteriores entre sí (cada llamada partiría del
+  // mismo estado aún no actualizado por React).
   function resizeSelectedElementByKeyboard(direction: 1 | -1) {
-    const el = currentElements[activeView].find((e) => e.id === selectedId);
-    if (!el) return;
+    if (selectedIds.size === 0) return;
     const factor = direction === 1 ? RESIZE_STEP_FACTOR : 1 / RESIZE_STEP_FACTOR;
-
-    if (el.type === "text") {
-      const currentPx = el.fontSizePx ?? DEFAULT_FONT_SIZE_PX;
-      const nextPx = Math.min(FONT_SIZE_MAX_PX, Math.max(FONT_SIZE_MIN_PX, currentPx * factor));
-      updateElement(el.id, { fontSizePx: nextPx });
-      return;
-    }
-
-    const centerXPct = el.xPct + el.widthPct / 2;
-    const centerYPct = el.yPct + el.heightPct / 2;
-    const nextWidthPct = Math.max(LOGO_MIN_PCT, el.widthPct * factor);
-    const nextHeightPct = Math.max(LOGO_MIN_PCT, el.heightPct * factor);
-    updateElement(el.id, {
-      widthPct: nextWidthPct,
-      heightPct: nextHeightPct,
-      xPct: centerXPct - nextWidthPct / 2,
-      yPct: centerYPct - nextHeightPct / 2,
+    const current = elementsRef.current[designKeyRef.current];
+    const nextView = current[activeView].map((el) => {
+      if (!selectedIds.has(el.id)) return el;
+      if (el.type === "text") {
+        const currentPx = el.fontSizePx ?? DEFAULT_FONT_SIZE_PX;
+        const nextPx = Math.min(FONT_SIZE_MAX_PX, Math.max(FONT_SIZE_MIN_PX, currentPx * factor));
+        return { ...el, fontSizePx: nextPx };
+      }
+      const centerXPct = el.xPct + el.widthPct / 2;
+      const centerYPct = el.yPct + el.heightPct / 2;
+      const nextWidthPct = Math.max(LOGO_MIN_PCT, el.widthPct * factor);
+      const nextHeightPct = Math.max(LOGO_MIN_PCT, el.heightPct * factor);
+      return {
+        ...el,
+        widthPct: nextWidthPct,
+        heightPct: nextHeightPct,
+        xPct: centerXPct - nextWidthPct / 2,
+        yPct: centerYPct - nextHeightPct / 2,
+      };
     });
+    commit({ ...current, [activeView]: nextView });
   }
 
   // Flechas (sin Shift) mueven el elemento seleccionado un paso chico —
@@ -747,9 +792,12 @@ export default function PersonalizerClient({
   const MOVE_STEP_PCT = 0.4;
 
   function moveSelectedElementByKeyboard(dxPct: number, dyPct: number) {
-    const el = currentElements[activeView].find((e) => e.id === selectedId);
-    if (!el) return;
-    updateElement(el.id, { xPct: el.xPct + dxPct, yPct: el.yPct + dyPct });
+    if (selectedIds.size === 0) return;
+    const current = elementsRef.current[designKeyRef.current];
+    const nextView = current[activeView].map((el) =>
+      selectedIds.has(el.id) ? { ...el, xPct: el.xPct + dxPct, yPct: el.yPct + dyPct } : el
+    );
+    commit({ ...current, [activeView]: nextView });
   }
 
   useEffect(() => {
@@ -777,9 +825,9 @@ export default function PersonalizerClient({
       // not the element. Checking the focused element covers every such
       // field generically, with no need to know about them individually.
       if (e.key === "Delete" || e.key === "Backspace") {
-        if (isEditableField || !selectedId) return;
+        if (isEditableField || selectedIds.size === 0) return;
         e.preventDefault();
-        deleteElement(selectedId);
+        deleteSelected();
         return;
       }
 
@@ -801,7 +849,7 @@ export default function PersonalizerClient({
           target.isContentEditable ||
           (target.tagName === "INPUT" && (target as HTMLInputElement).type === "text"));
       if (e.shiftKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
-        if (isTypingFreeText || !selectedId) return;
+        if (isTypingFreeText || selectedIds.size === 0) return;
         e.preventDefault();
         resizeSelectedElementByKeyboard(e.key === "ArrowRight" ? 1 : -1);
         return;
@@ -817,7 +865,7 @@ export default function PersonalizerClient({
         !e.shiftKey &&
         (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
       ) {
-        if (isEditableField || !selectedId) return;
+        if (isEditableField || selectedIds.size === 0) return;
         e.preventDefault();
         const dx = e.key === "ArrowLeft" ? -MOVE_STEP_PCT : e.key === "ArrowRight" ? MOVE_STEP_PCT : 0;
         const dy = e.key === "ArrowUp" ? -MOVE_STEP_PCT : e.key === "ArrowDown" ? MOVE_STEP_PCT : 0;
@@ -847,7 +895,7 @@ export default function PersonalizerClient({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [undo, redo, deleteElement, selectedId, currentElements, activeView]);
+  }, [undo, redo, deleteSelected, selectedIds, selectedId, currentElements, activeView]);
 
   // Ctrl/Cmd+V hace dos cosas distintas con el mismo evento nativo "paste",
   // en este orden de prioridad: 1) si el portapapeles del SO trae una
@@ -917,7 +965,7 @@ export default function PersonalizerClient({
     const current = elementsRef.current[designKeyRef.current];
     const next = { ...current, [el.view]: [...current[el.view], el] };
     commit(next);
-    setSelectedId(el.id);
+    selectOnly(el.id);
   }
 
   // Live in-bounds status while dragging/resizing/rotating the selected
@@ -1654,7 +1702,7 @@ export default function PersonalizerClient({
       // crear un renglón nuevo y seguir a /checkout.
       if (editarCartItemId) {
         upsertItem(buildCartItem(editarCartItemId, canvasDataUrl));
-        setSelectedId(null);
+        selectOnly(null);
         router.push("/carrito");
         return;
       }
@@ -1663,7 +1711,7 @@ export default function PersonalizerClient({
       // PublicHeader (barra superior) es la única confirmación visual, y
       // ya reacciona solo porque comparte el mismo CartContext.
       addItem(buildCartItem(uid(), canvasDataUrl));
-      setSelectedId(null);
+      selectOnly(null);
       // Ya quedó como su propio renglón confirmado (id nuevo) -- el
       // renglón "en curso" (id fijo, ver draftCartItemId) y el borrador
       // local dejan de tener sentido, así que no deben reaparecer si el
@@ -1703,7 +1751,7 @@ export default function PersonalizerClient({
                     onClick={() => {
                       setActiveView(target);
                       setFilesTabView(target);
-                      setSelectedId(null);
+                      selectOnly(null);
                     }}
                     className={`flex items-center gap-2 border-b-[3px] pb-3 transition-all duration-200 ease-out ${
                       active ? "border-primary" : "border-transparent"
@@ -1726,7 +1774,7 @@ export default function PersonalizerClient({
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedId(null);
+                  selectOnly(null);
                   setPreviewOpen(true);
                 }}
                 aria-label="Vista previa del producto personalizado"
@@ -1757,7 +1805,7 @@ export default function PersonalizerClient({
                     setGroupOrientation((prev) => ({ ...prev, [activeGroupDef.key]: v }));
                     setActiveView(v);
                     setFilesTabView(v);
-                    setSelectedId(null);
+                    selectOnly(null);
                   }}
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 ease-out ${
                     activeView === v ? "bg-white text-foreground shadow-sm" : "text-ui-gray hover:text-foreground"
@@ -1877,7 +1925,7 @@ export default function PersonalizerClient({
                 // click that starts on Moveable's own UI must never reach
                 // this deselect-on-elsewhere handler.
                 if ((e.target as HTMLElement).closest(".moveable-control-box")) return;
-                setSelectedId(null);
+                selectOnly(null);
               }}
               onDragEnter={(e) => {
                 if (!e.dataTransfer.types.includes("Files")) return;
@@ -1929,8 +1977,15 @@ export default function PersonalizerClient({
                   key={el.id}
                   element={el}
                   containerRef={canvasRef}
-                  selected={selectedId === el.id}
-                  onSelect={setSelectedId}
+                  selected={selectedIds.has(el.id)}
+                  // Las manijas de mouse (arrastrar/redimensionar/rotar) solo
+                  // se muestran con exactamente 1 seleccionado -- nunca se
+                  // construyó arrastre de grupo, así que con 2+
+                  // seleccionados cada elemento se queda con el aro de
+                  // "seleccionado" nada más (el Shift+flecha de abajo sigue
+                  // funcionando sobre todos igual).
+                  interactive={selectedIds.size === 1}
+                  onSelect={(id, shift) => (shift ? toggleSelect(id) : selectOnly(id))}
                   onChange={updateElement}
                   onInteraction={handleElementInteraction}
                 />
@@ -1952,9 +2007,9 @@ export default function PersonalizerClient({
                         <button
                           key={el.id}
                           type="button"
-                          onClick={() => setSelectedId(el.id)}
+                          onClick={() => selectOnly(el.id)}
                           className={`block w-full truncate rounded-lg px-2 py-1.5 text-left text-xs transition-colors duration-150 ease-out ${
-                            selectedId === el.id ? "bg-primary/15 font-semibold text-foreground" : "text-ui-gray hover:bg-gray-50"
+                            selectedIds.has(el.id) ? "bg-primary/15 font-semibold text-foreground" : "text-ui-gray hover:bg-gray-50"
                           }`}
                         >
                           {el.type === "logo" ? el.fileName : `“${el.text}”`}
@@ -2045,12 +2100,12 @@ export default function PersonalizerClient({
                   <div
                     key={el.id}
                     className={`group relative aspect-square overflow-hidden rounded-2xl border bg-white transition-all duration-150 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] ${
-                      selectedId === el.id ? "border-primary ring-2 ring-primary/25" : "border-ui-border hover:border-primary/50"
+                      selectedIds.has(el.id) ? "border-primary ring-2 ring-primary/25" : "border-ui-border hover:border-primary/50"
                     }`}
                   >
                     <button
                       type="button"
-                      onClick={() => setSelectedId(el.id)}
+                      onClick={() => selectOnly(el.id)}
                       aria-label={el.type === "logo" ? el.fileName : `Texto “${el.text}”`}
                       className="flex h-full w-full items-center justify-center p-2.5"
                     >
@@ -2169,7 +2224,7 @@ export default function PersonalizerClient({
                           selectedElementId={selectedId}
                           onSelectLogo={(view, elementId) => {
                             setActiveView(view);
-                            setSelectedId(elementId);
+                            selectOnly(elementId);
                           }}
                           tintas={techniqueTintas[tintasKey(technique.id)] ?? ""}
                           onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [tintasKey(technique.id)]: v }))}
