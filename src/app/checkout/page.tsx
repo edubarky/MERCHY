@@ -7,23 +7,15 @@ import PublicHeader from "@/components/PublicHeader";
 import { useCart } from "@/lib/cart/CartContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatMXN } from "@/lib/pricing";
-import type { BillingData, DiscountCode, PaymentMethod, ShippingAddress, ShippingType } from "@/types";
+import { totalBoxes, getShippingZone, getShippingCost, computeEtaRange, formatEtaRange } from "@/lib/shipping";
+import type { BillingData, DiscountCode, PaymentMethod, ProductionTimeTier, ShippingAddress, ShippingType, ShippingZone, StoreSettings } from "@/types";
 
-// ---- Costos de envío fijos -- mismo valor por defecto que ya trae
-// orders.shipping_cost en el schema (80.00) para "standard"; "express" es
-// el único otro tramo que pide el diseño. Si algún día se vuelven
-// configurables desde el admin, esto se reemplaza por una tabla, igual que
-// price_tiers -- por ahora, dos tramos fijos alcanzan. ----
-const SHIPPING_COSTS: Record<ShippingType, number> = { standard: 80, express: 150 };
-const SHIPPING_LABELS: Record<ShippingType, { label: string; eta: string }> = {
-  standard: { label: "Envío estándar", eta: "3-5 días" },
-  express: { label: "Envío express", eta: "1-2 días" },
-};
+const SHIPPING_TYPE_LABELS: Record<ShippingType, string> = { standard: "Envío estándar", express: "Envío express" };
 
 // ---- Catálogo de Régimen Fiscal (SAT, vigente para CFDI 4.0) -- estable,
-// cambia muy rara vez, así que se deja fijo aquí en vez de una tabla nueva
-// (mismo criterio que SHIPPING_COSTS arriba). Solo se usa si el cliente
-// decide llenar Facturación -- ver `billingTouched` más abajo. ----
+// cambia muy rara vez, así que se deja fijo aquí en vez de una tabla nueva.
+// Solo se usa si el cliente decide llenar Facturación -- ver
+// `billingTouched` más abajo. ----
 const REGIMENES_FISCALES = [
   { code: "601", label: "601 · General de Ley Personas Morales" },
   { code: "603", label: "603 · Personas Morales con Fines no Lucrativos" },
@@ -46,11 +38,14 @@ const REGIMENES_FISCALES = [
   { code: "626", label: "626 · Régimen Simplificado de Confianza" },
 ];
 
-const PAYMENT_METHODS: { id: PaymentMethod; label: string }[] = [
-  { id: "card", label: "Tarjeta de crédito/débito" },
-  { id: "paypal", label: "PayPal" },
-  { id: "mercadopago", label: "Mercado Pago" },
-  { id: "transfer", label: "Transferencia" },
+// Solo 2 métodos reales hoy (ver charla 2026-09-16): tarjeta vía Mercado
+// Pago Checkout Pro (redirige a la página de MP) o transferencia SPEI
+// directa a la cuenta del negocio (se confirma a mano en el admin). "card"
+// y "paypal" siguen en el tipo PaymentMethod por si algún pedido viejo los
+// tiene guardados, pero no se ofrecen como opción nueva.
+const PAYMENT_METHODS: { id: PaymentMethod; label: string; hint: string }[] = [
+  { id: "mercadopago", label: "Tarjeta de crédito/débito", hint: "Se procesa con Mercado Pago" },
+  { id: "transfer", label: "Transferencia bancaria", hint: "Verificamos tu pago manualmente" },
 ];
 
 function isValidEmail(value: string) {
@@ -169,6 +164,10 @@ interface CpLookup {
   estado: string;
   municipio: string;
   colonias: string[];
+  // Clave de estado de INEGI (2 dígitos, ej. "09" = Ciudad de México) --
+  // más confiable que el nombre para resolver la zona de envío (ver
+  // charla 2026-09-16 y lib/shipping.ts getShippingZone).
+  cveEnt: string;
 }
 
 export default function CheckoutPage() {
@@ -195,6 +194,9 @@ export default function CheckoutPage() {
   const [geoError, setGeoError] = useState<string | null>(null);
 
   const [shippingType, setShippingType] = useState<ShippingType>("standard");
+  const [shippingZones, setShippingZones] = useState<ShippingZone[]>([]);
+  const [productionTiers, setProductionTiers] = useState<ProductionTimeTier[]>([]);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
 
   // Facturación es opcional -- billing_data solo se manda si el cliente
   // realmente empezó a llenar esta sección (ver `billingTouched` más
@@ -205,7 +207,7 @@ export default function CheckoutPage() {
   const [billingApellido1, setBillingApellido1] = useState("");
   const [billingApellido2, setBillingApellido2] = useState("");
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mercadopago");
 
   const [discountOpen, setDiscountOpen] = useState(false);
   const [discountInput, setDiscountInput] = useState("");
@@ -215,7 +217,7 @@ export default function CheckoutPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [confirmedOrder, setConfirmedOrder] = useState<{ orderNumber: string; total: number } | null>(null);
+  const [confirmedOrder, setConfirmedOrder] = useState<{ orderNumber: string; total: number; paymentMethod: PaymentMethod } | null>(null);
 
   const supabaseRef = useRef(createClient());
   const cpDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -231,6 +233,21 @@ export default function CheckoutPage() {
     }, 300);
     return () => clearTimeout(t);
   }, [items.length, confirmedOrder, router]);
+
+  // Zonas de envío y tramos de producción (ver charla 2026-09-16) -- se
+  // traen una sola vez al montar, igual criterio que price_tiers en otras
+  // pantallas: son catálogos, no cambian mientras el cliente hace checkout.
+  useEffect(() => {
+    supabaseRef.current.from("shipping_zones").select("*").order("sort_order").then(({ data }) => {
+      setShippingZones((data ?? []) as ShippingZone[]);
+    });
+    supabaseRef.current.from("production_time_tiers").select("*").order("qty_min").then(({ data }) => {
+      setProductionTiers((data ?? []) as ProductionTimeTier[]);
+    });
+    supabaseRef.current.from("store_settings").select("*").eq("id", "default").maybeSingle().then(({ data }) => {
+      setStoreSettings((data as StoreSettings | null) ?? null);
+    });
+  }, []);
 
   // Resuelve el CP escrito -- debounced, vía @webrek/mx-cp (SEPOMEX, vive
   // en el propio paquete, sin API key ni red). Un CP inválido/no
@@ -255,7 +272,7 @@ export default function CheckoutPage() {
           return;
         }
         const colonias = r.asentamientos.map((a) => a.nombre);
-        setCpLookup({ estado: r.estado, municipio: r.municipio, colonias });
+        setCpLookup({ estado: r.estado, municipio: r.municipio, colonias, cveEnt: r.cveEnt });
         setCpStatus("idle");
         setAddress((prev) => ({
           ...prev,
@@ -336,7 +353,13 @@ export default function CheckoutPage() {
 
   const billingTouched = rfc.trim() !== "" || billingNombre.trim() !== "" || billingApellido1.trim() !== "" || regimenFiscal.trim() !== "";
 
-  const shippingCost = SHIPPING_COSTS[shippingType];
+  // Zona resuelta del CP actual -- null mientras no haya un CP válido (o
+  // sus zonas no hayan cargado todavía), nunca un costo/fecha inventados
+  // (ver charla 2026-09-16).
+  const shippingZone = cpLookup ? getShippingZone(cpLookup.cveEnt, shippingZones) : null;
+  const boxes = totalBoxes(items);
+  const shippingCost = shippingZone ? getShippingCost(shippingZone, shippingType, boxes) : 0;
+  const etaRange = shippingZone ? computeEtaRange(items, shippingZone, shippingType, productionTiers) : null;
   const discountAmount = useMemo(() => {
     if (!appliedDiscount) return 0;
     if (subtotal < appliedDiscount.min_order) return 0;
@@ -398,6 +421,7 @@ export default function CheckoutPage() {
     if (!address.numero_ext.trim()) return "Falta el número exterior.";
     if (!/^\d{5}$/.test(address.cp.trim())) return "El código postal debe tener 5 dígitos.";
     if (!cpLookup) return "No pudimos validar ese código postal.";
+    if (!shippingZone) return "Todavía no tenemos cobertura de envío calculada para esa dirección -- contáctanos directamente.";
     if (!address.colonia.trim()) return "Falta la colonia.";
     if (billingTouched) {
       if (!isValidRfc(rfc)) return "El RFC no es válido.";
@@ -472,8 +496,29 @@ export default function CheckoutPage() {
         return;
       }
 
+      // Correo de aviso al admin + confirmación al cliente -- nunca debe
+      // tronar el checkout si Resend falla, el pedido ya quedó guardado
+      // (ver charla 2026-09-16).
+      fetch("/api/orders/notify", { method: "POST", body: JSON.stringify({ orderId: order.id }) }).catch(() => {});
+
+      if (paymentMethod === "mercadopago") {
+        const res = await fetch("/api/mercadopago/create-preference", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: order.id }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.init_point) {
+          setFormError("No se pudo iniciar el pago con Mercado Pago. Tu pedido quedó guardado como " + orderNumber + " -- contáctanos o intenta de nuevo.");
+          return;
+        }
+        clearCart();
+        window.location.href = data.init_point;
+        return;
+      }
+
       clearCart();
-      setConfirmedOrder({ orderNumber, total });
+      setConfirmedOrder({ orderNumber, total, paymentMethod });
     } catch {
       setFormError("No se pudo crear el pedido. Intenta de nuevo en un momento.");
     } finally {
@@ -495,6 +540,29 @@ export default function CheckoutPage() {
             confirmar el pago y arrancar la producción.
           </p>
           <p className="mt-4 text-lg font-bold text-foreground">{formatMXN(confirmedOrder.total)} MXN</p>
+          {confirmedOrder.paymentMethod === "transfer" && (
+            <div className="mt-6 w-full rounded-2xl border border-ui-border bg-gray-50 p-5 text-left">
+              <p className="text-sm font-semibold text-foreground">Transfiere a esta cuenta</p>
+              {storeSettings?.transfer_clabe ? (
+                <div className="mt-2 space-y-1 text-sm text-ui-gray">
+                  <p>
+                    Banco: <span className="font-medium text-foreground">{storeSettings.transfer_bank_name}</span>
+                  </p>
+                  <p>
+                    CLABE: <span className="font-mono font-medium text-foreground">{storeSettings.transfer_clabe}</span>
+                  </p>
+                  <p>
+                    Beneficiario: <span className="font-medium text-foreground">{storeSettings.transfer_beneficiary}</span>
+                  </p>
+                  <p className="pt-1 text-xs">
+                    Usa <span className="font-semibold">{confirmedOrder.orderNumber}</span> como referencia y envíanos tu comprobante.
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-ui-gray">Te compartiremos los datos de la cuenta por WhatsApp o correo para completar tu pago.</p>
+              )}
+            </div>
+          )}
           <Link
             href="/catalogo"
             className="mt-8 flex h-12 w-full items-center justify-center rounded-full bg-primary px-7 text-sm font-semibold text-white transition-transform duration-150 ease-out hover:-translate-y-0.5"
@@ -617,33 +685,49 @@ export default function CheckoutPage() {
               </div>
             </Card>
 
-            {/* Método de envío */}
+            {/* Método de envío -- costo y fecha dependen del CP (zona) y de
+                cuántas piezas/cajas lleva el pedido (ver charla 2026-09-16).
+                Sin CP válido todavía no se inventa un costo/fecha: se pide
+                capturarlo primero. */}
             <Card>
               <SectionHeader title="Método de envío" />
-              <div className="space-y-3">
-                {(Object.keys(SHIPPING_LABELS) as ShippingType[]).map((key) => (
-                  <label
-                    key={key}
-                    className={`flex cursor-pointer items-center justify-between rounded-2xl border px-5 py-4 transition-colors ${
-                      shippingType === key ? "border-primary bg-primary/5" : "border-ui-border hover:border-primary/40"
-                    }`}
-                  >
-                    <span className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="shipping"
-                        checked={shippingType === key}
-                        onChange={() => setShippingType(key)}
-                        className="h-4 w-4 accent-primary"
-                      />
-                      <span className="text-sm font-semibold text-foreground">
-                        {SHIPPING_LABELS[key].label} <span className="font-normal text-ui-gray">({SHIPPING_LABELS[key].eta})</span>
-                      </span>
-                    </span>
-                    <span className="text-sm font-semibold text-foreground">{formatMXN(SHIPPING_COSTS[key])}</span>
-                  </label>
-                ))}
-              </div>
+              {!shippingZone ? (
+                <p className="rounded-2xl border border-dashed border-ui-border px-5 py-4 text-sm text-ui-gray">
+                  Ingresa tu código postal en "Dirección de envío" para ver el costo y la fecha de entrega.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {(Object.keys(SHIPPING_TYPE_LABELS) as ShippingType[]).map((key) => {
+                    const cost = getShippingCost(shippingZone, key, boxes);
+                    const range = computeEtaRange(items, shippingZone, key, productionTiers);
+                    return (
+                      <label
+                        key={key}
+                        className={`flex cursor-pointer items-center justify-between rounded-2xl border px-5 py-4 transition-colors ${
+                          shippingType === key ? "border-primary bg-primary/5" : "border-ui-border hover:border-primary/40"
+                        }`}
+                      >
+                        <span className="flex items-center gap-3">
+                          <input
+                            type="radio"
+                            name="shipping"
+                            checked={shippingType === key}
+                            onChange={() => setShippingType(key)}
+                            className="h-4 w-4 accent-primary"
+                          />
+                          <span className="text-sm font-semibold text-foreground">
+                            {SHIPPING_TYPE_LABELS[key]}
+                            <span className="block font-normal text-ui-gray">
+                              {range ? formatEtaRange(range.min, range.max) : "Calculando..."}
+                            </span>
+                          </span>
+                        </span>
+                        <span className="text-sm font-semibold text-foreground">{formatMXN(cost)}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </Card>
 
             {/* Facturación */}
@@ -699,13 +783,13 @@ export default function CheckoutPage() {
                       onChange={() => setPaymentMethod(m.id)}
                       className="h-4 w-4 accent-primary"
                     />
-                    <span className="text-sm font-medium text-foreground">{m.label}</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {m.label}
+                      <span className="block text-xs font-normal text-ui-gray">{m.hint}</span>
+                    </span>
                   </label>
                 ))}
               </div>
-              <p className="mt-4 text-xs text-ui-gray">
-                Tu pedido se registra como pendiente de pago -- te contactaremos para confirmar el cobro con el método elegido.
-              </p>
             </Card>
           </div>
 
@@ -740,7 +824,20 @@ export default function CheckoutPage() {
                         <p className="text-ui-gray">Cantidad: {item.total_quantity}</p>
                         {colors && <p className="truncate text-ui-gray">Color: {colors}</p>}
                         {sizesLabel && <p className="truncate text-ui-gray">Tallas: {sizesLabel}</p>}
-                        <p className="text-ui-gray">Tipo de impresión: {item.technique?.name ?? "Sin personalizar"}</p>
+                        {/* Técnica + posición(es) + no. de tintas (si aplica) -- mismo
+                            formato que ya usa CotizacionDoc.tsx. Sin snapshot (renglones
+                            guardados antes de este campo) cae al nombre solo. */}
+                        {(item.customization_snapshot?.selected_techniques ?? []).length > 0 ? (
+                          item.customization_snapshot!.selected_techniques!.map((t) => (
+                            <p key={t.technique_id} className="truncate text-ui-gray">
+                              Impresión: {t.technique_name}
+                              {t.positions?.length ? ` · ${t.positions.join(", ")}` : ""}
+                              {t.tintas ? ` · ${t.tintas} ${t.tintas === 1 ? "tinta" : "tintas"}` : ""}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-ui-gray">Impresión: {item.technique?.name ?? "Sin personalizar"}</p>
+                        )}
                       </div>
                     </div>
                   );
@@ -756,7 +853,10 @@ export default function CheckoutPage() {
                   <span>{formatMXN(subtotal)} MXN</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Envío ({SHIPPING_LABELS[shippingType].label})</span>
+                  <span>
+                    Envío ({SHIPPING_TYPE_LABELS[shippingType]})
+                    {etaRange && <span className="block text-xs text-ui-gray">{formatEtaRange(etaRange.min, etaRange.max)}</span>}
+                  </span>
                   <span>{formatMXN(shippingCost)} MXN</span>
                 </div>
                 {appliedDiscount && (
@@ -823,7 +923,9 @@ export default function CheckoutPage() {
                 disabled={submitting || items.length === 0}
                 className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-primary text-base font-semibold text-white transition-all duration-180 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_8px_20px_rgba(87,224,217,0.4)] disabled:opacity-60"
               >
-                {submitting ? "Enviando pedido..." : "Finalizar"}
+                {submitting
+                  ? paymentMethod === "mercadopago" ? "Redirigiendo a Mercado Pago..." : "Enviando pedido..."
+                  : paymentMethod === "mercadopago" ? "Continuar al pago" : "Finalizar pedido"}
               </button>
               <Link
                 href="/carrito"

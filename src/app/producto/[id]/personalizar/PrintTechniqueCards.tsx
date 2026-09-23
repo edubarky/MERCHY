@@ -46,10 +46,10 @@ export default function PrintTechniqueCards({
     // técnicas, con 4, o con cualquier otro subconjunto futuro.
     // justify-start (no justify-center): por pedido explícito, la última
     // tarjeta suelta siempre queda alineada a la izquierda, no centrada.
-    // El ancho de cada tarjeta imita exactamente las mismas 2 columnas en
-    // móvil / 3 en desktop de antes (mismo gap-0.5 de 2px, restado del
-    // cálculo del ancho).
-    <div className="mx-auto flex flex-wrap justify-start gap-0.5 sm:w-[92%]">
+    // 2 columnas en móvil, 4 en desktop (tarjetas más chicas -- pedido
+    // explícito charla 2026-09-10, "que se vean 4 en una fila"). El
+    // gap-0.5 (2px) se resta del cálculo del ancho.
+    <div className="mx-auto flex flex-wrap justify-start gap-0.5">
       {CARDS.map((card) => {
         const technique = techniques.find((t) => t.name === card.name);
         if (!technique) return null;
@@ -65,7 +65,7 @@ export default function PrintTechniqueCards({
             // contorno real y transparente-respetuoso del SVG (no una caja
             // rectangular aparte) — así nunca aparece un "segundo cuadro".
             // Sin scale ni translate: la tarjeta no cambia de tamaño ni se mueve.
-            className={`relative block shrink-0 basis-[calc((100%-2px)/2)] transition-[filter] duration-150 ease-out sm:basis-[calc((100%-4px)/3)] ${
+            className={`relative block shrink-0 basis-[calc((100%-2px)/2)] transition-[filter] duration-150 ease-out sm:basis-[calc((100%-6px)/4)] ${
               isSelected
                 ? "[filter:drop-shadow(0_0_2px_rgba(87,224,217,0.9))_drop-shadow(0_6px_16px_rgba(87,224,217,0.3))]"
                 : "hover:[filter:drop-shadow(0_0_2px_rgba(87,224,217,0.85))_drop-shadow(0_6px_14px_rgba(87,224,217,0.18))]"

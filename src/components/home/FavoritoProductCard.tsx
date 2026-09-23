@@ -118,7 +118,10 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
     (preferredVariant ?? selectedVariant)?.images?.[0] ?? firstImage
   );
   const [imageVisible, setImageVisible] = useState(true);
-  const precioDesde = getProductUnitPrice(product.costo, 1, priceTiers);
+  // El precio de la tarjeta se cotiza a 20 pzas (ver charla 2026-09-16):
+  // el de 1 pza sale muy elevado y espanta al cliente antes de que vea
+  // el rango completo de precios en el detalle del producto.
+  const precioDesde = getProductUnitPrice(product.costo, 20, priceTiers);
   // El swatch activo (por filtro o por selección manual) siempre debe
   // quedar entre los visibles, aunque no esté entre los primeros 3 del
   // producto — si no, el círculo "seleccionado" nunca se vería.

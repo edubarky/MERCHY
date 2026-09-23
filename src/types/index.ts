@@ -9,6 +9,11 @@ export interface Category {
   icon: string | null;
   sort_order: number;
   active: boolean;
+  // Cuántas piezas de esta categoría caben en una caja de envío -- estimado
+  // editable en Configuración (ver charla 2026-09-16), usado para calcular
+  // cuántas cajas se cobran en el checkout. Varía mucho por categoría
+  // (playeras vs mochilas), nunca un solo número global.
+  pzas_per_box?: number;
 }
 
 export interface Product {
@@ -35,6 +40,12 @@ export interface ProductVariant {
   color_name: string;
   color_hex: string;
   images: string[];
+  // Fotos de vista del Personalizador (Frente/Reverso/etc + "conModelo"),
+  // editables desde el admin -- ver charla 2026-09-22 "Como lo acabo de
+  // hacer con las blancas". Clave = ViewName | "conModelo", valor = URL de
+  // Storage. Si una clave no está, resolveProductAssets.ts cae al sistema
+  // de carpetas de siempre (public/VISTA DE PRODUCTOS/...).
+  views?: Record<string, string> | null;
   stock: number;
   active: boolean;
 }
@@ -141,8 +152,29 @@ export interface SelectedTechniqueDetail {
   needs_quote: boolean;
 }
 
+// Mismo desglose que tendría el renglón completo (logos/texts/técnicas/
+// precio), pero de UN SOLO color -- ver CustomizationSnapshot.per_color
+// (charla 2026-09-19: "si el diseño es distinto por color... el precio
+// varía", cada color necesita su propio montaje de impresión).
+export interface PerColorCustomization {
+  logos: CustomizationElement[];
+  texts: CustomizationElement[];
+  selected_techniques: SelectedTechniqueDetail[];
+  num_elements: number;
+  num_logo_elements: number;
+  // Precio por pieza de ESTE color (prenda al tier combinado + impresión
+  // al tier de la cantidad de este color solo) -- a diferencia de
+  // CartItem.unit_price, este sí es un precio real cobrable, no un
+  // promedio.
+  unit_price: number;
+}
+
 export interface CustomizationSnapshot {
   canvas_data_url: string;
+  // Con applied_to "per_color", estos 3 campos (logos/texts/selected_techniques)
+  // quedan vacíos/ausentes a nivel raíz -- viven dentro de cada entrada de
+  // `per_color`. Con "all" (default, mismo diseño para todos los colores)
+  // se siguen llenando aquí igual que siempre.
   logos: CustomizationElement[];
   texts: CustomizationElement[];
   applied_to: "all" | "per_color";
@@ -151,6 +183,23 @@ export interface CustomizationSnapshot {
   // (compatibilidad con el carrito/checkout existentes, que todavía
   // muestran una sola técnica) -- este arreglo es la fuente completa.
   selected_techniques?: SelectedTechniqueDetail[];
+  // Un diseño (y su propio precio de impresión) por color -- solo
+  // presente cuando applied_to === "per_color". Llave = variant_id (ver
+  // CartVariantSelection.variant_id).
+  per_color?: Record<string, PerColorCustomization>;
+  // Estado completo del editor (todas las vistas, técnica, tintas,
+  // medidas, orientación de grupo) tal como lo guarda PersonalizerClient
+  // -- para que "Editar" desde el carrito pueda reabrir el Personalizador
+  // con el diseño EXACTO, en vez de reconstruirlo a ciegas desde
+  // logos/texts (que no llevan a qué vista pertenecen ni el estilo del
+  // texto). Opaco a propósito aquí: su forma real vive en
+  // personalizar/types.ts (ViewElements) y solo ese mismo componente lo
+  // lee/escribe. Con applied_to "per_color", editor_state.elements es un
+  // diccionario por color (variant_id -> ViewElements) en vez de un solo
+  // ViewElements -- mismo campo, forma distinta según el modo. Ausente en
+  // renglones guardados antes de este campo (ver charla 2026-09-12) --
+  // "Editar" cae a un lienzo vacío en ese caso.
+  editor_state?: unknown;
 }
 
 export interface CartItem {
@@ -161,7 +210,18 @@ export interface CartItem {
   technique_id: string | null;
   technique?: PrintTechnique;
   num_elements: number;
+  // Solo logos (nunca texto) -- es "posiciones" para el precio de
+  // técnicas by_tintas (ver recomputeCartItemUnitPrice en pricing.ts),
+  // que necesita el conteo exacto para recalcular al cambiar la cantidad
+  // en el carrito. Ausente/0 en renglones guardados antes de este campo.
+  num_logo_elements?: number;
   customization_snapshot: CustomizationSnapshot | null;
+  // Con customization_snapshot.applied_to === "per_color", esto deja de
+  // ser "el" precio por pieza real (cada color puede costar distinto) --
+  // es total_price / total_quantity, un PROMEDIO nada más para listados
+  // genéricos que muestran un solo número. Para el precio real de cada
+  // color ver customization_snapshot.per_color[variantId].unit_price.
+  // total_price siempre es el total real a cobrar, en ambos modos.
   unit_price: number;
   total_price: number;
 }
@@ -178,7 +238,52 @@ export type OrderStatus =
 
 export type ShippingType = "standard" | "express";
 
+// Costo/tiempo de envío por zona geográfica (ver charla 2026-09-16 --
+// "Método de envío" depende de la dirección, no es un tramo fijo). Valores
+// de costo son POR CAJA, no por pedido -- ver lib/shipping.ts countBoxes.
+// cve_ent_list son claves de estado de INEGI (2 dígitos, ej. "09" = Ciudad
+// de México) -- mismas que ya devuelve @webrek/mx-cp en buscaCP().
+export interface ShippingZone {
+  id: string;
+  name: string;
+  cve_ent_list: string[];
+  standard_cost_per_box: number;
+  express_cost_per_box: number;
+  standard_dias_min: number;
+  standard_dias_max: number;
+  express_dias_min: number;
+  express_dias_max: number;
+  sort_order: number;
+}
+
+// Tiempo de producción según cuántas piezas trae ESE renglón del carrito
+// (regla de negocio real, ver charla 2026-09-16) -- independiente del
+// envío, se suman después (ver lib/shipping.ts computeEtaRange).
+export interface ProductionTimeTier {
+  id: string;
+  qty_min: number;
+  qty_max: number | null;
+  dias_min: number;
+  dias_max: number;
+  label: string;
+  sort_order: number;
+}
+
 export type PaymentMethod = "card" | "paypal" | "mercadopago" | "transfer";
+
+// Fila única (id fijo "default") con datos de contacto editables en
+// Configuración -- a dónde llega la notificación de pedido nuevo y el
+// número de WhatsApp que se muestra en todo el sitio (ver charla
+// 2026-09-16). Nunca hardcodeados en el código.
+export interface StoreSettings {
+  id: string;
+  notification_email: string | null;
+  whatsapp_number: string | null;
+  transfer_bank_name: string | null;
+  transfer_clabe: string | null;
+  transfer_beneficiary: string | null;
+  updated_at: string;
+}
 
 export interface ShippingAddress {
   calle: string;

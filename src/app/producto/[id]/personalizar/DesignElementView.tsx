@@ -82,18 +82,28 @@ export default function DesignElementView({
   element,
   containerRef,
   selected,
+  interactive = true,
   onSelect,
   onChange,
   onInteraction,
 }: {
   element: DesignElement;
   containerRef: React.RefObject<HTMLDivElement>;
+  // Aro visual de "seleccionado" -- true para CADA elemento de una
+  // multi-selección (ver charla 2026-09-22: Shift+clic).
   selected: boolean;
-  onSelect: (id: string) => void;
+  // Manijas reales de mouse (arrastrar/redimensionar/rotar vía
+  // react-moveable) -- solo tiene sentido con exactamente 1 elemento
+  // seleccionado (nunca se construyó arrastre de grupo); con 2+
+  // seleccionados cada uno se queda solo con el aro, y Shift+flecha
+  // (PersonalizerClient) sigue escalando a todos por igual.
+  interactive?: boolean;
+  onSelect: (id: string, shift: boolean) => void;
   onChange: (id: string, patch: Partial<DesignElement>) => void;
   onInteraction: (active: boolean, inBounds: boolean) => void;
 }) {
   const targetRef = useRef<HTMLDivElement>(null);
+  const moveableRef = useRef<Moveable>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
   const textDisplayRef = useRef<HTMLDivElement>(null);
 
@@ -236,6 +246,19 @@ export default function DesignElementView({
     element.letterSpacing,
   ]);
 
+  // Cuando el tamaño / posición / rotación del elemento cambian por fuera
+  // de react-moveable (teclado: Shift+flecha para escalar, flechas solas
+  // para mover), el recuadro de control con las manijas de esquina no se
+  // entera solo y se queda "congelado" en la medida anterior, dejando un
+  // hueco entre las manijas y el logo ya reescalado (ver charla
+  // 2026-09-10). updateRect() lo recalcula contra el target ya
+  // actualizado. Durante un drag/resize real con el mouse estas props no
+  // cambian hasta soltar, así que esto no interfiere con esa interacción.
+  useLayoutEffect(() => {
+    if (!selected) return;
+    moveableRef.current?.updateRect();
+  }, [selected, element.xPct, element.yPct, element.widthPct, element.heightPct, element.rotation]);
+
   function pxToPct(left: number, top: number, width: number, height: number) {
     const container = containerRef.current;
     if (!container) return null;
@@ -289,16 +312,16 @@ export default function DesignElementView({
         ref={targetRef}
         onMouseDown={(e) => {
           e.stopPropagation();
-          onSelect(element.id);
+          onSelect(element.id, e.shiftKey);
         }}
         onTouchStart={(e) => {
           e.stopPropagation();
-          onSelect(element.id);
+          onSelect(element.id, false);
         }}
         onDoubleClick={(e) => {
           if (element.type !== "text") return;
           e.stopPropagation();
-          onSelect(element.id);
+          onSelect(element.id, false);
           setEditingText(true);
         }}
         className={`absolute select-none transition-shadow duration-150 ${editingText ? "cursor-text" : "cursor-move"} ${
@@ -386,8 +409,9 @@ export default function DesignElementView({
         )}
       </div>
 
-      {selected && !editingText && (
+      {selected && interactive && !editingText && (
         <Moveable
+          ref={moveableRef}
           target={targetRef}
           draggable
           resizable
@@ -403,6 +427,12 @@ export default function DesignElementView({
           throttleRotate={0}
           snappable
           snapCenter
+          // Oculta el punto rojo del centro (el pivote de rotación de
+          // react-moveable) — no cumple ninguna función aquí, la rotación
+          // ya se hace con el manijo de arriba (ver charla 2026-09-10:
+          // "quítame ese botón rojo"). Solo esconde el indicador visual,
+          // no cambia nada del drag/resize/rotate real.
+          origin={false}
           className="merchy-moveable"
           zoom={handleZoom}
           onDragStart={({ target }) => {

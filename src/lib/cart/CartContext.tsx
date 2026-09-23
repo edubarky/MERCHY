@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { CartItem } from "@/types";
+import { createClient } from "@/lib/supabase/client";
+import { deleteSavedLogoByUrl } from "@/lib/artLibrary/ArtLibraryContext";
 
 const STORAGE_KEY = "merchy_cart_v1";
 
@@ -9,12 +11,29 @@ interface CartContextValue {
   items: CartItem[];
   addItem: (item: CartItem) => void;
   upsertItem: (item: CartItem) => void;
+  // Igual que upsertItem, pero escribe a localStorage de forma SINCRÓNICA
+  // (lee-modifica-escribe directo, sin pasar por setState + el useEffect
+  // de arriba) -- para usar en un listener de "pagehide" (ver
+  // PersonalizerClient), donde no hay garantía de que React llegue a
+  // aplicar el efecto normal antes de que la pestaña ya se haya cerrado.
+  // `removeId` (opcional) quita ese otro renglón en la MISMA escritura --
+  // usado para reemplazar el placeholder "en progreso" (ver
+  // productDraftCartItemId) por el renglón real recién creado, sin dos
+  // escrituras separadas que pudieran perder la segunda si la página
+  // cierra entre una y otra.
+  upsertItemSync: (item: CartItem, removeId?: string) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
   total: number;
   justAdded: boolean;
+  // true una vez que ya se intentó leer el carrito de localStorage (en el
+  // primer render `items` siempre arranca en [] así se haya guardado algo
+  // antes) -- lo necesita quien busque un renglón concreto por id nada
+  // más montar (ver "Editar" en el Personalizador, PersonalizerClient.tsx)
+  // para no darlo por "no existe" antes de que termine de hidratar.
+  hydrated: boolean;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -23,6 +42,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const supabaseRef = useRef(createClient());
 
   useEffect(() => {
     try {
@@ -71,8 +91,54 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  function upsertItemSync(item: CartItem, removeId?: string) {
+    function merge(prev: CartItem[]): CartItem[] {
+      const withoutRemoved = removeId ? prev.filter((i) => i.id !== removeId) : prev;
+      const idx = withoutRemoved.findIndex((i) => i.id === item.id);
+      return idx === -1 ? [...withoutRemoved, item] : withoutRemoved.map((i, k) => (k === idx ? item : i));
+    }
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const current: CartItem[] = raw ? JSON.parse(raw) : [];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merge(current)));
+    } catch {
+      // ver upsertItem -- storage lleno/bloqueado, no debe romper nada
+    }
+    // Espejo best-effort en el estado de React -- por si la página en
+    // realidad no se cerró (ej. solo se puso en segundo plano en móvil) y
+    // el usuario vuelve a esta misma pestaña ya montada.
+    setItems(merge);
+  }
+
+  // Al quitar un renglón, se borran también los logos que ese diseño haya
+  // subido -- pedido explícito (ver charla 2026-09-16): "no quiero que se
+  // guarden TODOS los logos que un usuario llene en su vida", solo
+  // mientras el diseño siga en el carrito. NUNCA se llama desde
+  // clearCart() (ver ahí abajo) -- ese se dispara también después de un
+  // checkout exitoso, donde el pedido YA guardó su propio
+  // customization_snapshot apuntando a estos mismos archivos; borrarlos
+  // ahí rompería la producción real del pedido.
+  //
+  // BUG real encontrado (ver charla 2026-09-17): al confirmar un diseño,
+  // PersonalizerClient hace addItem(nuevo) + removeItem(draftCartItemId)
+  // -- pero el draft y el renglón recién confirmado comparten LA MISMA
+  // url de imagen (es el mismo archivo subido). Sin este chequeo, borrar
+  // el draft borraba también el archivo que el renglón nuevo YA estaba
+  // usando -- el logo desaparecía justo al confirmar. Ahora solo se borra
+  // una url si NINGÚN otro renglón restante la sigue usando.
   function removeItem(id: string) {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+    setItems((prev) => {
+      const item = prev.find((i) => i.id === id);
+      const remaining = prev.filter((i) => i.id !== id);
+      const urls = item?.customization_snapshot?.logos.map((l) => l.url).filter((u): u is string => !!u) ?? [];
+      const stillUsed = new Set(
+        remaining.flatMap((i) => i.customization_snapshot?.logos.map((l) => l.url).filter((u): u is string => !!u) ?? [])
+      );
+      new Set(urls).forEach((url) => {
+        if (!stillUsed.has(url)) deleteSavedLogoByUrl(supabaseRef.current, url);
+      });
+      return remaining;
+    });
   }
 
   function clearCart() {
@@ -84,7 +150,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const total = subtotal;
 
   return (
-    <CartContext.Provider value={{ items, addItem, upsertItem, removeItem, clearCart, totalItems, subtotal, total, justAdded }}>
+    <CartContext.Provider value={{ items, addItem, upsertItem, upsertItemSync, removeItem, clearCart, totalItems, subtotal, total, justAdded, hydrated }}>
       {children}
     </CartContext.Provider>
   );

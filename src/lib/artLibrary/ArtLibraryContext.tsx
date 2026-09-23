@@ -71,6 +71,21 @@ function storagePathFromPublicUrl(url: string): string {
   return idx === -1 ? "" : url.slice(idx + marker.length);
 }
 
+// Borra un logo subido (fila en saved_logos + archivo real en Storage) a
+// partir de su URL pública -- usado por CartContext cuando se elimina un
+// renglón del carrito (ver charla 2026-09-16: "ya no quiero una
+// biblioteca permanente de por vida, solo mientras el diseño siga en el
+// carrito"). Exportado en vez de vivir solo dentro de este provider
+// porque CartContext no tiene por qué montar/leer la lista completa de
+// `assets` para poder borrar uno puntual por URL. Fire-and-forget a
+// propósito, igual que removeAsset -- nunca debe bloquear ni poder
+// tronar el borrado del carrito en sí.
+export function deleteSavedLogoByUrl(supabase: ReturnType<typeof createClient>, url: string) {
+  const path = storagePathFromPublicUrl(url);
+  supabase.from("saved_logos").delete().eq("file_url", url);
+  if (path) supabase.storage.from(BUCKET).remove([path]);
+}
+
 function rowToAsset(row: SavedLogoRow): ArtAsset {
   const fileName = row.file_name ?? "archivo";
   const fileType = detectFileType(fileName);

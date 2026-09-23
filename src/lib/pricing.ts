@@ -1,4 +1,4 @@
-import type { PriceTier, PrintTechnique } from "@/types";
+import type { PriceTier, PrintTechnique, CartItem } from "@/types";
 
 export function getProductUnitPrice(
   costo: number,
@@ -41,10 +41,23 @@ export function findQtyPrice(technique: PrintTechnique, totalQty: number): numbe
   return tier ? tier.price_per_element : null;
 }
 
-/** pricing_type "by_tintas" (ej. Serigrafía, Tampografía) -- por número de tintas Y cantidad total. */
-export function findTintasPrice(technique: PrintTechnique, tintas: number, totalQty: number): number | null {
+/** pricing_type "by_tintas" (ej. Serigrafía, Tampografía) -- la FILA de la
+ * tabla ("No. de tintas") es `posiciones × tintas`, igual criterio que
+ * ONPOINT: 2 posiciones × 1 tinta cuesta lo mismo que 1 posición × 2
+ * tintas. El precio de esa fila se cobra UNA vez (las posiciones ya están
+ * dentro del índice) -- no se multiplica por el número de logos. Si
+ * `posiciones × tintas` se pasa de la fila más alta configurada, no se
+ * inventa un precio -> null ("requiere cotización"). */
+export function findTintasPrice(
+  technique: PrintTechnique,
+  tintas: number,
+  posiciones: number,
+  totalQty: number
+): number | null {
+  const fila = tintas * posiciones;
+  if (!Number.isFinite(fila) || fila < 1) return null;
   const tier = technique.price_table.find(
-    (t) => t.tintas === tintas && totalQty >= t.qty_min && (t.qty_max === null || totalQty <= t.qty_max)
+    (t) => t.tintas === fila && totalQty >= t.qty_min && (t.qty_max === null || totalQty <= t.qty_max)
   );
   return tier ? tier.price_per_element : null;
 }
@@ -135,6 +148,27 @@ export function getPriceTierLabel(totalQty: number, tiers: PriceTier[]): string 
   return tier?.label ?? "";
 }
 
+// ---- IVA ----
+// Los catálogos de MERCHY se manejan como PRECIO FINAL AL PÚBLICO. El
+// precio del producto (getProductUnitPrice) ya trae IVA incluido. La tabla
+// de precios de TÉCNICAS viene SIN IVA (así está la referencia del
+// cliente), así que se le agrega aquí y se redondea hacia arriba al peso,
+// mismo criterio de redondeo que getProductUnitPrice (nunca erosionar el
+// margen).
+export const IVA_RATE = 0.16;
+
+export function techniquePriceWithIva(sinIva: number): number {
+  return Math.ceil(sinIva * (1 + IVA_RATE));
+}
+
+/** Parte un total que YA incluye IVA en {subtotal, iva} -- para mostrarlo
+ * desglosado. El IVA queda como exactamente 16% del subtotal
+ * (subtotal = total ÷ 1.16; iva = total − subtotal). */
+export function splitIva(totalConIva: number): { subtotal: number; iva: number } {
+  const subtotal = Math.round(totalConIva / (1 + IVA_RATE));
+  return { subtotal, iva: totalConIva - subtotal };
+}
+
 export function formatMXN(amount: number): string {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -142,4 +176,73 @@ export function formatMXN(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+// ---- Recalcular el precio de un renglón del carrito a otra cantidad ----
+// Cambiar la cantidad en el carrito (ver carrito/page.tsx) tiene que
+// respetar los mismos tramos por cantidad que ya se usaron al personalizar
+// -- nunca solo escalar el precio guardado. Reproduce, por técnica, la
+// MISMA fórmula que PersonalizerClient (ver ese archivo): by_qty ×
+// num_elements; by_tintas con posiciones × tintas (num_logo_elements) +
+// IVA de técnica; by_size sumando cada logo por su tamaño ya redondeado.
+// Solo se puede recalcular con seguridad la técnica que coincide con
+// item.technique (la única de la que se guarda price_table completo hoy,
+// ver CartItem) -- cualquier otra conserva su precio ya guardado tal cual
+// en vez de arriesgar un número inventado.
+export function recomputeCartItemUnitPrice(
+  item: CartItem,
+  newQty: number,
+  priceTiers: PriceTier[]
+): { unitPrice: number; needsQuote: boolean } {
+  const garmentUnit = getProductUnitPrice(item.product.costo, newQty, priceTiers);
+  const techniques = item.customization_snapshot?.selected_techniques ?? [];
+
+  if (!techniques.length) {
+    // Sin personalizar, o snapshot guardado antes de que existiera este
+    // detalle -- se conserva la parte de técnica tal cual estaba (ya no
+    // hay con qué recalcularla), solo se actualiza el producto.
+    const oldGarmentUnit = getProductUnitPrice(item.product.costo, item.total_quantity || 1, priceTiers);
+    const oldTechniqueTotal = Math.max(0, item.unit_price - oldGarmentUnit);
+    return { unitPrice: garmentUnit + oldTechniqueTotal, needsQuote: false };
+  }
+
+  let techniqueTotal = 0;
+  let needsQuote = false;
+  for (const t of techniques) {
+    const technique = item.technique?.id === t.technique_id ? item.technique : null;
+    if (!technique) {
+      // No es la técnica "primaria" guardada en el renglón (multi-técnica,
+      // hoy deshabilitado en el personalizador) -- se respeta su precio ya
+      // calculado, no se re-deriva a ciegas.
+      techniqueTotal += t.unit_price ?? 0;
+      if (t.unit_price == null) needsQuote = true;
+      continue;
+    }
+    if (technique.pricing_type === "by_qty") {
+      const price = findQtyPrice(technique, newQty);
+      if (price === null) { needsQuote = true; continue; }
+      techniqueTotal += price * item.num_elements;
+    } else if (technique.pricing_type === "by_tintas") {
+      const posiciones = item.num_logo_elements ?? 0;
+      if (!t.tintas || posiciones === 0) { techniqueTotal += t.unit_price ?? 0; continue; }
+      const price = findTintasPrice(technique, t.tintas, posiciones, newQty);
+      if (price === null) { needsQuote = true; continue; }
+      techniqueTotal += techniquePriceWithIva(price);
+    } else if (technique.pricing_type === "by_size") {
+      const sizes = Object.values(t.logo_sizes ?? {});
+      if (!sizes.length) { techniqueTotal += t.unit_price ?? 0; continue; }
+      let sum = 0;
+      let algunoPorCotizar = false;
+      for (const size of sizes) {
+        const price = findSizePrice(technique, size, newQty);
+        if (price === null) algunoPorCotizar = true;
+        else sum += price;
+      }
+      if (algunoPorCotizar) { needsQuote = true; continue; }
+      techniqueTotal += sum;
+    } else {
+      techniqueTotal += t.unit_price ?? 0;
+    }
+  }
+  return { unitPrice: garmentUnit + techniqueTotal, needsQuote };
 }

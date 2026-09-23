@@ -2,16 +2,26 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toPng } from "html-to-image";
-import type { Product, ProductVariant, PriceTier, PrintTechnique, CartItem, CustomizationElement } from "@/types";
+import type {
+  Product,
+  ProductVariant,
+  PriceTier,
+  PrintTechnique,
+  CartItem,
+  CustomizationElement,
+  PerColorCustomization,
+  SelectedTechniqueDetail,
+} from "@/types";
 import {
   getProductUnitPrice,
   findQtyPrice,
   findTintasPrice,
   findSizePrice,
   roundUpToConfiguredSize,
-  formatMXN,
+  getElementRealCm,
+  techniquePriceWithIva,
 } from "@/lib/pricing";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
 import { useArtLibrary, type ArtAsset } from "@/lib/artLibrary/ArtLibraryContext";
@@ -32,12 +42,12 @@ import { getPrintArea, getApplicableViews, isGarmentProduct } from "./printAreas
 import DesignElementView, { DEFAULT_FONT_SIZE_PX, FONT_SIZE_MIN_PX, FONT_SIZE_MAX_PX } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
 
-import ArtLibraryPanel from "./ArtLibraryPanel";
-import DesignsPreviewCard from "./DesignsPreviewCard";
 import SelectionToolbar from "./SelectionToolbar";
 import DesignOptionsPanel from "./DesignOptionsPanel";
 import PrintTechniqueCards from "./PrintTechniqueCards";
 import TechniqueDetailCard from "./TechniqueDetailCard";
+import TechniqueModal, { TechniqueConfirmedRow } from "./TechniqueModal";
+import PrecioDesglose from "./PrecioDesglose";
 import PreviewModal from "./PreviewModal";
 import {
   TextToolIcon,
@@ -45,6 +55,7 @@ import {
   LayersIcon,
   UndoIcon,
   RedoIcon,
+  SaveIcon,
   ArrowRightIcon,
   FrenteTabIcon,
   ReversoTabIcon,
@@ -56,7 +67,7 @@ import {
   IzquierdaPrendaTabIcon,
   DerechaPrendaTabIcon,
   EyeIcon,
-  SparkleIcon,
+
 } from "./Icons";
 
 // Qué ícono le toca a cada pestaña de eje -- ver el comentario junto a
@@ -160,72 +171,65 @@ interface Props {
   // el query param, o un valor inválido) -> 1, mismo comportamiento de
   // siempre.
   initialQuantity: number | null;
+  // El cliente eligió "Distinto por color" en la pregunta de la ficha
+  // (ver ProductDetail.tsx / page.tsx ?porColor=1, charla 2026-09-19).
+  // Cambia `elements`/`techniqueTintas`/history de un solo diseño
+  // compartido a uno por color (ver SHARED_KEY/designKey en el
+  // componente) -- false (default) es el comportamiento de siempre.
+  distintoPorColor: boolean;
+}
+
+// Clave de diseño cuando "Mismo diseño" está activo (o el producto no es
+// multicolor) -- un solo diseño compartido, exactamente el
+// comportamiento de siempre. Con "Distinto por color" la clave real es
+// el variant_id de cada color.
+const SHARED_KEY = "__shared__";
+
+// Migra un `elements` guardado ANTES de "Distinto por color" (charla
+// 2026-09-19): en ese entonces era un ViewElements plano (llaves = nombres
+// de eje, ej. "frente"), no un diccionario por clave de diseño -- se
+// envuelve en SHARED_KEY en vez de descartarlo. Usado por la restauración
+// de ?editar= (renglón ya guardado en el carrito, ver customization_
+// snapshot.editor_state) -- un renglón guardado antes de este cambio
+// puede traer la forma vieja.
+function migrateElementsShape(raw: unknown): Record<string, ViewElements> {
+  const obj = raw as Record<string, unknown> | null | undefined;
+  if (obj && !(SHARED_KEY in obj) && VIEW_ORDER.some((v) => v in obj)) {
+    return { [SHARED_KEY]: obj as unknown as ViewElements };
+  }
+  return (obj as Record<string, ViewElements>) ?? { [SHARED_KEY]: emptyViewElements() };
 }
 
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// Autoguardado del diseño en curso -- pedido explícito: si el cliente sale
-// de esta página (botón atrás, cierra la pestaña, navega a otra parte del
-// sitio) sin llegar a "Confirmar diseño", antes todo lo que llevaba
-// colocado se perdía para siempre. Se guarda por PRODUCTO (no por color:
-// `elements` ya es una sola cosa compartida entre colores, ver
-// activeVariantId en el componente) en localStorage -- nunca en el
-// carrito ni en Supabase, esto es solo un borrador en el propio navegador.
-// `quantity`/`activeVariantId` a propósito NO se guardan aquí: esos ya
-// llegan de la ficha del producto vía props (initialQuantity/
-// initialVariantId, ver Props) cada vez que se entra, y esa sigue siendo
-// la fuente de verdad -- este autoguardado protege el TRABAJO (logos/
-// texto/técnica elegida), no la selección de color/cantidad.
-const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 días -- más viejo que
-// esto se descarta en vez de restaurar algo potencialmente obsoleto (ej.
-// un logo ya borrado de "Mis diseños" desde entonces).
-
+// Ya NO hay borrador local en localStorage (ver charla 2026-09-22: "el
+// carrito pasa a ser el único lugar donde vive cualquier borrador") --
+// "Guardar"/"Siguiente"/cerrar la página guardan directo en un renglón
+// real del carrito (ver persistToCart en el componente). Este tipo se
+// queda porque sigue siendo la forma exacta de
+// customization_snapshot.editor_state (ver buildCartItem), para que
+// "Editar" desde el carrito pueda reabrir el lienzo EXACTO.
 interface PersonalizerDraft {
-  savedAt: number;
-  elements: ViewElements;
+  // Diccionario por "clave de diseño" (SHARED_KEY en modo Mismo diseño, o
+  // variant_id por color en modo Distinto por color) -- ver designKey en
+  // el componente. Un renglón guardado antes de este cambio (un solo
+  // ViewElements plano) se migra en vez de descartarse, ver
+  // migrateElementsShape.
+  elements: Record<string, ViewElements>;
   selectedTechniqueIds: string[];
+  // Con "Distinto por color", la llave deja de ser solo technique.id --
+  // pasa a ser `${designKey}:${technique.id}` (ver tintasKey en el
+  // componente), para que la cuenta de tintas no colisione entre
+  // colores. Con "Mismo diseño" sigue siendo technique.id tal cual, sin
+  // cambio de forma.
   techniqueTintas: Record<string, string>;
   techniqueLogoSizeCm: Record<string, Record<string, { largo: string; alto: string }>>;
   groupOrientation: Partial<Record<string, ViewName>>;
 }
 
-function draftStorageKey(productId: string) {
-  return `merchy:personalizador-draft:${productId}`;
-}
-
-function loadDraft(productId: string): PersonalizerDraft | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(draftStorageKey(productId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as PersonalizerDraft;
-    if (!parsed || typeof parsed.savedAt !== "number" || Date.now() - parsed.savedAt > DRAFT_TTL_MS) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function saveDraft(productId: string, draft: Omit<PersonalizerDraft, "savedAt">) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(draftStorageKey(productId), JSON.stringify({ ...draft, savedAt: Date.now() }));
-  } catch {
-    // localStorage lleno/bloqueado (modo privado, cuotas, etc.) -- el
-    // autoguardado es una mejora, nunca debe romper el editor.
-  }
-}
-
-function clearDraft(productId: string) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(draftStorageKey(productId));
-  } catch {
-    // ver saveDraft
-  }
-}
+type EditorState = PersonalizerDraft;
 
 // Reads an image's real natural pixel dimensions — the source of truth for
 // sizing a newly-placed logo's box to its own actual aspect ratio (see
@@ -278,6 +282,7 @@ export default function PersonalizerClient({
   initialVariantId,
   multicolorVariantIds,
   initialQuantity,
+  distintoPorColor,
 }: Props) {
   const router = useRouter();
   // "frente" es el default de siempre, pero deja de ser válido para un
@@ -295,10 +300,41 @@ export default function PersonalizerClient({
   // de resetear siempre a la misma; un grupo sin elección guardada cae al
   // primer eje de ese grupo (ver tabGroups.map más abajo).
   const [groupOrientation, setGroupOrientation] = useState<Partial<Record<string, ViewName>>>({});
-  const [elements, setElements] = useState<ViewElements>(emptyViewElements());
-  const [history, setHistory] = useState<ViewElements[]>([emptyViewElements()]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Diccionario por "clave de diseño" (ver SHARED_KEY/designKey más abajo)
+  // -- con "Mismo diseño" (default) todo vive bajo SHARED_KEY, idéntico en
+  // los hechos al ViewElements plano de siempre. Con "Distinto por color"
+  // cada variant_id tiene su propio ViewElements independiente.
+  const [elements, setElements] = useState<Record<string, ViewElements>>({ [SHARED_KEY]: emptyViewElements() });
+  // Historial de undo/redo POR clave de diseño -- cambiar de color en modo
+  // "Distinto por color" no debe permitir deshacer hacia el diseño de otro
+  // color (ver commit()/undo()/redo() más abajo).
+  const [historyByKey, setHistoryByKey] = useState<Record<string, ViewElements[]>>({ [SHARED_KEY]: [emptyViewElements()] });
+  const [historyIndexByKey, setHistoryIndexByKey] = useState<Record<string, number>>({ [SHARED_KEY]: 0 });
+  // Multi-selección (charla 2026-09-22: "seleccionar varios logos con
+  // shift + click"). `selectedId` se sigue derivando aquí mismo (null
+  // salvo que haya EXACTO un elemento seleccionado) -- todo lo que ya
+  // dependía de un solo id (SelectionToolbar, DesignOptionsPanel, el
+  // Moveable interactivo con manijas de mouse) sigue funcionando igual
+  // sin tocarlo, y automáticamente se oculta en cuanto hay 2+ (nunca se
+  // implementó arrastre/rotación de grupo con el mouse -- fuera de
+  // alcance de este pedido, que solo pide seleccionar y escalar con
+  // Shift+flecha). selectOnly reemplaza cada `setSelectedId` de antes
+  // (mismo comportamiento: un clic normal siempre reduce la selección a
+  // un solo elemento); toggleSelect es nuevo, solo lo usa el
+  // Shift+clic en el lienzo.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : null;
+  function selectOnly(id: string | null) {
+    setSelectedIds(id ? new Set([id]) : new Set());
+  }
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   // "Opciones de diseño" (rotar/girar/cambiar color/ajustes de un logo) --
   // pedido explícito: el usuario debe ver la prenda completa junto con el
   // logo MIENTRAS edita. Ni un overlay flotando encima del lienzo ni
@@ -346,6 +382,9 @@ export default function PersonalizerClient({
   // ejes (frente/reverso/izquierda/derecha) hay elementos colocados (ver
   // activePositionLabels más abajo), así que no necesita su propio estado.
   const [selectedTechniqueIds, setSelectedTechniqueIds] = useState<string[]>([]);
+  // Técnica cuyo pop-up de "elegir/editar" está abierto (solo by_tintas
+  // por ahora -- ver TechniqueModal). null = ningún pop-up.
+  const [modalTechniqueId, setModalTechniqueId] = useState<string | null>(null);
   const [techniqueTintas, setTechniqueTintas] = useState<Record<string, string>>({});
   // Medida por LOGO, no una sola compartida por técnica: técnica -> id de
   // elemento -> {largo, alto}. Se agrupan visualmente por posición
@@ -383,7 +422,6 @@ export default function PersonalizerClient({
   // isWithinCanvas(); the notice shows only while true is false and
   // something is selected.
   const [interactionInBounds, setInteractionInBounds] = useState(true);
-  const [artLibraryOpen, setArtLibraryOpen] = useState(false);
   // Se pone en true recién después de que el efecto de restaurar el
   // borrador (ver más abajo) ya corrió una vez -- el efecto de GUARDAR usa
   // esto para no disparar en el primer render con los valores todavía
@@ -396,7 +434,14 @@ export default function PersonalizerClient({
   // page.tsx), que ya usa este mismo CartContext, así que el conteo/pulso
   // sigue siendo el carrito real de la plataforma, no uno nuevo. `addItem`
   // es lo único que este componente todavía necesita del contexto.
-  const { addItem, upsertItem, removeItem } = useCart();
+  const { addItem, upsertItem, upsertItemSync, removeItem, items: cartItems, hydrated: cartHydrated } = useCart();
+  // ?editar=<id> -- "Editar" desde el carrito de una línea YA
+  // personalizada (ver carrito/page.tsx) -- distinto del renglón "en
+  // curso" de arriba (draftCartItemId, id fijo, todavía sin confirmar).
+  // Mientras esto tenga valor, "Siguiente" reemplaza ESA misma línea del
+  // carrito en vez de crear una nueva (ver handleAddToCart) y vuelve al
+  // carrito en vez de a /checkout.
+  const editarCartItemId = useSearchParams().get("editar");
   // Mismo id que ya viene usando ProductDetail (ver productDraftCartItemId)
   // desde que el cliente eligió cantidad/color/talla en la ficha -- este
   // Personalizador sigue actualizando ESE MISMO renglón (nunca uno nuevo)
@@ -404,29 +449,28 @@ export default function PersonalizerClient({
   // carrito. Nunca choca con el id de un renglón ya confirmado (ver
   // handleAddToCart, que usa uid() para ese).
   const draftCartItemId = productDraftCartItemId(product.id);
-  const { assets: artAssets, loading: artLibraryLoading, addAsset, removeAsset } = useArtLibrary();
+  // Colores + desglose de tallas reales ya guardados por ProductDetail
+  // (pasos "1. Selecciona Color"/"2. Selecciona Cantidad") en este mismo
+  // renglón -- editarCartItemId si se está editando una línea ya
+  // confirmada, si no draftCartItemId (el renglón "en curso" que
+  // ProductDetail ya viene sincronizando). El Personalizador (pasos 3-4)
+  // NUNCA debe reconstruir esto desde cero: antes recreaba `variants` con
+  // un solo color activo y `sizes_breakdown: {}` fijo, así que en cuanto
+  // el cliente tocaba cualquier cosa aquí (incluso antes de poner un
+  // logo) se le borraban las tallas y, en Multicolor, se le colapsaban
+  // los demás colores a uno solo (ver charla 2026-09-16, bug real
+  // reportado). Solo si no hay NINGÚN renglón previo (ej. un link directo
+  // al Personalizador sin haber pasado por la ficha) cae al color activo
+  // como respaldo, sin desglose de tallas por no haber de dónde sacarlo.
+  // Declarado temprano (no junto a buildCartItem, donde vivía antes) para
+  // que colorQty (ver más abajo) lo pueda usar desde el bloque de precio
+  // en vivo, que se calcula antes que buildCartItem en el orden del
+  // componente.
+  const sourceVariantsItem = cartItems.find((i) => i.id === (editarCartItemId ?? draftCartItemId));
+  const { addAsset } = useArtLibrary();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const historyRef = useRef({ history, historyIndex });
-  historyRef.current = { history, historyIndex };
-  // Mismo patrón que historyRef -- addElement/updateElement/etc. leen esto
-  // (nunca el `elements` cerrado en el render) para no perder un elemento.
-  // Bug real confirmado: dos subidas rápidas seguidas a la MISMA vista (ej.
-  // 2 logos en Frente) son asíncronas (addAsset sube a Supabase antes de
-  // poder colocarse) -- si la segunda `addElement` corría con el `elements`
-  // capturado en un render viejo (antes de que la primera terminara de
-  // re-renderizar), pisaba el arreglo y el primer logo desaparecía.
-  const elementsRef = useRef(elements);
-  elementsRef.current = elements;
-  // Portapapeles interno para Ctrl/Cmd+C + Ctrl/Cmd+V sobre el elemento
-  // seleccionado (logo o texto) -- pedido explícito para que duplicar sea
-  // tan fácil como en cualquier editor real. Guarda una copia de los datos
-  // del elemento en el momento del copy (no solo el id, porque el usuario
-  // puede seguir editándolo o incluso borrarlo antes de pegar). Vive fuera
-  // de React state a propósito: copiar/pegar no debe generar historial de
-  // undo por sí solo, solo el pegado (que sí crea un elemento real).
-  const copiedElementRef = useRef<DesignElement | null>(null);
 
   // El/los color(es) de la prenda YA se eligieron en la página del producto
   // (ver ProductDetail.tsx's "1. Selecciona Color" + el switch Multicolor)
@@ -461,6 +505,63 @@ export default function PersonalizerClient({
   const [activeVariantId, setActiveVariantId] = useState<string | null>(initialVariantId ?? fallbackVariant?.id ?? null);
   const activeVariant = product.variants.find((v) => v.id === activeVariantId) ?? fallbackVariant;
   const garmentColor: GarmentColor = (activeVariant && normalizeGarmentColorName(activeVariant.color_name)) ?? "blanco";
+
+  // "Clave de diseño" -- con "Mismo diseño" (default) siempre SHARED_KEY,
+  // sin importar qué color esté activo en la barra: cambiar de color ahí
+  // sigue siendo puramente visual, nunca toca `elements` (comportamiento
+  // de siempre). Con "Distinto por color" SÍ importa: cada color edita su
+  // propio diseño independiente.
+  const designKey = distintoPorColor ? (activeVariantId ?? SHARED_KEY) : SHARED_KEY;
+  const currentElements = elements[designKey] ?? emptyViewElements();
+  const currentHistory = historyByKey[designKey] ?? [emptyViewElements()];
+  const currentHistoryIndex = historyIndexByKey[designKey] ?? 0;
+  // Ver el comentario de techniqueTintas en PersonalizerDraft -- con
+  // "Distinto por color" la llave real es compuesta para que la cuenta de
+  // tintas de un color nunca pise la de otro.
+  function tintasKeyFor(dk: string, techniqueId: string) {
+    return distintoPorColor ? `${dk}:${techniqueId}` : techniqueId;
+  }
+  function tintasKey(techniqueId: string) {
+    return tintasKeyFor(designKey, techniqueId);
+  }
+  // Cantidad de ESTE color específico -- de sourceVariantsItem (el
+  // renglón real del carrito, ya sincronizado por ProductDetail, ver más
+  // abajo) si existe; si no (ej. link directo sin pasar por la ficha),
+  // cae a la cantidad total repartida entre los colores de la barra a
+  // partes iguales, mejor esfuerzo mientras no haya de dónde sacar el
+  // reparto real.
+  function colorQty(variantId: string): number {
+    const fromCart = sourceVariantsItem?.variants.find((v) => v.variant_id === variantId)?.qty;
+    if (fromCart != null) return fromCart;
+    return barVariants.length ? Math.round(quantity / barVariants.length) : quantity;
+  }
+
+  // designKey viaja junto con el historial -- undo/redo/commit siempre
+  // deben operar sobre la clave de diseño que estaba activa en el
+  // render MÁS RECIENTE al momento del clic/llamada, nunca una vieja
+  // cerrada por un useCallback con deps vacías.
+  const historyRef = useRef({ history: currentHistory, historyIndex: currentHistoryIndex, designKey });
+  historyRef.current = { history: currentHistory, historyIndex: currentHistoryIndex, designKey };
+  // Mismo patrón que historyRef -- addElement/updateElement/etc. leen esto
+  // (nunca el `elements`/`designKey` cerrados en el render) para no perder
+  // un elemento. Bug real confirmado: dos subidas rápidas seguidas a la
+  // MISMA vista (ej. 2 logos en Frente) son asíncronas (addAsset sube a
+  // Supabase antes de poder colocarse) -- si la segunda `addElement`
+  // corría con el `elements` capturado en un render viejo (antes de que
+  // la primera terminara de re-renderizar), pisaba el arreglo y el primer
+  // logo desaparecía.
+  const elementsRef = useRef(elements);
+  elementsRef.current = elements;
+  const designKeyRef = useRef(designKey);
+  designKeyRef.current = designKey;
+  // Portapapeles interno para Ctrl/Cmd+C + Ctrl/Cmd+V sobre el elemento
+  // seleccionado (logo o texto) -- pedido explícito para que duplicar sea
+  // tan fácil como en cualquier editor real. Guarda una copia de los datos
+  // del elemento en el momento del copy (no solo el id, porque el usuario
+  // puede seguir editándolo o incluso borrarlo antes de pegar). Vive fuera
+  // de React state a propósito: copiar/pegar no debe generar historial de
+  // undo por sí solo, solo el pegado (que sí crea un elemento real).
+  const copiedElementRef = useRef<DesignElement | null>(null);
 
   // No shared generic mockup fallback here on purpose: the Personalizador
   // must only ever show the actual selected product's own photography, per
@@ -513,7 +614,7 @@ export default function PersonalizerClient({
   // color ya elegido en la página del producto. No se resuelven ni cargan
   // los ejes de ningún otro color.
   const activeViewSrc = getViewSrc(activeView, garmentColor);
-  const selectedElement = elements[activeView].find((e) => e.id === selectedId) ?? null;
+  const selectedElement = currentElements[activeView].find((e) => e.id === selectedId) ?? null;
 
   // Fresh selection always starts "in bounds" (it was just placed/spawned
   // validly) — only an active drag/resize/rotate on it can mark it out.
@@ -521,42 +622,58 @@ export default function PersonalizerClient({
     setInteractionInBounds(true);
   }, [selectedId]);
 
+  // Todas escriben sobre historyRef.current.designKey -- la clave de
+  // diseño activa en el render más reciente, no la que estuviera cerrada
+  // en este useCallback (deps vacías a propósito, mismo motivo de
+  // siempre: el resto de handlers también los usan desde closures viejas).
   const commit = useCallback((next: ViewElements) => {
-    setElements(next);
-    setHistory((prev) => {
-      const truncated = prev.slice(0, historyRef.current.historyIndex + 1);
-      return [...truncated, next];
+    const key = historyRef.current.designKey;
+    setElements((prev) => ({ ...prev, [key]: next }));
+    setHistoryByKey((prev) => {
+      const truncated = (prev[key] ?? [emptyViewElements()]).slice(0, historyRef.current.historyIndex + 1);
+      return { ...prev, [key]: [...truncated, next] };
     });
-    setHistoryIndex((i) => i + 1);
+    setHistoryIndexByKey((prev) => ({ ...prev, [key]: historyRef.current.historyIndex + 1 }));
   }, []);
 
   const undo = useCallback(() => {
-    const { history: h, historyIndex: idx } = historyRef.current;
+    const { history: h, historyIndex: idx, designKey: key } = historyRef.current;
     if (idx === 0) return;
-    setHistoryIndex(idx - 1);
-    setElements(h[idx - 1]);
-    setSelectedId(null);
+    setHistoryIndexByKey((prev) => ({ ...prev, [key]: idx - 1 }));
+    setElements((prev) => ({ ...prev, [key]: h[idx - 1] }));
+    selectOnly(null);
   }, []);
 
   const redo = useCallback(() => {
-    const { history: h, historyIndex: idx } = historyRef.current;
+    const { history: h, historyIndex: idx, designKey: key } = historyRef.current;
     if (idx >= h.length - 1) return;
-    setHistoryIndex(idx + 1);
-    setElements(h[idx + 1]);
-    setSelectedId(null);
+    setHistoryIndexByKey((prev) => ({ ...prev, [key]: idx + 1 }));
+    setElements((prev) => ({ ...prev, [key]: h[idx + 1] }));
+    selectOnly(null);
   }, []);
 
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
+  const canUndo = currentHistoryIndex > 0;
+  const canRedo = currentHistoryIndex < currentHistory.length - 1;
 
   const deleteElement = useCallback(
     (id: string) => {
-      const next = { ...elements, [activeView]: elements[activeView].filter((e) => e.id !== id) };
+      const next = { ...currentElements, [activeView]: currentElements[activeView].filter((e) => e.id !== id) };
       commit(next);
-      setSelectedId(null);
+      selectOnly(null);
     },
-    [elements, activeView, commit]
+    [currentElements, activeView, commit]
   );
+
+  // Elimina TODOS los seleccionados a la vez (Suprimir/Backspace con una
+  // multi-selección, ver charla 2026-09-22) -- deleteElement de arriba se
+  // queda igual, la sigue usando el botón "Eliminar" de SelectionToolbar
+  // (que solo se muestra con exactamente 1 seleccionado).
+  const deleteSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    const next = { ...currentElements, [activeView]: currentElements[activeView].filter((e) => !selectedIds.has(e.id)) };
+    commit(next);
+    selectOnly(null);
+  }, [currentElements, activeView, commit, selectedIds]);
 
   // Shift+ArrowRight/ArrowLeft grows/shrinks the currently selected element
   // — same keepRatio-preserving scaling react-moveable's own corner-drag
@@ -570,28 +687,54 @@ export default function PersonalizerClient({
   const RESIZE_STEP_FACTOR = 1.06;
   const LOGO_MIN_PCT = 1;
 
+  // Con 2+ seleccionados escala a TODOS a la vez (ver charla 2026-09-22)
+  // -- cada uno alrededor de su PROPIO centro, igual que con 1 solo, así
+  // que no se juntan ni se separan entre ellos, solo cada uno crece o
+  // encoge en su lugar. Un solo `commit` al final (no un updateElement
+  // por elemento): éste lee/escribe el mismo `elements[designKey]`
+  // completo, así que llamarlo varias veces seguidas de forma síncrona
+  // pisaría los cambios anteriores entre sí (cada llamada partiría del
+  // mismo estado aún no actualizado por React).
   function resizeSelectedElementByKeyboard(direction: 1 | -1) {
-    const el = elements[activeView].find((e) => e.id === selectedId);
-    if (!el) return;
+    if (selectedIds.size === 0) return;
     const factor = direction === 1 ? RESIZE_STEP_FACTOR : 1 / RESIZE_STEP_FACTOR;
-
-    if (el.type === "text") {
-      const currentPx = el.fontSizePx ?? DEFAULT_FONT_SIZE_PX;
-      const nextPx = Math.min(FONT_SIZE_MAX_PX, Math.max(FONT_SIZE_MIN_PX, currentPx * factor));
-      updateElement(el.id, { fontSizePx: nextPx });
-      return;
-    }
-
-    const centerXPct = el.xPct + el.widthPct / 2;
-    const centerYPct = el.yPct + el.heightPct / 2;
-    const nextWidthPct = Math.max(LOGO_MIN_PCT, el.widthPct * factor);
-    const nextHeightPct = Math.max(LOGO_MIN_PCT, el.heightPct * factor);
-    updateElement(el.id, {
-      widthPct: nextWidthPct,
-      heightPct: nextHeightPct,
-      xPct: centerXPct - nextWidthPct / 2,
-      yPct: centerYPct - nextHeightPct / 2,
+    const current = elementsRef.current[designKeyRef.current];
+    const nextView = current[activeView].map((el) => {
+      if (!selectedIds.has(el.id)) return el;
+      if (el.type === "text") {
+        const currentPx = el.fontSizePx ?? DEFAULT_FONT_SIZE_PX;
+        const nextPx = Math.min(FONT_SIZE_MAX_PX, Math.max(FONT_SIZE_MIN_PX, currentPx * factor));
+        return { ...el, fontSizePx: nextPx };
+      }
+      const centerXPct = el.xPct + el.widthPct / 2;
+      const centerYPct = el.yPct + el.heightPct / 2;
+      const nextWidthPct = Math.max(LOGO_MIN_PCT, el.widthPct * factor);
+      const nextHeightPct = Math.max(LOGO_MIN_PCT, el.heightPct * factor);
+      return {
+        ...el,
+        widthPct: nextWidthPct,
+        heightPct: nextHeightPct,
+        xPct: centerXPct - nextWidthPct / 2,
+        yPct: centerYPct - nextHeightPct / 2,
+      };
     });
+    commit({ ...current, [activeView]: nextView });
+  }
+
+  // Flechas (sin Shift) mueven el elemento seleccionado un paso chico —
+  // no existía ningún atajo de teclado para esto (ver charla 2026-09-10:
+  // "no me deja moverlo con las flechas"). Mismo ancla-por-centro que el
+  // resize de arriba, solo que aquí no hay que recalcular nada más que
+  // xPct/yPct.
+  const MOVE_STEP_PCT = 0.4;
+
+  function moveSelectedElementByKeyboard(dxPct: number, dyPct: number) {
+    if (selectedIds.size === 0) return;
+    const current = elementsRef.current[designKeyRef.current];
+    const nextView = current[activeView].map((el) =>
+      selectedIds.has(el.id) ? { ...el, xPct: el.xPct + dxPct, yPct: el.yPct + dyPct } : el
+    );
+    commit({ ...current, [activeView]: nextView });
   }
 
   useEffect(() => {
@@ -619,9 +762,9 @@ export default function PersonalizerClient({
       // not the element. Checking the focused element covers every such
       // field generically, with no need to know about them individually.
       if (e.key === "Delete" || e.key === "Backspace") {
-        if (isEditableField || !selectedId) return;
+        if (isEditableField || selectedIds.size === 0) return;
         e.preventDefault();
-        deleteElement(selectedId);
+        deleteSelected();
         return;
       }
 
@@ -643,9 +786,27 @@ export default function PersonalizerClient({
           target.isContentEditable ||
           (target.tagName === "INPUT" && (target as HTMLInputElement).type === "text"));
       if (e.shiftKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
-        if (isTypingFreeText || !selectedId) return;
+        if (isTypingFreeText || selectedIds.size === 0) return;
         e.preventDefault();
         resizeSelectedElementByKeyboard(e.key === "ArrowRight" ? 1 : -1);
+        return;
+      }
+
+      // Flecha sola (sin Shift) mueve el elemento seleccionado. Guardia
+      // ANCHA (isEditableField, no isTypingFreeText) a propósito -- a
+      // diferencia de Shift+flecha arriba, una flecha SOLA sobre el campo
+      // "Rotación" (type="number") sí tiene un uso nativo real (subir/
+      // bajar ese número), así que aquí NO se debe interceptar solo
+      // porque el foco esté en cualquier campo de formulario.
+      if (
+        !e.shiftKey &&
+        (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")
+      ) {
+        if (isEditableField || selectedIds.size === 0) return;
+        e.preventDefault();
+        const dx = e.key === "ArrowLeft" ? -MOVE_STEP_PCT : e.key === "ArrowRight" ? MOVE_STEP_PCT : 0;
+        const dy = e.key === "ArrowUp" ? -MOVE_STEP_PCT : e.key === "ArrowDown" ? MOVE_STEP_PCT : 0;
+        moveSelectedElementByKeyboard(dx, dy);
         return;
       }
 
@@ -661,7 +822,7 @@ export default function PersonalizerClient({
       // tiene nada útil que copiar de todos modos.
       if (ctrlOrCmd && e.key.toLowerCase() === "c") {
         if (isTypingFreeText || !selectedId) return;
-        const el = elementsRef.current[activeView].find((item) => item.id === selectedId);
+        const el = elementsRef.current[designKeyRef.current][activeView].find((item) => item.id === selectedId);
         if (el) {
           copiedElementRef.current = el;
           e.preventDefault();
@@ -671,7 +832,7 @@ export default function PersonalizerClient({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [undo, redo, deleteElement, selectedId, elements, activeView]);
+  }, [undo, redo, deleteSelected, selectedIds, selectedId, currentElements, activeView]);
 
   // Ctrl/Cmd+V hace dos cosas distintas con el mismo evento nativo "paste",
   // en este orden de prioridad: 1) si el portapapeles del SO trae una
@@ -738,10 +899,10 @@ export default function PersonalizerClient({
   }, [activeView, zCounter]);
 
   function addElement(el: DesignElement) {
-    const current = elementsRef.current;
+    const current = elementsRef.current[designKeyRef.current];
     const next = { ...current, [el.view]: [...current[el.view], el] };
     commit(next);
-    setSelectedId(el.id);
+    selectOnly(el.id);
   }
 
   // Live in-bounds status while dragging/resizing/rotating the selected
@@ -754,13 +915,13 @@ export default function PersonalizerClient({
   }
 
   function updateElement(id: string, patch: Partial<DesignElement>) {
-    const current = elementsRef.current;
+    const current = elementsRef.current[designKeyRef.current];
     const next = { ...current, [activeView]: current[activeView].map((e) => (e.id === id ? { ...e, ...patch } : e)) };
     commit(next);
   }
 
   function duplicateElement(id: string) {
-    const el = elementsRef.current[activeView].find((e) => e.id === id);
+    const el = elementsRef.current[designKeyRef.current][activeView].find((e) => e.id === id);
     if (!el) return;
     const z = zCounter + 1;
     setZCounter(z);
@@ -780,7 +941,7 @@ export default function PersonalizerClient({
   }
 
   function sendToBack(id: string) {
-    const minZ = Math.min(0, ...elementsRef.current[activeView].map((e) => e.zIndex));
+    const minZ = Math.min(0, ...elementsRef.current[designKeyRef.current][activeView].map((e) => e.zIndex));
     updateElement(id, { zIndex: minZ - 1 });
   }
 
@@ -889,19 +1050,32 @@ export default function PersonalizerClient({
     });
   }
 
+  function selectTechnique(id: string) {
+    // Elegir una técnica nueva: con la regla de una sola técnica (default
+    // hoy) reemplaza cualquier selección previa en vez de sumarse a ella
+    // -- clic en Serigrafía con DTF UV ya elegido acaba en [Serigrafía].
+    setSelectedTechniqueIds((prev) =>
+      prev.includes(id) ? prev : ALLOW_MULTIPLE_TECHNIQUES ? [...prev, id] : [id]
+    );
+  }
+
   function toggleTechnique(id: string) {
-    setSelectedTechniqueIds((prev) => {
-      // Quitar la técnica ya elegida (el botón "quitar" de su propia
-      // tarjeta, o volver a hacer clic en su card) se comporta exactamente
-      // igual con o sin ALLOW_MULTIPLE_TECHNIQUES -- deja la selección
-      // vacía, nunca "la anterior a esta".
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      // Elegir una técnica nueva: con la regla de una sola técnica
-      // (default hoy) reemplaza cualquier selección previa en vez de
-      // sumarse a ella -- clic en Serigrafía con DTF UV ya elegido acaba
-      // en [Serigrafía], no en [DTF UV, Serigrafía].
-      return ALLOW_MULTIPLE_TECHNIQUES ? [...prev, id] : [id];
-    });
+    // Quitar la técnica ya elegida (su bote, o volver a hacer clic en su
+    // card) deja la selección vacía, nunca "la anterior a esta".
+    if (selectedTechniqueIds.includes(id)) {
+      setSelectedTechniqueIds((prev) => prev.filter((x) => x !== id));
+      return;
+    }
+    // by_tintas (Serigrafía / Tampografía): NO se selecciona directo --
+    // abre el pop-up, y "Confirmar técnica" es lo único que la agrega
+    // (ver charla 2026-09-10). Las demás técnicas se eligen igual que
+    // siempre y muestran su tarjeta de detalle inline.
+    const technique = techniques.find((t) => t.id === id);
+    if (technique?.pricing_type === "by_tintas") {
+      setModalTechniqueId(id);
+      return;
+    }
+    selectTechnique(id);
   }
 
   // Único punto que cambia la cantidad real -- lo usan tanto los botones
@@ -943,117 +1117,245 @@ export default function PersonalizerClient({
     return roundUpToConfiguredSize(largo, alto, sizeOptions);
   }
 
-  // Restaura el borrador guardado de ESTE producto (si hay uno vigente) al
-  // entrar -- una sola vez, al montar. `setHistory([draft.elements])` deja
-  // el punto restaurado como nuevo inicio del undo (nunca "deshacer" hacia
-  // un vacío que el cliente ni siquiera vio en esta sesión).
-  useEffect(() => {
-    const draft = loadDraft(product.id);
-    if (draft) {
-      setElements(draft.elements);
-      setHistory([draft.elements]);
-      setHistoryIndex(0);
-      setSelectedTechniqueIds(draft.selectedTechniqueIds ?? []);
-      setTechniqueTintas(draft.techniqueTintas ?? {});
-      setTechniqueLogoSizeCm(draft.techniqueLogoSizeCm ?? {});
-      setGroupOrientation(draft.groupOrientation ?? {});
-    }
-    setDraftReady(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.id]);
-
-  const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers);
-  const numElements = applicableViews.reduce((sum, v) => sum + elements[v].length, 0);
-
-  // Guarda el borrador (debounced, 400ms) cada vez que algo del diseño
-  // cambia -- solo después de que el efecto de arriba ya haya tenido
-  // oportunidad de restaurar (ver draftReady), para no pisar un borrador
-  // real con el estado vacío inicial del primer render. Sin nada colocado
-  // ni técnica elegida, borra el borrador en vez de guardar uno vacío --
-  // si el cliente quitó todo a propósito y se fue, no debe reaparecer.
-  useEffect(() => {
-    if (!draftReady) return;
-    const timer = setTimeout(() => {
-      const hasContent = numElements > 0 || selectedTechniqueIds.length > 0;
-      if (hasContent) {
-        saveDraft(product.id, { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation });
-      } else {
-        clearDraft(product.id);
-      }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [draftReady, product.id, elements, numElements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation]);
-  const allLogoElements = applicableViews.flatMap((v) => elements[v].filter((e) => e.type === "logo"));
-  const numLogoElements = allLogoElements.length;
-  // "Posiciones" (tarjeta de detalle de cada técnica): los ejes reales
-  // donde el cliente ya colocó algún LOGO en el canvas, agrupados con
-  // cuántos logos hay en cada uno -- ya no un número que se escriba a
-  // mano, ni una sola medida compartida. Mismos VIEW_LABELS que ya se
-  // usan en las pestañas Frente/Reverso/Izquierda/Derecha de arriba. Es
-  // el mismo para las 4 vistas sin importar cuál esté activa ahora mismo,
-  // porque la técnica aplica al diseño completo, no a una vista.
-  const logosByView = applicableViews.map((v) => ({
-    view: v,
-    viewLabel: VIEW_LABELS[v],
-    logos: elements[v].filter((e) => e.type === "logo"),
-  })).filter((g) => g.logos.length > 0);
-  const activePositionLabels = logosByView.map((g) => g.viewLabel);
-
-  // Cada técnica calcula su propio precio según su pricing_type (ver
-  // types/index.ts) y se suma al total — nunca se inventa un precio: si
-  // falta el parámetro (tintas/tamaño) o no hay un renglón que coincida
-  // exacto, unitPrice queda en null y needsQuote en true.
   interface TechniqueResult {
     technique: PrintTechnique;
+    // unitPrice YA incluye IVA (la tabla de técnicas viene sin IVA -> ver
+    // techniquePriceWithIva). Se suma directo al precio del producto, que
+    // también viene con IVA.
     unitPrice: number | null;
     needsQuote: boolean;
+    // Texto corto para el desglose / la tarjeta confirmada, p.ej.
+    // "2 posiciones · 1 tinta" o "2 logos".
+    resumen: string;
   }
-  const techniqueResults: TechniqueResult[] = selectedTechniqueIds
-    .map((id) => techniques.find((t) => t.id === id))
-    .filter((t): t is PrintTechnique => !!t)
-    .map((technique): TechniqueResult => {
+
+  // Calcula el desglose de precio de IMPRESIÓN de UN diseño (los
+  // elementos de UNA clave de diseño, ver designKey) a la cantidad que le
+  // corresponda -- con "Mismo diseño" se llama una sola vez, con el diseño
+  // compartido y la cantidad total (idéntico al comportamiento de
+  // siempre). Con "Distinto por color" se llama UNA VEZ POR COLOR (ver
+  // buildCartItem), cada una con los elementos y la cantidad de ESE color
+  // nada más -- el garment (tela) nunca pasa por aquí, siempre usa la
+  // cantidad total combinada (ver garmentUnit arriba).
+  function computeDesignPricing(elementsForDesign: ViewElements, qtyForDesign: number, dk: string) {
+    const numElements = applicableViews.reduce((sum, v) => sum + elementsForDesign[v].length, 0);
+    const allLogoElements = applicableViews.flatMap((v) => elementsForDesign[v].filter((e) => e.type === "logo"));
+    const numLogoElements = allLogoElements.length;
+    // "Posiciones" = número de logos colocados (1 logo = 1 posición,
+    // criterio acordado -- charla 2026-09-10). Es el mismo para las 4
+    // vistas.
+    const posiciones = numLogoElements;
+
+    // Precio de UNA técnica según su pricing_type (ver types/index.ts) --
+    // nunca se inventa un precio: si falta el parámetro (tintas/tamaño) o
+    // no hay un renglón que coincida exacto, unitPrice queda en null y
+    // needsQuote en true.
+    const priceTechnique = (technique: PrintTechnique): TechniqueResult => {
+      const logosTxt = `${posiciones} ${posiciones === 1 ? "logo" : "logos"}`;
       if (technique.pricing_type === "by_qty") {
-        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false };
-        const price = findQtyPrice(technique, quantity);
-        return price === null ? { technique, unitPrice: null, needsQuote: true } : { technique, unitPrice: price * numElements, needsQuote: false };
+        // Nota: by_qty (DTG) y by_size (DTF) NO llevan el ×1.16 de IVA
+        // todavía -- solo se aplicó a by_tintas (Serigrafía/Tampografía),
+        // que es lo que se acordó. Cuando se confirme que esas tablas
+        // también vienen sin IVA se envuelven igual con
+        // techniquePriceWithIva.
+        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
+        const price = findQtyPrice(technique, qtyForDesign);
+        return price === null
+          ? { technique, unitPrice: null, needsQuote: true, resumen: logosTxt }
+          : { technique, unitPrice: price * numElements, needsQuote: false, resumen: logosTxt };
       }
       if (technique.pricing_type === "by_tintas") {
-        if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false };
-        const tintas = parseInt(techniqueTintas[technique.id] ?? "", 10);
-        if (!Number.isFinite(tintas) || tintas <= 0) return { technique, unitPrice: null, needsQuote: true };
-        const price = findTintasPrice(technique, tintas, quantity);
-        return price === null ? { technique, unitPrice: null, needsQuote: true } : { technique, unitPrice: price * numElements, needsQuote: false };
+        if (posiciones === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
+        const posTxt = `${posiciones} ${posiciones === 1 ? "posición" : "posiciones"}`;
+        const tintas = parseInt(techniqueTintas[tintasKeyFor(dk, technique.id)] ?? "", 10);
+        if (!Number.isFinite(tintas) || tintas <= 0) return { technique, unitPrice: null, needsQuote: true, resumen: posTxt };
+        const resumen = `${posTxt} · ${tintas} ${tintas === 1 ? "tinta" : "tintas"}`;
+        // La fila de la tabla es posiciones × tintas y se cobra UNA vez
+        // (ver findTintasPrice) -- ya NO se multiplica por el número de
+        // logos como antes.
+        const price = findTintasPrice(technique, tintas, posiciones, qtyForDesign);
+        return price === null
+          ? { technique, unitPrice: null, needsQuote: true, resumen }
+          : { technique, unitPrice: techniquePriceWithIva(price), needsQuote: false, resumen };
       }
       if (technique.pricing_type === "by_size") {
-        // Suma el precio de cada logo por separado -- cada uno puede tener
-        // su propia medida (ver resolveLogoSize), a diferencia de
-        // by_qty/by_tintas donde un solo precio se multiplica por el total
-        // de elementos.
-        if (allLogoElements.length === 0) return { technique, unitPrice: 0, needsQuote: false };
+        // Suma el precio de cada logo por separado -- cada uno puede
+        // tener su propia medida (ver resolveLogoSize), a diferencia de
+        // by_qty/by_tintas donde un solo precio se multiplica por el
+        // total de elementos.
+        if (allLogoElements.length === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
         let sum = 0;
         let needsQuote = false;
         for (const el of allLogoElements) {
           const size = resolveLogoSize(technique, el.id);
-          const price = size ? findSizePrice(technique, size, quantity) : null;
+          const price = size ? findSizePrice(technique, size, qtyForDesign) : null;
           if (price === null) needsQuote = true;
           else sum += price;
         }
-        return { technique, unitPrice: needsQuote ? null : sum, needsQuote };
+        return { technique, unitPrice: needsQuote ? null : sum, needsQuote, resumen: logosTxt };
       }
       // pricing_type null -> sin datos suficientes configurados todavía.
-      return { technique, unitPrice: null, needsQuote: true };
+      return { technique, unitPrice: null, needsQuote: true, resumen: "" };
+    };
+
+    const techniqueResults: TechniqueResult[] = selectedTechniqueIds
+      .map((id) => techniques.find((t) => t.id === id))
+      .filter((t): t is PrintTechnique => !!t)
+      .map(priceTechnique);
+    const anyTechniqueNeedsQuote = techniqueResults.some((r) => r.needsQuote);
+    const techniqueTotal = techniqueResults.reduce((sum, r) => sum + (r.unitPrice ?? 0), 0);
+
+    // `priceTechnique` también se expone -- lo usa el pop-up de
+    // TechniqueModal para previsualizar el precio de una técnica que
+    // TODAVÍA no está en selectedTechniqueIds (antes de "Confirmar
+    // técnica").
+    return { numElements, allLogoElements, numLogoElements, posiciones, techniqueResults, anyTechniqueNeedsQuote, techniqueTotal, priceTechnique };
+  }
+
+  // ?editar=<id> -- reabre una línea del carrito YA confirmada tal cual se
+  // guardó (editor_state, ver buildCartItem), en vez del borrador normal
+  // de este producto. Espera a que el carrito termine de hidratar desde
+  // localStorage (si no, `cartItems` todavía está en [] y el id nunca se
+  // encontraría) -- por eso depende de `cartHydrated`/`cartItems` y no
+  // solo corre una vez al montar como el efecto de abajo. El ref evita
+  // repetir la restauración si `cartItems` vuelve a cambiar después
+  // (ej. por el autoguardado del renglón "en curso" de otro producto).
+  const editarResueltoRef = useRef(false);
+  useEffect(() => {
+    if (!editarCartItemId || editarResueltoRef.current || !cartHydrated) return;
+    editarResueltoRef.current = true;
+    const item = cartItems.find((i) => i.id === editarCartItemId);
+    const estado = item?.customization_snapshot?.editor_state as EditorState | undefined;
+    if (item && estado) {
+      const migrated = migrateElementsShape(estado.elements);
+      setElements(migrated);
+      setHistoryByKey(Object.fromEntries(Object.entries(migrated).map(([k, v]) => [k, [v]])));
+      setHistoryIndexByKey(Object.fromEntries(Object.keys(migrated).map((k) => [k, 0])));
+      setSelectedTechniqueIds(estado.selectedTechniqueIds ?? []);
+      setTechniqueTintas(estado.techniqueTintas ?? {});
+      setTechniqueLogoSizeCm(estado.techniqueLogoSizeCm ?? {});
+      setGroupOrientation(estado.groupOrientation ?? {});
+      setQuantity(item.total_quantity);
+      setQtyDraft(String(item.total_quantity));
+      const variantId = item.variants[0]?.variant_id;
+      if (variantId) setActiveVariantId(variantId);
+    }
+    setDraftReady(true);
+  }, [editarCartItemId, cartHydrated, cartItems]);
+
+  // Ya NO hay borrador local por producto (ver charla 2026-09-22: el
+  // carrito pasa a ser el único lugar donde vive un diseño sin terminar
+  // -- "Guardar"/"Siguiente"/cerrar la página lo dejan ahí, ver
+  // persistToCart más abajo). Entrar a personalizar este producto desde
+  // cero (sin ?editar=) por eso siempre arranca vacío, aunque ya exista
+  // un renglón guardado de este mismo producto en el carrito -- para
+  // retomar ESE hay que entrar por "Editar" desde el carrito, que sí
+  // trae `editarCartItemId` y cae en el efecto de arriba.
+  useEffect(() => {
+    if (editarCartItemId) return;
+    setDraftReady(true);
+  }, [editarCartItemId]);
+
+  // El garment (tela/manufactura) SIEMPRE usa la cantidad TOTAL combinada
+  // de todos los colores -- nunca cambia entre colores, ni con "Distinto
+  // por color" (ver contexto del plan 2026-09-19): la tela escala igual
+  // sin importar el diseño.
+  const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers);
+  // Cantidad a usar para el precio de IMPRESIÓN del diseño que se está
+  // viendo/editando ahora mismo: con "Distinto por color" es la de ESE
+  // color nada más (colorQty); con "Mismo diseño" (o producto no
+  // multicolor) sigue siendo la cantidad total, igual que siempre.
+  const qtyForActiveDesign = distintoPorColor ? colorQty(activeVariantId ?? "") : quantity;
+  const activeDesignPricing = computeDesignPricing(currentElements, qtyForActiveDesign, designKey);
+  const { numElements, allLogoElements, numLogoElements, posiciones, techniqueResults, anyTechniqueNeedsQuote, techniqueTotal, priceTechnique } =
+    activeDesignPricing;
+
+  // Suma de elementos colocados en TODOS los diseños (todas las claves del
+  // diccionario `elements`, no solo el diseño activo) -- se usa nada más
+  // para decidir si hay algo que valga la pena guardar (ver
+  // hasContentToSave/handleGuardar y el guardado al cerrar la página más
+  // abajo). Cambiar de color sin haber puesto nada en ese color
+  // específico no debe borrar lo que ya se diseñó en otro color.
+  const numElementsAllDesigns = Object.values(elements).reduce(
+    (sum, ve) => sum + applicableViews.reduce((s, v) => s + ve[v].length, 0),
+    0
+  );
+  const hasContentToSave = numElementsAllDesigns > 0 || selectedTechniqueIds.length > 0;
+
+  // "Posiciones" (tarjeta de detalle de cada técnica): los ejes reales
+  // donde el cliente ya colocó algún LOGO en el canvas, agrupados con
+  // cuántos logos hay en cada uno -- ya no un número que se escriba a
+  // mano, ni una sola medida compartida. Mismos VIEW_LABELS que ya se
+  // usan en las pestañas Frente/Reverso/Izquierda/Derecha de arriba. Con
+  // "Distinto por color" es del diseño ACTIVO nada más -- cada color tiene
+  // los suyos.
+  const logosByView = applicableViews.map((v) => ({
+    view: v,
+    viewLabel: VIEW_LABELS[v],
+    logos: currentElements[v].filter((e) => e.type === "logo"),
+  })).filter((g) => g.logos.length > 0);
+  const activePositionLabels = logosByView.map((g) => g.viewLabel);
+
+  // Sugerencia (mejor esfuerzo) de Largo/Alto real en cm de cada logo, a
+  // partir de su tamaño ya dibujado en el lienzo (widthPct/heightPct, %
+  // del área de impresión) y las medidas reales de esa área (ver
+  // printAreas.ts) — mismo espíritu que suggestInkCount para tintas: se
+  // muestra como referencia y se auto-rellena si el campo sigue vacío,
+  // pero el cliente siempre puede corregirla a mano. null cuando el
+  // producto/vista todavía no tiene medidas reales configuradas (nunca se
+  // inventa una).
+  const suggestedSizeCmByElement: Record<string, { largo: string; alto: string } | null> = {};
+  allLogoElements.forEach((el) => {
+    const pa = getPrintArea(product.name, el.view);
+    const real = getElementRealCm(el.widthPct, el.heightPct, pa.widthCm, pa.heightCm);
+    suggestedSizeCmByElement[el.id] = real ? { largo: real.widthCm.toFixed(1), alto: real.heightCm.toFixed(1) } : null;
+  });
+
+  // Auto-rellena Largo/Alto con la sugerencia mientras el campo siga
+  // vacío -- igual que tintas con onTintasChange en TechniqueModal: si el
+  // cliente ya escribió algo (a mano o de una sugerencia anterior), nunca
+  // se le pisa. Corre para toda técnica que use tamaño (by_size), elegida
+  // o no, para que ya esté listo en cuanto se elija.
+  const sizeSuggestKey = allLogoElements.map((el) => `${el.id}:${el.widthPct.toFixed(1)}:${el.heightPct.toFixed(1)}`).join("|");
+  useEffect(() => {
+    const sizeTechniques = techniques.filter((t) => t.pricing_type !== "by_tintas");
+    if (!sizeTechniques.length || !allLogoElements.length) return;
+    setTechniqueLogoSizeCm((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      sizeTechniques.forEach((t) => {
+        allLogoElements.forEach((el) => {
+          const suggestion = suggestedSizeCmByElement[el.id];
+          if (!suggestion) return;
+          const current = next[t.id]?.[el.id];
+          if (current?.largo || current?.alto) return; // ya tiene algo -- nunca se pisa
+          next[t.id] = { ...(next[t.id] ?? {}), [el.id]: suggestion };
+          changed = true;
+        });
+      });
+      return changed ? next : prev;
     });
-  const anyTechniqueNeedsQuote = techniqueResults.some((r) => r.needsQuote);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sizeSuggestKey, techniques]);
+
   // Pedido explícito: no se puede avanzar a "Siguiente"/checkout sin
   // elegir una técnica de impresión Y completar sus datos (tintas para
   // Serigrafía/Tampografía, tamaño en cm por logo para DTF Textil/DTF
-  // UV) -- ambas condiciones ya las resuelve techniqueResults arriba:
-  // sin ninguna técnica elegida no hay nada en el arreglo, y needsQuote
-  // ya es true tanto para datos incompletos como para pricing_type sin
-  // configurar -- en cualquiera de los dos casos no hay un precio real
-  // que cobrar todavía, así que tampoco debería poder pasar a checkout.
+  // UV) -- ambas condiciones ya las resuelve techniqueResults (ver
+  // computeDesignPricing más abajo): sin ninguna técnica elegida no hay
+  // nada en el arreglo, y needsQuote ya es true tanto para datos
+  // incompletos como para pricing_type sin configurar -- en cualquiera de
+  // los dos casos no hay un precio real que cobrar todavía, así que
+  // tampoco debería poder pasar a checkout.
   const techniqueSelectionIncomplete = selectedTechniqueIds.length === 0 || anyTechniqueNeedsQuote;
-  const techniqueTotal = techniqueResults.reduce((sum, r) => sum + (r.unitPrice ?? 0), 0);
+  // Precio en vivo del diseño que se está viendo/editando ahora mismo --
+  // con "Mismo diseño" es EL precio real del renglón completo (igual que
+  // siempre). Con "Distinto por color" es solo una vista previa del color
+  // activo (usa el tier de precio de ESE color, pero multiplicado por la
+  // cantidad TOTAL para el subtotal en pantalla): el precio real y
+  // definitivo del renglón completo -- sumando cada color a su propio
+  // tier -- se calcula aparte en buildCartItem, ver customization_snapshot
+  // .per_color.
   const unitPrice = garmentUnit + techniqueTotal;
   const subtotal = unitPrice * quantity;
   const total = subtotal;
@@ -1076,18 +1378,18 @@ export default function PersonalizerClient({
   // carrito de compras", para que si el cliente sale sin terminar el
   // producto YA esté ahí, no solo recuperable al volver a entrar al
   // Personalizador (ver el autoguardado local, arriba).
-  function buildCartItem(id: string, canvasDataUrl: string): CartItem {
-    // El color agregado al carrito es el color ACTIVO en este momento
-    // (`activeVariant`, derivado arriba) -- el que ya se eligió en la
-    // página del producto, o el que se esté mostrando en la barra
-    // Multicolor si el usuario cambió entre colores -- nunca "la primera
-    // variante activa" a secas, para que el carrito siempre coincida con
-    // la prenda que realmente se vio y personalizó.
-    const variant = activeVariant ?? product.variants.find((v) => v.active) ?? product.variants[0];
+  // sourceVariantsItem (colores/tallas reales del renglón) se declaró
+  // arriba, junto a draftCartItemId -- lo sigue usando igual aquí abajo.
+
+  // Convierte los elementos de UN diseño (una clave del diccionario
+  // `elements`) al formato de producción logos/texts -- usado tanto para
+  // el modo "Mismo diseño" (una sola vez, sobre currentElements) como
+  // para "Distinto por color" (una vez por color, sobre elements[variantId]).
+  function buildElementsPayload(elementsForDesign: ViewElements) {
     const logos: CustomizationElement[] = [];
     const texts: CustomizationElement[] = [];
     VIEW_ORDER.forEach((v) => {
-      elements[v].forEach((el) => {
+      elementsForDesign[v].forEach((el) => {
         const shared = { x: el.xPct, y: el.yPct, width: el.widthPct, height: el.heightPct, rotation: el.rotation };
         if (el.type === "logo")
           logos.push({
@@ -1105,85 +1407,216 @@ export default function PersonalizerClient({
         else texts.push({ type: "text", text: el.text, ...shared });
       });
     });
+    return { logos, texts };
+  }
+
+  // Arma el detalle de técnicas seleccionadas (tintas/tamaños/precio) para
+  // UN diseño -- `dk` es la clave de diseño de ESE diseño (para resolver
+  // tintas con la llave compuesta correcta, ver tintasKeyFor).
+  function buildSelectedTechniques(pricing: ReturnType<typeof computeDesignPricing>, dk: string): SelectedTechniqueDetail[] {
+    const positionLabels = applicableViews
+      .filter((v) => pricing.allLogoElements.some((el) => el.view === v))
+      .map((v) => VIEW_LABELS[v]);
+    return pricing.techniqueResults.map((r) => {
+      const tintasRaw = parseInt(techniqueTintas[tintasKeyFor(dk, r.technique.id)] ?? "", 10);
+      const logoSizes: Record<string, string> = {};
+      const sizeCmByElement: Record<string, { largo: number; alto: number }> = {};
+      for (const el of pricing.allLogoElements) {
+        const dims = techniqueLogoSizeCm[r.technique.id]?.[el.id];
+        const largo = parseFloat(dims?.largo ?? "");
+        const alto = parseFloat(dims?.alto ?? "");
+        if (largo > 0 && alto > 0) sizeCmByElement[el.id] = { largo, alto };
+        const resolved = resolveLogoSize(r.technique, el.id);
+        if (resolved) logoSizes[el.id] = resolved;
+      }
+      return {
+        technique_id: r.technique.id,
+        technique_name: r.technique.name,
+        tintas: Number.isFinite(tintasRaw) && tintasRaw > 0 ? tintasRaw : undefined,
+        positions: positionLabels.length > 0 ? positionLabels : undefined,
+        logo_sizes: Object.keys(logoSizes).length > 0 ? logoSizes : undefined,
+        size_cm: Object.keys(sizeCmByElement).length > 0 ? sizeCmByElement : undefined,
+        unit_price: r.unitPrice,
+        needs_quote: r.needsQuote,
+      };
+    });
+  }
+
+  function buildCartItem(id: string, canvasDataUrl: string): CartItem {
+    const variant = activeVariant ?? product.variants.find((v) => v.active) ?? product.variants[0];
+    const variantsForItem = sourceVariantsItem?.variants.length
+      ? sourceVariantsItem.variants
+      : variant
+      ? [{ variant_id: variant.id, color_name: variant.color_name, color_hex: variant.color_hex, qty: quantity, sizes_breakdown: {} }]
+      : [];
+    const totalQty = sourceVariantsItem?.total_quantity ?? quantity;
+
+    // "Mismo diseño" -- comportamiento de siempre, sin cambio: un solo
+    // diseño compartido (currentElements === elements[SHARED_KEY], porque
+    // designKey es SHARED_KEY cuando !distintoPorColor).
+    if (!distintoPorColor) {
+      const { logos, texts } = buildElementsPayload(currentElements);
+      return {
+        id,
+        product,
+        variants: variantsForItem,
+        total_quantity: totalQty,
+        technique_id: primaryTechnique?.id ?? null,
+        technique: primaryTechnique ?? undefined,
+        num_elements: numElements,
+        num_logo_elements: allLogoElements.length,
+        customization_snapshot:
+          numElements > 0
+            ? {
+                canvas_data_url: canvasDataUrl,
+                logos,
+                texts,
+                applied_to: "all",
+                // Estado completo del editor -- para que "Editar" desde el
+                // carrito reabra el lienzo EXACTO (ver el efecto de
+                // ?editar= arriba). logos/texts arriba son informativos
+                // (producción) y no alcanzan para reconstruir el lienzo:
+                // no llevan a qué vista pertenecen ni el estilo del texto.
+                editor_state: { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation } satisfies EditorState,
+                selected_techniques: buildSelectedTechniques(activeDesignPricing, designKey),
+              }
+            : null,
+        unit_price: unitPrice,
+        total_price: total,
+      };
+    }
+
+    // "Distinto por color" -- un sub-objeto por color, cada uno calculado
+    // con SU PROPIA cantidad (colorQty) y SUS PROPIOS elementos
+    // (elements[variantId]). El garment sigue siempre al tier de la
+    // cantidad TOTAL combinada (garmentUnit, calculado arriba, igual para
+    // todos los colores) -- solo la parte de impresión cambia por color.
+    const perColor: Record<string, PerColorCustomization> = {};
+    let totalPrice = 0;
+    let anyElements = false;
+    variantsForItem.forEach((v) => {
+      const elementsForColor = elements[v.variant_id] ?? emptyViewElements();
+      const qty = v.qty;
+      const pricing = computeDesignPricing(elementsForColor, qty, v.variant_id);
+      const { logos, texts } = buildElementsPayload(elementsForColor);
+      if (pricing.numElements > 0) anyElements = true;
+      const colorUnitPrice = garmentUnit + pricing.techniqueTotal;
+      totalPrice += colorUnitPrice * qty;
+      perColor[v.variant_id] = {
+        logos,
+        texts,
+        selected_techniques: buildSelectedTechniques(pricing, v.variant_id),
+        num_elements: pricing.numElements,
+        num_logo_elements: pricing.allLogoElements.length,
+        unit_price: colorUnitPrice,
+      };
+    });
 
     return {
       id,
       product,
-      variants: variant
-        ? [{ variant_id: variant.id, color_name: variant.color_name, color_hex: variant.color_hex, qty: quantity, sizes_breakdown: {} }]
-        : [],
-      total_quantity: quantity,
+      variants: variantsForItem,
+      total_quantity: totalQty,
       technique_id: primaryTechnique?.id ?? null,
       technique: primaryTechnique ?? undefined,
       num_elements: numElements,
-      customization_snapshot:
-        numElements > 0
-          ? {
-              canvas_data_url: canvasDataUrl,
-              logos,
-              texts,
-              applied_to: "all",
-              selected_techniques: techniqueResults.map((r) => {
-                const tintasRaw = parseInt(techniqueTintas[r.technique.id] ?? "", 10);
-                const logoSizes: Record<string, string> = {};
-                const sizeCmByElement: Record<string, { largo: number; alto: number }> = {};
-                for (const el of allLogoElements) {
-                  const dims = techniqueLogoSizeCm[r.technique.id]?.[el.id];
-                  const largo = parseFloat(dims?.largo ?? "");
-                  const alto = parseFloat(dims?.alto ?? "");
-                  if (largo > 0 && alto > 0) sizeCmByElement[el.id] = { largo, alto };
-                  const resolved = resolveLogoSize(r.technique, el.id);
-                  if (resolved) logoSizes[el.id] = resolved;
-                }
-                return {
-                  technique_id: r.technique.id,
-                  technique_name: r.technique.name,
-                  tintas: Number.isFinite(tintasRaw) && tintasRaw > 0 ? tintasRaw : undefined,
-                  positions: activePositionLabels.length > 0 ? activePositionLabels : undefined,
-                  logo_sizes: Object.keys(logoSizes).length > 0 ? logoSizes : undefined,
-                  size_cm: Object.keys(sizeCmByElement).length > 0 ? sizeCmByElement : undefined,
-                  unit_price: r.unitPrice,
-                  needs_quote: r.needsQuote,
-                };
-              }),
-            }
-          : null,
-      unit_price: unitPrice,
-      total_price: total,
+      num_logo_elements: allLogoElements.length,
+      customization_snapshot: anyElements
+        ? {
+            canvas_data_url: canvasDataUrl,
+            logos: [],
+            texts: [],
+            applied_to: "per_color",
+            per_color: perColor,
+            editor_state: { elements, selectedTechniqueIds, techniqueTintas, techniqueLogoSizeCm, groupOrientation } satisfies EditorState,
+          }
+        : null,
+      // Promedio nada más (ver comentario en CartItem.unit_price) -- el
+      // total real a cobrar es total_price, siempre.
+      unit_price: totalQty > 0 ? totalPrice / totalQty : 0,
+      total_price: totalPrice,
     };
   }
 
-  // Mantiene el renglón "en curso" del carrito sincronizado con el diseño
-  // (debounced 400ms, mismo criterio/gate `draftReady` que el autoguardado
-  // local de arriba -- para no disparar en el primer render con el estado
-  // vacío inicial antes de que ese efecto tenga oportunidad de restaurar).
-  // Sin captura de canvas aquí (queda "" -- el carrito ya cae a la foto
-  // normal del producto como miniatura, ver /carrito): generar el PNG real
-  // en cada cambio sería costoso: la captura real solo se hace una vez, al
-  // confirmar (ver handleAddToCart).
-  //
-  // A diferencia del autoguardado local de arriba, este SIEMPRE actualiza
-  // (nunca quita el renglón por falta de diseño): llegar a esta página ya
-  // implica una cantidad/color/talla reales elegidos (ver
-  // productDraftCartItemId -- el mismo renglón que ProductDetail ya venía
-  // sincronizando desde la ficha, o los valores por defecto de un link
-  // directo), así que el producto sigue siendo una selección válida
-  // aunque todavía no tenga ningún logo/texto colocado -- quitarlo aquí
-  // borraría justo lo que ProductDetail acaba de guardar. Solo
-  // handleAddToCart (al confirmar) reemplaza este renglón.
+  // Id REAL y permanente de este renglón en el carrito, una vez que ya se
+  // guardó una vez en esta sesión (por "Guardar" o por "Siguiente") -- ver
+  // charla 2026-09-22: el carrito pasa a ser el único lugar donde vive
+  // cualquier borrador, así que el PRIMER guardado de una sesión nueva
+  // mintea un id real (igual que "Siguiente" ya hacía) y todo guardado
+  // posterior en la MISMA sesión actualiza ese mismo id, nunca uno nuevo.
+  // Nunca es igual a draftCartItemId (el placeholder de qty/color que ya
+  // viene de la ficha, ver productDraftCartItemId) ni aplica cuando se
+  // está editando un renglón ya existente (?editar=, que siempre usa
+  // editarCartItemId directo).
+  const savedItemIdRef = useRef<string | null>(null);
+
+  // "Guardado en carrito como borrador" / "Actualizado en carrito" (ver
+  // charla 2026-09-22) -- un pill flotante simple, se auto-oculta solo.
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function showNotice(message: string) {
+    setNotice(message);
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = setTimeout(() => setNotice(null), 2500);
+  }
+  useEffect(() => () => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+  }, []);
+
+  // Único punto que decide A CUÁL renglón del carrito se escribe --
+  // usado por "Guardar" (cualquier vista), "Siguiente", y el guardado
+  // automático al cerrar la página (ver el efecto de abajo). `isNew` es
+  // lo que decide el texto de la notificación.
+  function persistToCart(canvasDataUrl: string): { id: string; isNew: boolean } {
+    if (editarCartItemId) {
+      upsertItem(buildCartItem(editarCartItemId, canvasDataUrl));
+      return { id: editarCartItemId, isNew: false };
+    }
+    if (savedItemIdRef.current) {
+      upsertItem(buildCartItem(savedItemIdRef.current, canvasDataUrl));
+      return { id: savedItemIdRef.current, isNew: false };
+    }
+    const newId = uid();
+    addItem(buildCartItem(newId, canvasDataUrl));
+    // Reemplaza el placeholder de qty/color de la ficha (ver
+    // productDraftCartItemId) -- ya quedó su propio renglón real, dos a
+    // la vez se verían como el mismo producto duplicado en el carrito.
+    removeItem(draftCartItemId);
+    savedItemIdRef.current = newId;
+    return { id: newId, isNew: true };
+  }
+
+  // Red de seguridad si se cierra la pestaña/página sin darle a "Guardar"
+  // ni a "Siguiente" -- mismo `persistToCart` de arriba, pero escribiendo
+  // de forma SINCRÓNICA (ver upsertItemSync en CartContext) porque un
+  // "pagehide" no da garantía de que React llegue a aplicar un setState
+  // normal antes de que la página ya se haya ido. Nunca mientras se está
+  // restaurando (`draftReady`) ni si no hay nada que valga la pena
+  // guardar todavía.
   useEffect(() => {
-    if (!draftReady) return;
-    const timer = setTimeout(() => {
-      upsertItem(buildCartItem(draftCartItemId, ""));
-    }, 400);
-    return () => clearTimeout(timer);
+    function handlePageHide() {
+      if (!draftReady) return;
+      const hasContent = numElementsAllDesigns > 0 || selectedTechniqueIds.length > 0;
+      if (!hasContent) return;
+      const targetId = editarCartItemId ?? savedItemIdRef.current;
+      if (targetId) {
+        upsertItemSync(buildCartItem(targetId, ""));
+      } else {
+        const newId = uid();
+        upsertItemSync(buildCartItem(newId, ""), draftCartItemId);
+        savedItemIdRef.current = newId;
+      }
+    }
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     draftReady,
+    editarCartItemId,
     draftCartItemId,
-    numElements,
-    elements,
+    numElementsAllDesigns,
     selectedTechniqueIds,
+    elements,
     techniqueTintas,
     techniqueLogoSizeCm,
     quantity,
@@ -1191,6 +1624,24 @@ export default function PersonalizerClient({
     unitPrice,
     total,
   ]);
+
+  const [guardando, setGuardando] = useState(false);
+  // "Guardar" -- visible sin importar la vista activa (Frente/Reverso/
+  // Izquierda/Derecha, ver charla 2026-09-22), siempre guarda el producto
+  // COMPLETO (las 4 vistas), no solo la vista donde se dio clic. A
+  // diferencia de "Siguiente", nunca exige que la técnica esté completa
+  // (es justo para no perder trabajo a medias) y no captura una foto real
+  // del lienzo -- esa solo hace falta al confirmar de verdad.
+  function handleGuardar() {
+    if (guardando || !hasContentToSave) return;
+    setGuardando(true);
+    try {
+      const { isNew } = persistToCart("");
+      showNotice(isNew ? "Guardado en carrito como borrador" : "Actualizado en carrito");
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   async function handleAddToCart() {
     // Segunda barrera además del disabled del botón (ver
@@ -1210,33 +1661,31 @@ export default function PersonalizerClient({
         }
       }
 
+      const { isNew } = persistToCart(canvasDataUrl);
+      selectOnly(null);
       // Ya no se abre ningún popover local -- el badge/pulso del carrito en
-      // PublicHeader (barra superior) es la única confirmación visual, y
-      // ya reacciona solo porque comparte el mismo CartContext.
-      addItem(buildCartItem(uid(), canvasDataUrl));
-      setSelectedId(null);
-      // Ya quedó como su propio renglón confirmado (id nuevo) -- el
-      // renglón "en curso" (id fijo, ver draftCartItemId) y el borrador
-      // local dejan de tener sentido, así que no deben reaparecer si el
-      // cliente vuelve a personalizar este mismo producto después.
-      removeItem(draftCartItemId);
-      clearDraft(product.id);
-      // "Siguiente" ya no se queda en esta misma página -- pedido
-      // explícito: de aquí en adelante el flujo continúa directo en el
-      // checkout que se acaba de construir (/checkout), el mismo destino
-      // al que ya lleva "Finalizar compra" desde el carrito.
-      router.push("/checkout");
+      // PublicHeader (barra superior) ya reacciona solo porque comparte el
+      // mismo CartContext. La leyenda de abajo sí se deja ver un momento
+      // antes de navegar (ver charla 2026-09-22: "Siguiente" también debe
+      // mostrarla).
+      showNotice(isNew ? "Guardado en carrito como borrador" : "Actualizado en carrito");
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      // Revertido -- pedido explícito (ver charla 2026-09-16): "Siguiente"
+      // vuelve a mandar al carrito, no directo a checkout. El carrito es
+      // justo la pantalla donde el cliente revisa/resume su compra (y
+      // ahora también ve la fecha estimada de entrega) antes de pagar.
+      router.push("/carrito");
     } finally {
       setAddingToCart(false);
     }
   }
 
   return (
-    <div className="mx-auto flex max-w-[1680px] flex-col gap-8 px-6 py-8 lg:flex-row lg:items-start lg:gap-10">
+    <div className="mx-auto flex max-w-[1680px] flex-col gap-8 px-6 py-6 lg:flex-row lg:items-start lg:gap-10">
       {/* ── Canvas (izquierda, ~65%) ── */}
       <div className="w-full lg:w-[65%]">
-        <div className="relative rounded-[24px] bg-white p-8 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
-          <div className="mb-8 flex items-center justify-between">
+        <div className="relative rounded-[24px] bg-white p-6 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
+          <div className="mb-5 flex items-center justify-between">
             <div className="flex items-center gap-8">
               {tabGroups.map((group) => {
                 const active = group.views.includes(activeView);
@@ -1254,7 +1703,7 @@ export default function PersonalizerClient({
                     onClick={() => {
                       setActiveView(target);
                       setFilesTabView(target);
-                      setSelectedId(null);
+                      selectOnly(null);
                     }}
                     className={`flex items-center gap-2 border-b-[3px] pb-3 transition-all duration-200 ease-out ${
                       active ? "border-primary" : "border-transparent"
@@ -1277,7 +1726,7 @@ export default function PersonalizerClient({
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedId(null);
+                  selectOnly(null);
                   setPreviewOpen(true);
                 }}
                 aria-label="Vista previa del producto personalizado"
@@ -1308,7 +1757,7 @@ export default function PersonalizerClient({
                     setGroupOrientation((prev) => ({ ...prev, [activeGroupDef.key]: v }));
                     setActiveView(v);
                     setFilesTabView(v);
-                    setSelectedId(null);
+                    selectOnly(null);
                   }}
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 ease-out ${
                     activeView === v ? "bg-white text-foreground shadow-sm" : "text-ui-gray hover:text-foreground"
@@ -1325,11 +1774,15 @@ export default function PersonalizerClient({
               color (`showColorBar`, ver arriba). NO es un selector de
               colores de la prenda en general -- únicamente permite
               alternar entre los colores que ya se eligieron antes de
-              entrar aquí; nunca muestra los 6 colores completos. Cambiar
-              de color en esta barra SOLO cambia `activeVariantId` (y por lo
-              tanto `garmentColor`): nunca toca `elements`, así que el
-              diseño colocado por el usuario se mantiene intacto (misma
-              posición/escala/rotación %) al alternar de prenda. */}
+              entrar aquí; nunca muestra los 6 colores completos. Con
+              "Mismo diseño" (default), cambiar de color en esta barra SOLO
+              cambia `activeVariantId` (y por lo tanto `garmentColor`):
+              nunca toca `elements`, así que el diseño colocado por el
+              usuario se mantiene intacto (misma posición/escala/rotación
+              %) al alternar de prenda. Con "Distinto por color" (ver
+              designKey más arriba) SÍ importa: cambiar de color aquí
+              también cambia QUÉ diseño se está editando -- por eso el
+              label "Editando: {color}" debajo, para que quede claro. */}
           {showColorBar && (
             <div className="mb-5 flex flex-wrap items-center gap-2">
               <span className="mr-1 text-xs font-semibold text-ui-gray">Color de la prenda:</span>
@@ -1349,21 +1802,11 @@ export default function PersonalizerClient({
                   }`}
                 />
               ))}
-            </div>
-          )}
-
-          {selectedElement && (
-            <div ref={designOptionsButtonRef} className="mb-5">
-              <SelectionToolbar
-                element={selectedElement}
-                onChange={updateElement}
-                onDuplicate={() => duplicateElement(selectedElement.id)}
-                onDelete={() => deleteElement(selectedElement.id)}
-                onBringFront={() => bringToFront(selectedElement.id)}
-                onSendBack={() => sendToBack(selectedElement.id)}
-                designOptionsOpen={designOptionsOpen}
-                onToggleDesignOptions={() => setDesignOptionsOpen((v) => !v)}
-              />
+              {distintoPorColor && activeVariant && (
+                <span className="ml-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary-dark">
+                  Editando: {activeVariant.color_name}
+                </span>
+              )}
             </div>
           )}
 
@@ -1408,7 +1851,14 @@ export default function PersonalizerClient({
               // esos ya son más angostos que 600px por sí solos, así que
               // este tope extra nunca llega a aplicar.
               style={{
-                height: "min(75vh, 720px)",
+                // Bajado de min(75vh,720px) -- pedido explícito (ver charla
+                // 2026-09-16): esa altura fija empujaba el hem de la prenda
+                // fuera del viewport en laptops típicas, obligando a hacer
+                // scroll para ver la imagen completa dentro del propio
+                // recuadro. Con esto cabe completa sin scroll junto con el
+                // resto del chrome (header + tabs + padding) en pantallas
+                // normales.
+                height: "min(58vh, 560px)",
                 aspectRatio: asset.aspect,
                 maxWidth: asset.aspect > 1 ? "min(100%, 600px)" : "100%",
               }}
@@ -1427,7 +1877,7 @@ export default function PersonalizerClient({
                 // click that starts on Moveable's own UI must never reach
                 // this deselect-on-elsewhere handler.
                 if ((e.target as HTMLElement).closest(".moveable-control-box")) return;
-                setSelectedId(null);
+                selectOnly(null);
               }}
               onDragEnter={(e) => {
                 if (!e.dataTransfer.types.includes("Files")) return;
@@ -1474,13 +1924,20 @@ export default function PersonalizerClient({
                 </div>
               )}
 
-              {elements[activeView].map((el) => (
+              {currentElements[activeView].map((el) => (
                 <DesignElementView
                   key={el.id}
                   element={el}
                   containerRef={canvasRef}
-                  selected={selectedId === el.id}
-                  onSelect={setSelectedId}
+                  selected={selectedIds.has(el.id)}
+                  // Las manijas de mouse (arrastrar/redimensionar/rotar) solo
+                  // se muestran con exactamente 1 seleccionado -- nunca se
+                  // construyó arrastre de grupo, así que con 2+
+                  // seleccionados cada elemento se queda con el aro de
+                  // "seleccionado" nada más (el Shift+flecha de abajo sigue
+                  // funcionando sobre todos igual).
+                  interactive={selectedIds.size === 1}
+                  onSelect={(id, shift) => (shift ? toggleSelect(id) : selectOnly(id))}
                   onChange={updateElement}
                   onInteraction={handleElementInteraction}
                 />
@@ -1492,19 +1949,19 @@ export default function PersonalizerClient({
             {layersOpen && (
               <div className="absolute right-6 top-0 z-20 w-60 rounded-2xl border border-ui-border bg-white p-4 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ui-gray">Capas — {VIEW_LABELS[activeView]}</p>
-                {elements[activeView].length === 0 ? (
+                {currentElements[activeView].length === 0 ? (
                   <p className="text-xs text-ui-gray">Sin elementos.</p>
                 ) : (
                   <div className="space-y-1">
-                    {[...elements[activeView]]
+                    {[...currentElements[activeView]]
                       .sort((a, b) => b.zIndex - a.zIndex)
                       .map((el) => (
                         <button
                           key={el.id}
                           type="button"
-                          onClick={() => setSelectedId(el.id)}
+                          onClick={() => selectOnly(el.id)}
                           className={`block w-full truncate rounded-lg px-2 py-1.5 text-left text-xs transition-colors duration-150 ease-out ${
-                            selectedId === el.id ? "bg-primary/15 font-semibold text-foreground" : "text-ui-gray hover:bg-gray-50"
+                            selectedIds.has(el.id) ? "bg-primary/15 font-semibold text-foreground" : "text-ui-gray hover:bg-gray-50"
                           }`}
                         >
                           {el.type === "logo" ? el.fileName : `“${el.text}”`}
@@ -1548,51 +2005,108 @@ export default function PersonalizerClient({
             y descartados) -- aquí, en la columna de al lado, el lienzo
             completo queda siempre visible sin importar si este panel está
             abierto. */}
+        {/* Barra de herramientas del elemento seleccionado — vive aquí en
+            el sidebar, NUNCA sobre/encima del lienzo: ponerla en el
+            lienzo (flotando o empujándolo) ya se probó y se descartó
+            porque tapa o mueve la prenda mientras se edita (ver charla
+            2026-09-10 y los comentarios de "Opciones de diseño"). Aquí la
+            columna izquierda con la prenda completa nunca se mueve. */}
+        {selectedElement && (
+          <div ref={designOptionsButtonRef} className="mb-6">
+            <SelectionToolbar
+              element={selectedElement}
+              onChange={updateElement}
+              onDuplicate={() => duplicateElement(selectedElement.id)}
+              onDelete={() => deleteElement(selectedElement.id)}
+              onBringFront={() => bringToFront(selectedElement.id)}
+              onSendBack={() => sendToBack(selectedElement.id)}
+              designOptionsOpen={designOptionsOpen}
+              onToggleDesignOptions={() => setDesignOptionsOpen((v) => !v)}
+            />
+          </div>
+        )}
         {selectedElement?.type === "logo" && designOptionsOpen && (
           <div ref={designOptionsPanelRef} className="mb-6">
             <DesignOptionsPanel element={selectedElement} onChange={updateElement} />
           </div>
         )}
-        <div className="space-y-10 rounded-[24px] bg-white p-8 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
+        <div className="space-y-6 rounded-[24px] bg-white p-6 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
           <div>
-            <h1 className="font-display text-[40px] font-bold uppercase leading-[1.05] text-foreground">{product.name}</h1>
-            <p className="mt-2 text-base text-ui-gray">{product.sku}</p>
+            <h1 className="font-display text-xl font-bold uppercase leading-[1.15] text-foreground">{product.name}</h1>
+            <p className="mt-1 text-xs text-ui-gray">{product.sku}</p>
           </div>
 
           <div>
-            <span className="mb-1 block text-2xl font-bold text-foreground">3. Personaliza tu producto</span>
-            <p className="mb-4 text-sm text-ui-gray">Agrega un logo o crea un texto personalizado</p>
+            <span className="mb-3 block text-base font-bold text-foreground">3. Personaliza tu producto</span>
 
-            {/* Tus diseños — misma tarjeta de siempre (icono/título/
-                subtítulo/flecha, sigue abriendo la galería completa), pero
-                ahora con una vista previa real de los diseños ya
-                guardados debajo, cuando existen. Vacío -> exactamente la
-                tarjeta de antes, sin miniaturas ficticias. */}
-            <DesignsPreviewCard
-              assets={artAssets}
-              onOpenAll={() => setArtLibraryOpen(true)}
-              onSelect={(asset) => placeAsset(asset)}
-              onRemove={removeAsset}
-            />
+            {/* Grid de lo ya agregado en ESTA vista (logos/textos), igual
+                de tiles que "Mis artes" (ver ArtLibraryPanel) -- pedido
+                explícito (ver charla 2026-09-16): antes solo se veían
+                abriendo el panel de Capas; ahora se ven de un vistazo sin
+                ningún pop-up. Clic en un tile selecciona ese elemento
+                (mismo criterio que Capas); la "×" lo borra directo. */}
+            <div className="grid grid-cols-3 gap-3">
+              {[...currentElements[activeView]]
+                .sort((a, b) => b.zIndex - a.zIndex)
+                .map((el) => (
+                  <div
+                    key={el.id}
+                    className={`group relative aspect-square overflow-hidden rounded-2xl border bg-white transition-all duration-150 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] ${
+                      selectedIds.has(el.id) ? "border-primary ring-2 ring-primary/25" : "border-ui-border hover:border-primary/50"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => selectOnly(el.id)}
+                      aria-label={el.type === "logo" ? el.fileName : `Texto “${el.text}”`}
+                      className="flex h-full w-full items-center justify-center p-2.5"
+                    >
+                      {el.type === "logo" ? (
+                        el.src ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={el.src} alt={el.fileName} className="h-full w-full object-contain" draggable={false} />
+                        ) : (
+                          <div className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-md border border-dashed border-gray-400 bg-white/85 p-1 text-center">
+                            <span className="text-[9px] font-semibold uppercase text-ui-gray">{el.fileType}</span>
+                            <span className="truncate px-1 text-[8px] leading-tight text-ui-gray">{el.fileName}</span>
+                          </div>
+                        )
+                      ) : (
+                        <span
+                          className="line-clamp-3 break-words text-center text-xs leading-tight"
+                          style={{ color: el.color, fontFamily: el.fontFamily, fontWeight: el.bold ? 700 : 500, fontStyle: el.italic ? "italic" : "normal" }}
+                        >
+                          "{el.text}"
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteElement(el.id)}
+                      aria-label={el.type === "logo" ? `Eliminar ${el.fileName}` : "Eliminar texto"}
+                      className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-ui-gray opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-opacity duration-150 ease-out hover:text-accent-coral group-hover:opacity-100"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
 
-            {/* Agregar imagen / Agregar texto — botones compactos, solo
-                ícono + texto principal (sin subtítulo ni flecha). */}
-            <div className="mt-4 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="group flex items-center justify-center gap-2 rounded-2xl border border-ui-border bg-white px-4 py-3 text-sm font-semibold text-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:bg-primary/5"
+                className="group flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-ui-border px-2 text-center text-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5"
               >
-                <ImageToolIcon className="h-4 w-4 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
-                Agregar imagen
+                <ImageToolIcon className="h-5 w-5 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                <span className="text-xs font-semibold leading-tight">Agregar imagen</span>
+                <span className="text-[10px] leading-tight text-ui-gray">PNG, SVG, PDF, AI</span>
               </button>
               <button
                 type="button"
                 onClick={handleAddText}
-                className="group flex items-center justify-center gap-2 rounded-2xl border border-ui-border bg-white px-4 py-3 text-sm font-semibold text-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_8px_20px_rgba(87,224,217,0.15)] active:translate-y-0 active:bg-primary/5"
+                className="group flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-ui-border px-2 text-center text-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5"
               >
-                <TextToolIcon className="h-4 w-4 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
-                Agregar texto
+                <TextToolIcon className="h-5 w-5 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
+                <span className="text-xs font-semibold leading-tight">Agregar texto</span>
               </button>
             </div>
             <input
@@ -1602,66 +2116,10 @@ export default function PersonalizerClient({
               className="hidden"
               onChange={(e) => handleLogoFiles(e.target.files)}
             />
-
-            <div className="mt-5">
-              <div className="mb-3 flex gap-6 text-sm">
-                {tabGroups.map((group) => {
-                  const active = group.views.includes(filesTabView);
-                  const target = group.views.length > 1 ? groupOrientation[group.key] ?? group.views[0] : group.views[0];
-                  return (
-                    <button
-                      key={group.key}
-                      type="button"
-                      onClick={() => setFilesTabView(target)}
-                      className={`border-b-2 pb-1.5 transition-all duration-200 ease-out ${
-                        active ? "border-primary font-semibold text-foreground" : "border-transparent text-ui-gray hover:text-foreground"
-                      }`}
-                    >
-                      {group.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {elements[filesTabView].length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-ui-border px-6 py-8 text-center">
-                  <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <SparkleIcon className="h-5 w-5" />
-                  </span>
-                  <p className="text-sm font-bold text-foreground">Sin elementos en esta vista.</p>
-                  <p className="mt-1 text-xs text-ui-gray">Agrega un logo o texto para comenzar a diseñar.</p>
-                </div>
-              ) : (
-                <div className="max-h-28 space-y-1 overflow-y-auto rounded-2xl border border-ui-border p-2">
-                  {elements[filesTabView].map((el) => (
-                    <div
-                      key={el.id}
-                      onClick={() => {
-                        setActiveView(filesTabView);
-                        setSelectedId(el.id);
-                      }}
-                      className="flex cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-sm transition-colors duration-150 ease-out hover:bg-primary/10"
-                    >
-                      <span className="truncate text-foreground">{el.type === "logo" ? el.fileName : `“${el.text}”`}</span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveView(filesTabView);
-                          deleteElement(el.id);
-                        }}
-                        className="ml-2 shrink-0 text-ui-gray transition-colors duration-150 hover:text-accent-coral"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
 
           <div>
-            <span className="mb-4 block text-2xl font-bold text-foreground">4. Selecciona el Tipo de impresión</span>
+            <span className="mb-3 block text-base font-bold text-foreground">4. Selecciona el Tipo de impresión</span>
             {/* Solo esta fila "sangra" fuera del padding del panel (-mx-8) para
                 ganar el máximo ancho posible sin tocar el padding compartido
                 por el resto de secciones — el título arriba se queda alineado
@@ -1670,168 +2128,107 @@ export default function PersonalizerClient({
               <p className="text-sm text-ui-gray">No hay técnicas de impresión disponibles para este producto.</p>
             ) : (
               <>
-                <div className="-mx-8">
+                <div className="-mx-6">
                   <PrintTechniqueCards techniques={techniques} selectedIds={selectedTechniqueIds} onToggle={toggleTechnique} />
                 </div>
-                {/* Cada técnica seleccionada se desglosa en su propia
-                    tarjeta: "Posiciones" se agrupa por eje
-                    (Frente/Reverso/Izquierda/Derecha, ver logosByView),
-                    cada eje muestra cuántos logos tiene y un panel de
-                    Largo/Alto (cm) POR LOGO -- pedido explícito ("si el
-                    usuario agregó 2 logos en la parte de enfrente, ahí va
-                    2 y se desglosan 2 paneles"). Serigrafía/Tampografía
-                    (by_tintas) no tienen medida por tamaño -- ahí
-                    "Posiciones" solo muestra el conteo, junto al campo de
-                    Tintas de siempre. El botón de basura quita esa
-                    técnica de la selección (mismo toggleTechnique que su
-                    tarjeta en el selector de arriba). */}
+                {/* Serigrafía/Tampografía (by_tintas): el clic en su card
+                    abre el pop-up (TechniqueModal); ya confirmadas se ven
+                    como una tarjeta compacta (TechniqueConfirmedRow) con
+                    "✎" para reabrir el pop-up y el bote para quitarla.
+                    Las demás técnicas (DTF/DTG) siguen con su tarjeta de
+                    detalle inline: "Posiciones" agrupado por eje (ver
+                    logosByView), cada eje con su panel de Largo/Alto (cm)
+                    POR LOGO. El botón de basura quita la técnica (mismo
+                    toggleTechnique que su card de arriba). */}
                 {techniqueResults.length > 0 && (
                   <div className="mt-5 flex flex-col gap-3">
-                    {techniqueResults.map(({ technique, unitPrice, needsQuote }) => (
-                      <TechniqueDetailCard
-                        key={technique.id}
-                        technique={technique}
-                        unitPrice={unitPrice}
-                        needsQuote={needsQuote}
-                        logosByView={logosByView}
-                        logoSizeCm={techniqueLogoSizeCm[technique.id] ?? {}}
-                        onLogoSizeCmChange={(elementId, patch) =>
-                          setTechniqueLogoSizeCm((prev) => ({
-                            ...prev,
-                            [technique.id]: {
-                              ...(prev[technique.id] ?? {}),
-                              [elementId]: { ...(prev[technique.id]?.[elementId] ?? { largo: "", alto: "" }), ...patch },
-                            },
-                          }))
-                        }
-                        selectedElementId={selectedId}
-                        onSelectLogo={(view, elementId) => {
-                          setActiveView(view);
-                          setSelectedId(elementId);
-                        }}
-                        tintas={techniqueTintas[technique.id] ?? ""}
-                        onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [technique.id]: v }))}
-                        onRemove={() => toggleTechnique(technique.id)}
-                      />
-                    ))}
+                    {techniqueResults.map(({ technique, unitPrice, needsQuote, resumen }) =>
+                      technique.pricing_type === "by_tintas" ? (
+                        // by_tintas: tarjeta compacta de "ya confirmada".
+                        // Los datos (tintas) se editan en el pop-up ("✎").
+                        <TechniqueConfirmedRow
+                          key={technique.id}
+                          technique={technique}
+                          resumen={resumen}
+                          unitPrice={unitPrice}
+                          needsQuote={needsQuote}
+                          onEdit={() => setModalTechniqueId(technique.id)}
+                          onRemove={() => toggleTechnique(technique.id)}
+                        />
+                      ) : (
+                        <TechniqueDetailCard
+                          key={technique.id}
+                          technique={technique}
+                          unitPrice={unitPrice}
+                          needsQuote={needsQuote}
+                          logosByView={logosByView}
+                          logoSizeCm={techniqueLogoSizeCm[technique.id] ?? {}}
+                          suggestedSizeCm={suggestedSizeCmByElement}
+                          onLogoSizeCmChange={(elementId, patch) =>
+                            setTechniqueLogoSizeCm((prev) => ({
+                              ...prev,
+                              [technique.id]: {
+                                ...(prev[technique.id] ?? {}),
+                                [elementId]: { ...(prev[technique.id]?.[elementId] ?? { largo: "", alto: "" }), ...patch },
+                              },
+                            }))
+                          }
+                          selectedElementId={selectedId}
+                          onSelectLogo={(view, elementId) => {
+                            setActiveView(view);
+                            selectOnly(elementId);
+                          }}
+                          tintas={techniqueTintas[tintasKey(technique.id)] ?? ""}
+                          onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [tintasKey(technique.id)]: v }))}
+                          onRemove={() => toggleTechnique(technique.id)}
+                        />
+                      )
+                    )}
+                  </div>
+                )}
+
+                {/* Desglose de precio (producto + técnicas → Subtotal /
+                    IVA / Total) -- estilo ONPOINT, ver charla 2026-09-10.
+                    Solo aparece con al menos una técnica elegida. */}
+                {techniqueResults.length > 0 && (
+                  <div className="mt-4">
+                    <PrecioDesglose
+                      productName={product.name}
+                      garmentUnit={garmentUnit}
+                      techniqueResults={techniqueResults}
+                      quantity={quantity}
+                      total={total}
+                      anyTechniqueNeedsQuote={anyTechniqueNeedsQuote}
+                    />
                   </div>
                 )}
               </>
             )}
           </div>
 
-          {/* Resumen del pedido -- píldora glassmorphism (rediseño puramente
-              visual, pedido explícito: "NO cambies la lógica, cálculos,
-              precios, funcionalidades ni comportamiento existente"). Todo
-              el estado/cálculo (setQty, handleQtyDraftChange/Blur,
-              quantity, qtyDraft, total, unitPrice, numLogoElements,
-              anyTechniqueNeedsQuote) es exactamente el mismo de antes --
-              solo cambió el marcado/clases visuales. Los tramos de precio
-              por cantidad de cada técnica siguen dependiendo de esta misma
-              `quantity`, sin tocar esa lógica. */}
-          {/* Todo en una sola fila (flex-nowrap, no flex-wrap) -- cada
-              sección lleva shrink-0 para que ninguna se comprima de forma
-              rara. Antes llevaba overflow-x-auto como "red de seguridad"
-              para un caso extremo (ej. un total de 6+ cifras + la nota de
-              "técnica por cotizar" al mismo tiempo) -- pero aunque la
-              barra de scroll se ocultaba visualmente (.scrollbar-none), el
-              contenido seguía siendo deslizable con touch/trackpad, y
-              esta píldora ya se había acordado como de tamaño FIJO, sin
-              poder deslizarse bajo ningún caso (pedido explícito). Ahora
-              overflow-hidden: nunca se desliza: un caso extremo se
-              recortaría en vez de scrollear, pero a los precios reales del
-              catálogo esto nunca ocurre en el uso normal. Alturas/
-              paddings/tamaños de fuente reducidos a propósito frente a la
-              versión anterior para que quepa cómodo en el ancho real del
-              panel (~35% del viewport). */}
-          <div className="flex flex-nowrap items-center gap-[13.8px] overflow-hidden rounded-full border border-white bg-white/[0.05] px-[42.4px] py-[18px] shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-[42.4px]">
-            {/* Cantidad -- compacta, botones circulares chicos, turquesa. */}
-            <div className="flex shrink-0 items-center gap-[3.2px]">
-              <button
-                type="button"
-                onClick={() => setQty(quantity - 1)}
-                aria-label="Quitar una pieza"
-                className="flex h-[19.1px] w-[19.1px] shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
-              >
-                <svg viewBox="0 0 16 16" className="h-[9.5px] w-[9.5px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-                  <path d="M3 8h10" />
-                </svg>
-              </button>
-              {/* Cuadro de texto SIEMPRE visible y editable -- sin estado
-                  "modo edición" que haya que activar con un clic aparte
-                  (eso era lo reportado como "muy complicado"). Escribir
-                  aquí actualiza el precio al instante, igual que los
-                  botones -/+. */}
-              <input
-                type="text"
-                inputMode="numeric"
-                value={qtyDraft}
-                onChange={(e) => handleQtyDraftChange(e.target.value)}
-                onBlur={handleQtyDraftBlur}
-                onFocus={(e) => e.currentTarget.select()}
-                aria-label="Cantidad de piezas"
-                className="w-[45.6px] rounded-full bg-white/80 py-0.5 text-center text-xs font-semibold text-foreground outline-none ring-1 ring-black/[0.06] transition-shadow focus:ring-2 focus:ring-primary/40"
-              />
-              <button
-                type="button"
-                onClick={() => setQty(quantity + 1)}
-                aria-label="Agregar una pieza"
-                className="flex h-[19.1px] w-[19.1px] shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-black/[0.06] transition-all duration-150 ease-out hover:bg-primary/10 active:scale-90"
-              >
-                <svg viewBox="0 0 16 16" className="h-[9.5px] w-[9.5px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-                  <path d="M8 3v10M3 8h10" />
-                </svg>
-              </button>
-            </div>
+          {/* La píldora glass de "Resumen del pedido" (cantidad + total +
+              no. de logos) se quitó: el total ya vive en el Desglose de
+              arriba, y la cantidad se define en el paso 1 (ficha del
+              producto) -- tenerla también aquí solo repetía el control
+              (ver charla 2026-09-10). El diseño/técnica/tintas se
+              autoguardan en el navegador (localStorage), así que salir y
+              volver no pierde nada; la cantidad se restaura del mismo
+              borrador si el link ya no trae ?qty. */}
 
-            <div className="h-[31.8px] w-px shrink-0 bg-black/[0.06]" />
-
-            {/* Total -- el elemento visual principal, con jerarquía clara:
-                etiqueta "TOTAL" chica, el monto grande, y "c/u · IVA
-                incluido" discreto debajo -- todo en el mismo bloque
-                compacto, sin forzar la altura del contenedor. */}
-            <div className="flex shrink-0 flex-col justify-center gap-0">
-              <span className="w-fit rounded-full bg-primary/10 px-[2.1px] py-[1.1px] text-[8.5px] font-bold uppercase leading-tight tracking-wide text-primary-dark">
-                Total
-              </span>
-              <p className="flex items-baseline gap-[4.2px] whitespace-nowrap">
-                <span className="text-[19.1px] font-extrabold leading-none tracking-tight text-foreground">{formatMXN(total)}</span>
-                <span className="text-[10.6px] font-semibold text-ui-gray">MXN</span>
-              </p>
-              <p className="whitespace-nowrap text-[7.4px] leading-tight text-ui-gray">
-                {formatMXN(unitPrice)} c/u <span className="mx-0.5 opacity-50">·</span>
-                {anyTechniqueNeedsQuote ? "No incluye técnicas por cotizar" : "IVA incluido"}
-              </p>
-            </div>
-
-            <div className="h-[31.8px] w-px shrink-0 bg-black/[0.06]" />
-
-            {/* Logo -- ícono de imagen (no carrito/bolsa) en una cajita
-                glass con borde turquesa muy sutil. */}
-            <div className="flex shrink-0 items-center gap-[6.4px]">
-              <div className="flex h-[25.4px] w-[25.4px] shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/5">
-                <ImageToolIcon className="h-[12.7px] w-[12.7px] text-primary" />
-              </div>
-              <span className="whitespace-nowrap text-[12.7px] font-semibold text-foreground">
-                {numLogoElements} {numLogoElements === 1 ? "Logo" : "Logos"}
-              </span>
-            </div>
-            {/* La nota de "técnica por cotizar" ya no se repite aquí como
-                un cuarto bloque -- era texto redundante (la línea
-                secundaria del Total ya dice "No incluye técnicas por
-                cotizar", y la propia tarjeta de la técnica ya muestra
-                "Por cotizar") que además era la causa real de que la fila
-                se desbordara en este caso específico. anyTechniqueNeedsQuote
-                sigue exactamente igual, solo se quitó el texto duplicado. */}
-          </div>
-
-          {techniqueSelectionIncomplete && (
-            <p className="mt-4 text-center text-xs font-medium text-accent-coral">
-              {selectedTechniqueIds.length === 0
-                ? "Selecciona una técnica de impresión para continuar."
-                : "Completa los datos de la técnica elegida (tintas/tamaño) para continuar."}
-            </p>
-          )}
+          {/* "Guardar" -- visible sin importar la vista activa (ver charla
+              2026-09-22), siempre guarda el producto completo en el
+              carrito como borrador, sin exigir que la técnica esté
+              completa (a diferencia de "Siguiente" de abajo). */}
+          <button
+            type="button"
+            onClick={handleGuardar}
+            disabled={guardando || !hasContentToSave}
+            title={hasContentToSave ? undefined : "Coloca algo primero para poder guardarlo"}
+            className="mb-3 flex h-11 w-full items-center justify-center gap-2 rounded-full border border-ui-border bg-white text-sm font-semibold text-foreground transition-all duration-200 ease-out hover:border-primary hover:text-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <SaveIcon className="h-4 w-4" />
+            {guardando ? "Guardando..." : "Guardar"}
+          </button>
 
           {/* "Minimal Sólido" (pedido explícito, reemplaza el tratamiento
               glass/glow de antes) -- colores sólidos únicamente, sin
@@ -1840,7 +2237,15 @@ export default function PersonalizerClient({
               onClick/disabled de siempre. */}
           <div className="flex gap-4">
             <Link
-              href={`/producto/${product.id}`}
+              // Con ?editar=<id> hay que devolver ese mismo parámetro --
+              // pedido explícito (ver charla 2026-09-16): sin él, el paso
+              // 1-2 no tenía ninguna pista de qué renglón YA CONFIRMADO
+              // restaurar (solo sabía buscar el borrador "en progreso",
+              // un id distinto) y arrancaba en blanco (color/cantidad en
+              // cero) aunque el renglón real seguía guardado en el
+              // carrito. Sin editarCartItemId (flujo normal, nunca
+              // confirmado todavía) se queda igual que siempre.
+              href={editarCartItemId ? `/producto/${product.id}?editar=${editarCartItemId}` : `/producto/${product.id}`}
               className="flex h-14 flex-1 items-center justify-center rounded-full border border-foreground bg-white text-base font-semibold text-foreground shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-foreground hover:text-white active:scale-[0.98]"
             >
               Atrás
@@ -1862,7 +2267,7 @@ export default function PersonalizerClient({
       <PreviewModal
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
-        elements={elements}
+        elements={currentElements}
         productName={product.name}
         technique={primaryTechnique}
         resolvedAssets={resolvedAssets}
@@ -1879,22 +2284,40 @@ export default function PersonalizerClient({
         }
       />
 
-      <ArtLibraryPanel
-        open={artLibraryOpen}
-        onClose={() => setArtLibraryOpen(false)}
-        assets={artAssets}
-        loading={artLibraryLoading}
-        onSelect={(asset) => {
-          placeAsset(asset);
-          setArtLibraryOpen(false);
-        }}
-        onRemove={removeAsset}
-        onAddNew={async (file) => {
-          const asset = await addAsset(file);
-          if (asset) placeAsset(asset);
-          setArtLibraryOpen(false);
-        }}
-      />
+      {(() => {
+        const modalTechnique = modalTechniqueId ? techniques.find((t) => t.id === modalTechniqueId) ?? null : null;
+        if (!modalTechnique) return null;
+        const preview = priceTechnique(modalTechnique);
+        return (
+          <TechniqueModal
+            technique={modalTechnique}
+            logosByView={logosByView}
+            posiciones={posiciones}
+            quantity={quantity}
+            tintas={techniqueTintas[tintasKey(modalTechnique.id)] ?? ""}
+            onTintasChange={(v) => setTechniqueTintas((prev) => ({ ...prev, [tintasKey(modalTechnique.id)]: v }))}
+            unitPrice={preview.unitPrice}
+            needsQuote={preview.needsQuote}
+            resumen={preview.resumen}
+            onConfirm={() => {
+              selectTechnique(modalTechnique.id);
+              setModalTechniqueId(null);
+            }}
+            onClose={() => setModalTechniqueId(null)}
+          />
+        );
+      })()}
+
+      {/* "Guardado en carrito como borrador" / "Actualizado en carrito"
+          (ver charla 2026-09-22) -- pill flotante simple, se oculta solo. */}
+      {notice && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[100] flex justify-center">
+          <span className="pointer-events-auto rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+            {notice}
+          </span>
+        </div>
+      )}
+
     </div>
   );
 }

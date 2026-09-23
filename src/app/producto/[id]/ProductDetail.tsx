@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Product, ProductVariant, PriceTier, CartItem } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
@@ -853,7 +853,29 @@ function TotalPzasCard({ total, onChange }: { total: number; onChange?: (next: n
 
 export default function ProductDetail({ product, priceTiers, resolvedGallery, modelShots }: Props) {
   const router = useRouter();
-  const { upsertItem, removeItem } = useCart();
+  const { items: cartItems, upsertItem, removeItem, hydrated } = useCart();
+  // Presente cuando se vuelve aquí con "Atrás" desde el Personalizador
+  // mientras se editaba un renglón YA CONFIRMADO del carrito (ver
+  // PersonalizerClient's "Atrás" y editarHref en carrito/page.tsx) -- el
+  // efecto de restauración de abajo lo usa para saber CUÁL renglón leer
+  // en vez de asumir siempre el borrador "en progreso".
+  const editarCartItemId = useSearchParams().get("editar");
+
+  // Espaciado de la columna derecha -- escala 0.75 confirmada en vivo con
+  // el ajustador (ver charla 2026-09-16), ya horneada como fija. Los 2
+  // tamaños base siguen igual de antes: "cortos" (etiqueta -> su propio
+  // contenido) y "largos" (entre pasos distintos).
+  const GAP_LONG = 15; // 20 * 0.75
+  const GAP_SHORT = 6; // 8 * 0.75
+  const GAP_QTY_TO_TALLAS = 10.875; // 14.5 * 0.75
+  const GAP_TALLAS_LABEL = 4.5; // 6 * 0.75
+  const GAP_CTA_TOP = 21; // 28 * 0.75
+  const GAP_CTA_BOTTOM = 6; // 8 * 0.75
+
+  // Espaciado de la columna izquierda -- escala 0.60 confirmada en vivo
+  // con el ajustador (ver charla 2026-09-16), ya horneada como fija.
+  const GAP_IMG_TO_THUMBS = 9.6; // 16 * 0.6
+  const GAP_THUMB_GAP = 7.2; // 12 * 0.6
   // Microinteracción minimalista al hacer clic en "Personalizar
   // producto" -- pedido explícito: reemplaza POR COMPLETO la versión
   // anterior ("MAGIC SWEEP", con franjas de luz de dos colores +
@@ -875,6 +897,11 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const [quantityDiscountOpen, setQuantityDiscountOpen] = useState(false);
   // Colores elegidos en modo Multicolor, en el orden en que se fueron seleccionando.
   const [selectedColorIds, setSelectedColorIds] = useState<string[]>([]);
+  // ¿El mismo diseño para todos los colores del multicolor, o uno
+  // distinto por color? (ver charla 2026-09-19). Solo importa con 2+
+  // colores elegidos -- default "mismo diseño" (comportamiento de
+  // siempre, un solo montaje de impresión sobre la cantidad combinada).
+  const [mismoDiseno, setMismoDiseno] = useState(true);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
   const [sizeQuantities, setSizeQuantities] = useState<Record<string, Record<string, number>>>({});
   const [reviews, setReviews] = useState<Review[]>(REVIEWS_SEED);
@@ -936,6 +963,21 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
       ? [modelShotUrl, ...ejesForColor].filter((url): url is string => !!url)
       : selectedVariant?.images ?? [];
   const sizes = product.sizes_available;
+  // Un producto SIN tallas reales (sizes_available vacío -- "Deja vacío
+  // si el producto no tiene tallas", ver el form de alta en /admin) de
+  // todos modos necesita UN bucket donde guardar/leer la cantidad (ver
+  // charla 2026-09-22: el stepper de cantidad no reaccionaba en la GORRA
+  // GABARDINA, un producto sin tallas -- incrementMainQuantity/
+  // decrementMainQuantity/setMainQuantity y sizeSum bailaban entero por
+  // `sizes.length === 0`, dejando la cantidad congelada en 1 sin poder
+  // cambiarla). Esta clave sintética NUNCA sale de aquí ni se guarda en
+  // sizes_breakdown (ver buildDraftCartItem, que sigue usando `sizes`
+  // real ahí para que el carrito/cotización no muestren una talla
+  // inventada) -- solo sirve para que getSizeQty/setSizeQty tengan dónde
+  // escribir. El resto de la UI (showSizes, "Tallas por color", el rango
+  // de tallas de la ficha) sigue usando `sizes` real, que se queda vacío
+  // como debe ser.
+  const QTY_SIZES = sizes.length > 0 ? sizes : ["__sin_talla__"];
 
   // Con Multicolor apagado solo hay UN color en juego a la vez -- cambiar
   // de color ahí es solo "prefiero este otro color para el mismo pedido",
@@ -1012,13 +1054,64 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     setSections((prev) => prev.filter((s) => s.id !== id));
   }
 
+  // Quitar un color del multicolor desde su propio bloque de tallas (bote
+  // de basura junto a "PIEZAS") -- mismo efecto que destocarlo desde el
+  // swatch de arriba (quitarlo de selectedColorIds dispara la animación de
+  // salida de handleSectionExited de por sí), solo que más a la mano
+  // mientras se está repartiendo tallas. Nunca deja en 0 colores: con uno
+  // solo seleccionado, el multicolor deja de tener sentido (ver charla
+  // 2026-09-19: "cuando me quede con 1 color pues no lo puedo eliminar").
+  function removeColor(variantId: string) {
+    if (selectedColorIds.length <= 1) return;
+    setSelectedColorIds((prev) => prev.filter((id) => id !== variantId));
+  }
+
+  // Restaura el renglón correspondiente de este producto al volver a esta
+  // página -- ej. con "Atrás" desde el Personalizador. Con
+  // editarCartItemId (un renglón YA CONFIRMADO que se estaba editando) lee
+  // ESE renglón exacto; sin él, cae al borrador "en progreso" (ver
+  // productDraftCartItemId) como antes. Sin esto, cada vez que este
+  // componente se vuelve a montar arranca en blanco (color/cantidad/
+  // tallas en cero) aunque el carrito ya tuviera guardado lo que el
+  // cliente había elegido (2 bugs reales reportados: primero con el
+  // borrador, después con un renglón ya confirmado -- editarCartItemId
+  // nunca se leía). Corre UNA sola vez, apenas el carrito ya hidrató desde
+  // localStorage -- nunca antes (`cartItems` arranca vacío en el primer
+  // render a propósito, ver CartContext) ni de nuevo después de esa
+  // primera vez (evitaría pisar ediciones en vivo del cliente con el
+  // draft viejo cada vez que el autoguardado de abajo actualiza `cartItems`).
+  const restoredDraftRef = useRef(false);
+  useEffect(() => {
+    if (!hydrated || restoredDraftRef.current) return;
+    restoredDraftRef.current = true;
+    const draft = cartItems.find((i) => i.id === (editarCartItemId ?? productDraftCartItemId(product.id)));
+    if (!draft || draft.variants.length === 0) return;
+
+    const isMulticolor = draft.variants.length > 1;
+    setMulticolor(isMulticolor);
+    if (isMulticolor) setSelectedColorIds(draft.variants.map((v) => v.variant_id));
+
+    const lastVariant = activeVariants.find((v) => v.id === draft.variants[draft.variants.length - 1].variant_id);
+    if (lastVariant) setSelectedVariant(lastVariant);
+
+    setSizeQuantities((prev) => {
+      const next = { ...prev };
+      draft.variants.forEach((v) => {
+        const key = isMulticolor ? v.variant_id : SINGLE_COLOR_QTY_KEY;
+        next[key] = { ...v.sizes_breakdown };
+      });
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, cartItems, product.id]);
+
   // Fuente de verdad ÚNICA para la cantidad total: la suma real de piezas
   // repartidas por talla, en las secciones de color visibles. Ya no existe
   // un "quantity" independiente — el selector superior es un espejo/atajo
   // de esta suma, nunca un segundo estado que se pueda desincronizar.
   const sizeSum = sections
     .filter((s) => !s.leaving)
-    .reduce((sum, s) => sum + sizes.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
+    .reduce((sum, s) => sum + QTY_SIZES.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
   // Con 0 piezas asignadas todavía, se muestra 1 como cantidad/precio de
   // referencia (nunca $0) — apenas el usuario asigna algo (por cualquier
   // vía: tallas o el selector superior), la cantidad real manda.
@@ -1044,36 +1137,73 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // aquí. Sin ninguna pieza asignada todavía (sizeSum === 0, antes de
   // tocar nada), no hay nada que guardar -- quita el renglón en vez de
   // dejar uno vacío.
+  // Compartida entre el autoguardado (abajo) y "Agregar al carrito" directo
+  // (ver handleAddToCartDirect) -- una sola fuente de verdad para armar el
+  // renglón de 1-2, nunca dos copias de esta lógica que puedan divergir.
+  function buildDraftCartItem(): CartItem {
+    const id = editarCartItemId ?? productDraftCartItemId(product.id);
+    // Con editarCartItemId (viniendo de "Atrás" mientras se editaba un
+    // renglón YA CONFIRMADO), escribe DIRECTO sobre ese mismo renglón --
+    // pedido explícito (ver charla 2026-09-16): usar siempre el id del
+    // borrador aquí creaba un renglón fantasma aparte, y el cambio de
+    // color/cantidad hecho en este paso nunca llegaba al renglón real.
+    // Preserva su diseño/técnica/precio EXACTOS (nunca los pisa a
+    // null/0 aquí) -- ese renglón ya tiene un diseño confirmado que este
+    // paso no toca; solo se recalculan de verdad al volver a confirmar
+    // en el Personalizador (ver handleAddToCart ahí).
+    const existing = cartItems.find((i) => i.id === id);
+    return {
+      id,
+      product,
+      variants: activeSections.map((s) => ({
+        variant_id: s.variant.id,
+        color_name: s.variant.color_name,
+        color_hex: s.variant.color_hex,
+        // qty usa QTY_SIZES (incluye el bucket sintético de un producto
+        // sin tallas reales) -- sizes_breakdown se queda con `sizes`
+        // real, para que un producto sin tallas guarde {} de verdad, sin
+        // filtrar la clave interna al carrito/cotización.
+        qty: QTY_SIZES.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0),
+        sizes_breakdown: Object.fromEntries(sizes.map((size) => [size, getSizeQty(s.variant, size)])),
+      })),
+      total_quantity: quantity,
+      technique_id: existing?.technique_id ?? null,
+      technique: existing?.technique,
+      num_elements: existing?.num_elements ?? 0,
+      num_logo_elements: existing?.num_logo_elements,
+      customization_snapshot: existing?.customization_snapshot ?? null,
+      unit_price: existing?.unit_price ?? unitPrice,
+      total_price: existing?.total_price ?? totalPrice,
+    };
+  }
+
   useEffect(() => {
-    const id = productDraftCartItemId(product.id);
+    const id = editarCartItemId ?? productDraftCartItemId(product.id);
     const timer = setTimeout(() => {
-      if (sizeSum <= 0) {
+      // Un renglón YA CONFIRMADO (editarCartItemId) nunca se quita solo
+      // por bajar la cantidad a 0 -- eso sería borrar un pedido real que
+      // el cliente ya había armado, solo por estar de paso editándolo.
+      if (sizeSum <= 0 && !editarCartItemId) {
         removeItem(id);
         return;
       }
-      const item: CartItem = {
-        id,
-        product,
-        variants: activeSections.map((s) => ({
-          variant_id: s.variant.id,
-          color_name: s.variant.color_name,
-          color_hex: s.variant.color_hex,
-          qty: sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0),
-          sizes_breakdown: Object.fromEntries(sizes.map((size) => [size, getSizeQty(s.variant, size)])),
-        })),
-        total_quantity: quantity,
-        technique_id: null,
-        technique: undefined,
-        num_elements: 0,
-        customization_snapshot: null,
-        unit_price: unitPrice,
-        total_price: totalPrice,
-      };
-      upsertItem(item);
+      if (sizeSum <= 0) return;
+      upsertItem(buildDraftCartItem());
     }, 400);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.id, sizeSum, sizeQuantities, multicolor, quantity, unitPrice, totalPrice, sections]);
+  }, [product.id, editarCartItemId, sizeSum, sizeQuantities, multicolor, quantity, unitPrice, totalPrice, sections]);
+
+  // "Agregar al carrito" directo (sin personalizar) -- pedido explícito:
+  // completar 1-2 y darle aquí debe dejar el renglón confirmado con eso
+  // nada más, sin logo/técnica, en vez del link muerto a WhatsApp que
+  // tenía antes este mismo botón.
+  function handleAddToCartDirect(e: React.MouseEvent) {
+    e.preventDefault();
+    if (sizeSum <= 0) return;
+    upsertItem(buildDraftCartItem());
+    router.push("/carrito");
+  }
 
   // 1 pieza ya es una cantidad válida y completa por sí sola: la sección
   // de tallas se muestra cuando hay algo real que repartir -- MÁS DE UNA
@@ -1093,8 +1223,8 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const canPersonalize = true;
   function incrementMainQuantity() {
     const target = activeSections[0];
-    if (!target || sizes.length === 0) return;
-    setSizeQty(target.variant, sizes[0], getSizeQty(target.variant, sizes[0]) + 1);
+    if (!target) return;
+    setSizeQty(target.variant, QTY_SIZES[0], getSizeQty(target.variant, QTY_SIZES[0]) + 1);
   }
   // Captura escribir un número directamente en el selector superior (en
   // vez de solo +/-). Reparte la diferencia con el mismo criterio que ya
@@ -1107,11 +1237,11 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   function setMainQuantity(newQtyRaw: number) {
     const newQty = Number.isFinite(newQtyRaw) && newQtyRaw > 0 ? Math.floor(newQtyRaw) : 1;
     const target = activeSections[0];
-    if (!target || sizes.length === 0) return;
+    if (!target) return;
     // Si hay más de una sección visible (Multicolor con varios colores),
     // las demás mantienen exactamente lo que ya tenían -- solo la primera
     // sección absorbe la diferencia, repartida parejo entre SUS tallas.
-    const targetCurrentTotal = sizes.reduce((sum, size) => sum + getSizeQty(target.variant, size), 0);
+    const targetCurrentTotal = QTY_SIZES.reduce((sum, size) => sum + getSizeQty(target.variant, size), 0);
     const otherSectionsTotal = sizeSum - targetCurrentTotal;
     const targetNewTotal = Math.max(0, newQty - otherSectionsTotal);
 
@@ -1119,15 +1249,15 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     // para todas, y el residuo (si no divide exacto) se le suma a las
     // primeras tallas, una unidad de más cada una -- nunca todo apilado
     // en una sola talla.
-    const base = Math.floor(targetNewTotal / sizes.length);
-    const remainder = targetNewTotal % sizes.length;
-    const perSize = Object.fromEntries(sizes.map((size, i) => [size, base + (i < remainder ? 1 : 0)]));
+    const base = Math.floor(targetNewTotal / QTY_SIZES.length);
+    const remainder = targetNewTotal % QTY_SIZES.length;
+    const perSize = Object.fromEntries(QTY_SIZES.map((size, i) => [size, base + (i < remainder ? 1 : 0)]));
 
     setSizeQuantities((prev) => ({ ...prev, [sizeQtyKey(target.variant)]: perSize }));
   }
   function decrementMainQuantity() {
     for (const s of activeSections) {
-      for (const size of sizes) {
+      for (const size of QTY_SIZES) {
         const qty = getSizeQty(s.variant, size);
         if (qty > 0) {
           setSizeQty(s.variant, size, qty - 1);
@@ -1153,17 +1283,6 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     if (!Number.isNaN(parsed)) setMainQuantity(parsed);
     setEditingMainQty(false);
   }
-  // El título de la sección de tallas es fijo — "Selecciona la talla" no
-  // cambia con la cantidad. La leyenda debajo sí, en tiempo real: como la
-  // cantidad total ahora ES la suma de tallas, solo hay dos estados
-  // posibles — nada asignado todavía, o ya asignado (siempre exacto, por
-  // definición no puede haber piezas "de más" ni "por asignar").
-  const sizeSectionTitle = "Selecciona la talla";
-  const sizeSectionHint =
-    sizeSum === 0
-      ? "Distribuye tu 1 pieza entre las tallas disponibles"
-      : `${sizeSum} pieza${sizeSum === 1 ? "" : "s"} asignada${sizeSum === 1 ? "" : "s"} ✓`;
-
   // El promedio y la distribución consideran tanto las reseñas escritas
   // como las calificaciones "solo estrellas" (sin tarjeta de comentario).
   const allRatingValues = [...reviews.map((r) => r.rating), ...standaloneRatings];
@@ -1208,6 +1327,9 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const personalizarParams = new URLSearchParams();
   if (personalizarVariantId) personalizarParams.set("variant", personalizarVariantId);
   if (multicolorIds) personalizarParams.set("colors", multicolorIds.join(","));
+  // Solo tiene sentido preguntar/mandar esto con 2+ colores de verdad --
+  // con 1 solo "distinto por color" no significa nada.
+  if (multicolorIds && !mismoDiseno) personalizarParams.set("porColor", "1");
   // La cantidad ya elegida en "2. Selecciona Cantidad" pasa también, para
   // que el Personalizador arranque con ella en vez de resetear a 1 --
   // confirmado explícitamente con el usuario.
@@ -1238,18 +1360,16 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      {/* Breadcrumb */}
-      <nav className="text-sm text-ui-gray mb-6">
-        <a href="/catalogo" className="hover:text-primary transition-colors">Catálogo</a>
-        <span className="mx-2">›</span>
-        <span className="text-foreground">{product.name}</span>
-      </nav>
-
+    <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* ── Galería ── */}
-        <div className="space-y-4">
-          <div className="aspect-square rounded-[28px] overflow-hidden bg-white border border-[#F1F1F1] shadow-[0_20px_60px_rgba(0,0,0,0.05)] relative">
+        <div>
+          {/* Antes aspect-square (tan alta como ancha) -- con el ancho real
+              de esta columna eso empujaba las miniaturas de abajo fuera de
+              la pantalla. Altura fija más baja en su lugar; object-contain
+              en la <img> de dentro sigue mostrando la foto completa sin
+              recortarla, solo con un poco más de margen arriba/abajo. */}
+          <div className="h-[510px] rounded-[28px] overflow-hidden bg-white border border-[#F1F1F1] shadow-[0_20px_60px_rgba(0,0,0,0.05)] relative">
             {/* Halos de profundidad — iluminación ambiental muy sutil detrás del producto */}
             <div
               className="absolute inset-0 pointer-events-none"
@@ -1292,7 +1412,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
             // siquiera notaba que podía hacer ("se tiene que deslizar...
             // es un poco complicado"). Envolver a una segunda fila
             // elimina la necesidad de deslizar nada.
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap" style={{ gap: GAP_THUMB_GAP, marginTop: GAP_IMG_TO_THUMBS }}>
               {images.map((url, i) => (
                 <button
                   key={url}
@@ -1313,28 +1433,48 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         </div>
 
         {/* ── Info ── */}
-        <div className="space-y-[29px]">
+        {/* Cada bloque trae su propio marginTop en vez de un space-y
+            compartido -- pedido explícito (ver charla 2026-09-16): así el
+            ajustador puede escalar TODOS los espacios a la vez (mismo
+            GAP_LONG/GAP_SHORT que se usan más abajo) sin perder la
+            relación entre los cortos y los largos. */}
+        <div>
           <div>
-            {product.category?.slug ? (
-              <Link
-                href={`/catalogo?categoria=${product.category.slug}`}
-                className="inline-block text-sm text-ui-gray mb-2 cursor-pointer transition-colors duration-200 hover:text-primary active:text-primary"
-              >
-                {product.category.name}
+            {/* Reemplaza el breadcrumb de arriba de la página ("Catálogo ›
+                Sudadera Ocean") -- pedido explícito (ver charla
+                2026-09-16): esta misma línea ya cumplía "dónde estoy", solo
+                le faltaba el link a Catálogo para ser un breadcrumb
+                completo. Quitar el otro ahorra el espacio que empujaba las
+                miniaturas fuera del viewport. */}
+            <p className="text-[13px] text-ui-gray" style={{ marginBottom: GAP_SHORT }}>
+              <Link href="/catalogo" className="transition-colors duration-200 hover:text-primary active:text-primary">
+                Catálogo
               </Link>
-            ) : (
-              <p className="text-sm text-ui-gray mb-2">{product.category?.name}</p>
-            )}
-            <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-foreground uppercase tracking-tight">{product.name}</h1>
-            <p className="text-xs text-ui-gray mt-2">{product.sku}</p>
+              <span className="mx-1.5">›</span>
+              {product.category?.slug ? (
+                <Link
+                  href={`/catalogo?categoria=${product.category.slug}`}
+                  className="transition-colors duration-200 hover:text-primary active:text-primary"
+                >
+                  {product.category.name}
+                </Link>
+              ) : (
+                product.category?.name
+              )}
+            </p>
+            {/* 1px más chica en ambos breakpoints -- pedido explícito (ver
+                charla 2026-09-16), para compensar la holgura nueva de los
+                CTAs de abajo sin que vuelva a hacer falta scroll. */}
+            <h1 className="font-display font-extrabold text-[23px] sm:text-[29px] text-foreground uppercase tracking-tight">{product.name}</h1>
+            <p className="text-[11px] text-ui-gray" style={{ marginTop: GAP_SHORT }}>{product.sku}</p>
           </div>
 
           {product.description && (
-            <p className="text-sm text-ui-gray leading-[1.9]">{product.description}</p>
+            <p className="text-[13px] text-ui-gray leading-[1.5]" style={{ marginTop: GAP_LONG }}>{product.description}</p>
           )}
 
           {/* Info row */}
-          <div className="flex gap-x-6 text-sm text-foreground">
+          <div className="flex gap-x-6 text-[13px] text-foreground" style={{ marginTop: GAP_LONG }}>
             <div className="flex-1 flex flex-col gap-3">
               {product.composition && (
                 <span className="flex items-start gap-1.5">
@@ -1369,9 +1509,9 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
 
           {/* Color selector */}
           {activeVariants.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-foreground">
+            <div style={{ marginTop: GAP_LONG }}>
+              <div className="flex items-center justify-between" style={{ marginBottom: GAP_SHORT }}>
+                <p className="text-[13px] font-semibold text-foreground">
                   1. Selecciona Color: <span className="font-normal text-ui-gray">{selectedVariant?.color_name}</span>
                 </p>
                 {/* Un producto de un solo color no tiene nada que combinar --
@@ -1409,9 +1549,9 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
           )}
 
           {/* Cantidad + precio */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between" style={{ marginTop: GAP_LONG }}>
             <div>
-              <p className="text-sm font-semibold text-foreground mb-2">2. Selecciona Cantidad</p>
+              <p className="text-[13px] font-semibold text-foreground" style={{ marginBottom: GAP_SHORT }}>2. Selecciona Cantidad</p>
               <div className="flex items-center gap-4 bg-gray-50 border border-ui-border rounded-full px-2 py-1.5 w-fit">
                 <button
                   type="button"
@@ -1457,11 +1597,15 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               </div>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-extrabold text-foreground tracking-tight">
-                {formatMXN(totalPrice)} <span className="text-sm font-normal text-ui-gray">MXN</span>
+              {/* Volteado -- pedido explícito (ver charla 2026-09-16): el
+                  unitario en negritas arriba (es el precio real que ve el
+                  cliente por pieza), el total en gris abajo. Antes era al
+                  revés. */}
+              <p className="text-[29px] font-extrabold text-foreground tracking-tight">
+                {formatMXN(unitPrice)} <span className="text-sm font-normal text-ui-gray">MXN</span>
               </p>
-              <p className="text-xs text-ui-gray mt-2">IVA incluido c/u</p>
-              <p className="text-xs text-ui-gray">{formatMXN(unitPrice)}</p>
+              <p className="text-[11px] text-ui-gray" style={{ marginTop: GAP_SHORT }}>IVA incluido c/u</p>
+              <p className="text-[11px] text-ui-gray">Total: {formatMXN(totalPrice)}</p>
             </div>
           </div>
 
@@ -1469,11 +1613,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               tallas. 1 pieza ya es una cantidad válida y completa: no hay
               ningún paso de confirmación ni un quantity > 1 de por medio. */}
           {showSizes && (
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-foreground">{sizeSectionTitle}</p>
-              {sizeSectionHint && (
-                <p className="text-xs text-ui-gray">{sizeSectionHint}</p>
-              )}
+            <div className="space-y-2" style={{ marginTop: GAP_QTY_TO_TALLAS }}>
               <div className="space-y-3">
                 {sections.map((s) => (
                   <AnimatedSizeSection
@@ -1481,7 +1621,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                     leaving={s.leaving}
                     onExited={() => handleSectionExited(s.id)}
                   >
-                    <p className="text-sm font-semibold text-foreground mb-1.5">Tallas - {s.variant.color_name}</p>
+                    <p className="text-[13px] font-semibold text-foreground" style={{ marginBottom: GAP_TALLAS_LABEL }}>Tallas - {s.variant.color_name}</p>
                     <div className="flex items-center gap-3 flex-nowrap">
                       {/* Con una sola talla real ("Único"), el chip +/- de
                           abajo sería el mismo número que la tarjeta de total
@@ -1510,6 +1650,19 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                         total={sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0)}
                         onChange={sizes.length === 1 ? (next) => setSizeQty(s.variant, sizes[0], next) : undefined}
                       />
+                      {multicolor && (
+                        <button
+                          type="button"
+                          onClick={() => removeColor(s.variant.id)}
+                          disabled={selectedColorIds.length <= 1}
+                          title={selectedColorIds.length <= 1 ? "Necesitas al menos 1 color" : `Quitar ${s.variant.color_name}`}
+                          className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-ui-gray hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ui-gray disabled:cursor-not-allowed transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </AnimatedSizeSection>
                 ))}
@@ -1525,7 +1678,46 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               MISMO turquesa (decisión explícita ya tomada antes: "no usar
               otro color adicional" -- este ajuste solo cambia la técnica
               visual a sólida, no el color). */}
-          <div className="flex gap-3">
+          {/* mt/mb inline pisan el space-y del padre -- ver charla
+              2026-09-16. El intento anterior (32px arriba y abajo) empujó
+              los botones fuera del viewport otra vez -- los 44px que
+              agregaba superaban por mucho lo que los ajustes de
+              tipografía de arriba lograban recuperar (~8-10px). Bajado a
+              un valor mucho más conservador. */}
+          {/* Pregunta explícita antes de personalizar -- solo tiene sentido
+              con 2+ colores elegidos de verdad (con 1 solo no hay nada que
+              "combinar"). Mockup aprobado, ver charla 2026-09-19: cambia
+              cómo se cotiza la impresión después (mismo montaje sobre la
+              cantidad combinada vs. uno por color). */}
+          {multicolor && selectedColorIds.length > 1 && (
+            <div className="rounded-2xl border border-ui-border bg-white p-4" style={{ marginTop: GAP_CTA_TOP }}>
+              <p className="text-sm font-semibold text-foreground mb-2.5">¿Mismo diseño para todos los colores?</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setMismoDiseno(true)}
+                  className={`text-left rounded-xl border-2 px-3 py-2.5 transition-colors ${
+                    mismoDiseno ? "border-primary bg-primary/5" : "border-ui-border hover:border-primary/40"
+                  }`}
+                >
+                  <p className="text-[13px] font-semibold text-foreground">Mismo diseño</p>
+                  <p className="text-[11px] text-ui-gray mt-0.5">Un solo montaje de impresión, sobre las {quantity} piezas combinadas.</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMismoDiseno(false)}
+                  className={`text-left rounded-xl border-2 px-3 py-2.5 transition-colors ${
+                    !mismoDiseno ? "border-primary bg-primary/5" : "border-ui-border hover:border-primary/40"
+                  }`}
+                >
+                  <p className="text-[13px] font-semibold text-foreground">Distinto por color</p>
+                  <p className="text-[11px] text-ui-gray mt-0.5">Personalizas cada color aparte -- la impresión se cotiza por color.</p>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3" style={{ marginTop: GAP_CTA_TOP, marginBottom: GAP_CTA_BOTTOM }}>
             <Link
               href={personalizarHref}
               aria-disabled={!canPersonalize}
@@ -1594,14 +1786,18 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               )}
               <span className="relative z-10">Personalizar producto</span>
             </Link>
-            <a
-              href={`https://wa.me/5215500000000?text=${encodeURIComponent(`Hola, me interesa cotizar: ${product.name} (SKU: ${product.sku})`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center py-3.5 rounded-full bg-primary text-white font-semibold text-sm shadow-[0_4px_14px_rgba(87,224,217,0.28)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_6px_18px_rgba(87,224,217,0.4)] active:scale-[0.98]"
+            <button
+              type="button"
+              onClick={handleAddToCartDirect}
+              disabled={sizeSum <= 0}
+              className={`flex-1 flex items-center justify-center py-3.5 rounded-full bg-primary text-white font-semibold text-sm transition-all duration-200 ease-out ${
+                sizeSum > 0
+                  ? "shadow-[0_4px_14px_rgba(87,224,217,0.28)] hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-[0_6px_18px_rgba(87,224,217,0.4)] active:scale-[0.98]"
+                  : "opacity-40 cursor-not-allowed"
+              }`}
             >
               Agregar al carrito
-            </a>
+            </button>
           </div>
         </div>
       </div>

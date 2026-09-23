@@ -95,7 +95,7 @@ export default function SelectionToolbar({
             {TEXT_FONT_CATEGORIES.map((category) => (
               <optgroup key={category.name} label={category.name}>
                 {category.fonts.map((f) => (
-                  <option key={f.label} value={f.label}>
+                  <option key={f.label} value={f.label} style={{ fontFamily: f.css }}>
                     {f.label}
                   </option>
                 ))}

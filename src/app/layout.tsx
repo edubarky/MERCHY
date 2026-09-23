@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, Outfit } from "next/font/google";
 import { CartProvider } from "@/lib/cart/CartContext";
 import { ArtLibraryProvider } from "@/lib/artLibrary/ArtLibraryContext";
+import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -35,6 +36,7 @@ export default function RootLayout({
         <ArtLibraryProvider>
           <CartProvider>{children}</CartProvider>
         </ArtLibraryProvider>
+        <FloatingWhatsApp />
       </body>
     </html>
   );

@@ -31,7 +31,11 @@ export default async function PersonalizarPage({
   // precio por tramos (ver PersonalizerClient) coincida desde el inicio
   // con lo que el cliente ya veía. Ausente/inválido -> 1, igual que
   // siempre.
-  searchParams: { variant?: string; colors?: string; qty?: string };
+  // ?porColor=1 -- el cliente eligió "Distinto por color" en la pregunta
+  // de la ficha (ver ProductDetail.tsx, charla 2026-09-19). Solo tiene
+  // efecto si además viene `colors` con 2+ ids; ausente = "Mismo diseño"
+  // (comportamiento de siempre).
+  searchParams: { variant?: string; colors?: string; qty?: string; porColor?: string };
 }) {
   const supabase = createClient();
 
@@ -40,8 +44,8 @@ export default async function PersonalizarPage({
       .from("products")
       .select(`
         id, sku, name, description, composition, sizes_available, costo, active,
-        category:categories(id, name, slug, icon, sort_order, active),
-        variants:product_variants(id, product_id, sku, color_name, color_hex, images, stock, active)
+        category:categories(id, name, slug, icon, sort_order, active, pzas_per_box),
+        variants:product_variants(id, product_id, sku, color_name, color_hex, images, views, stock, active)
       `)
       .eq("id", params.id)
       .eq("active", true)
@@ -58,7 +62,7 @@ export default async function PersonalizarPage({
   if (!product) notFound();
 
   const safeProduct = product as unknown as Product & { variants: ProductVariant[] };
-  const resolvedAssets = resolveProductViewAssets(safeProduct);
+  const resolvedAssets = resolveProductViewAssets(safeProduct, safeProduct.variants);
   // Confirma que el id recibido corresponde a una variante real de ESTE
   // producto antes de pasarlo -- un id inválido/de otro producto se
   // descarta aquí mismo (queda null), en vez de dejar que el cliente lo
@@ -72,6 +76,7 @@ export default async function PersonalizarPage({
   const rawColorIds = (searchParams.colors ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const validColorIds = rawColorIds.filter((id) => safeProduct.variants.some((v) => v.id === id));
   const multicolorVariantIds = validColorIds.length > 1 ? validColorIds : null;
+  const distintoPorColor = multicolorVariantIds !== null && searchParams.porColor === "1";
 
   // Mismo criterio de "nunca confiar ciegamente en la URL": un entero
   // positivo real, si no -> null (PersonalizerClient ya sabe caer a 1).
@@ -100,6 +105,7 @@ export default async function PersonalizarPage({
         initialVariantId={initialVariantId}
         multicolorVariantIds={multicolorVariantIds}
         initialQuantity={initialQuantity}
+        distintoPorColor={distintoPorColor}
       />
     </div>
   );
