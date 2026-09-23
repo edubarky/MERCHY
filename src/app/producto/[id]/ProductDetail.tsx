@@ -963,6 +963,21 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
       ? [modelShotUrl, ...ejesForColor].filter((url): url is string => !!url)
       : selectedVariant?.images ?? [];
   const sizes = product.sizes_available;
+  // Un producto SIN tallas reales (sizes_available vacío -- "Deja vacío
+  // si el producto no tiene tallas", ver el form de alta en /admin) de
+  // todos modos necesita UN bucket donde guardar/leer la cantidad (ver
+  // charla 2026-09-22: el stepper de cantidad no reaccionaba en la GORRA
+  // GABARDINA, un producto sin tallas -- incrementMainQuantity/
+  // decrementMainQuantity/setMainQuantity y sizeSum bailaban entero por
+  // `sizes.length === 0`, dejando la cantidad congelada en 1 sin poder
+  // cambiarla). Esta clave sintética NUNCA sale de aquí ni se guarda en
+  // sizes_breakdown (ver buildDraftCartItem, que sigue usando `sizes`
+  // real ahí para que el carrito/cotización no muestren una talla
+  // inventada) -- solo sirve para que getSizeQty/setSizeQty tengan dónde
+  // escribir. El resto de la UI (showSizes, "Tallas por color", el rango
+  // de tallas de la ficha) sigue usando `sizes` real, que se queda vacío
+  // como debe ser.
+  const QTY_SIZES = sizes.length > 0 ? sizes : ["__sin_talla__"];
 
   // Con Multicolor apagado solo hay UN color en juego a la vez -- cambiar
   // de color ahí es solo "prefiero este otro color para el mismo pedido",
@@ -1096,7 +1111,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // de esta suma, nunca un segundo estado que se pueda desincronizar.
   const sizeSum = sections
     .filter((s) => !s.leaving)
-    .reduce((sum, s) => sum + sizes.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
+    .reduce((sum, s) => sum + QTY_SIZES.reduce((sSum, size) => sSum + getSizeQty(s.variant, size), 0), 0);
   // Con 0 piezas asignadas todavía, se muestra 1 como cantidad/precio de
   // referencia (nunca $0) — apenas el usuario asigna algo (por cualquier
   // vía: tallas o el selector superior), la cantidad real manda.
@@ -1144,7 +1159,11 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         variant_id: s.variant.id,
         color_name: s.variant.color_name,
         color_hex: s.variant.color_hex,
-        qty: sizes.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0),
+        // qty usa QTY_SIZES (incluye el bucket sintético de un producto
+        // sin tallas reales) -- sizes_breakdown se queda con `sizes`
+        // real, para que un producto sin tallas guarde {} de verdad, sin
+        // filtrar la clave interna al carrito/cotización.
+        qty: QTY_SIZES.reduce((sum, size) => sum + getSizeQty(s.variant, size), 0),
         sizes_breakdown: Object.fromEntries(sizes.map((size) => [size, getSizeQty(s.variant, size)])),
       })),
       total_quantity: quantity,
@@ -1204,8 +1223,8 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const canPersonalize = true;
   function incrementMainQuantity() {
     const target = activeSections[0];
-    if (!target || sizes.length === 0) return;
-    setSizeQty(target.variant, sizes[0], getSizeQty(target.variant, sizes[0]) + 1);
+    if (!target) return;
+    setSizeQty(target.variant, QTY_SIZES[0], getSizeQty(target.variant, QTY_SIZES[0]) + 1);
   }
   // Captura escribir un número directamente en el selector superior (en
   // vez de solo +/-). Reparte la diferencia con el mismo criterio que ya
@@ -1218,11 +1237,11 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   function setMainQuantity(newQtyRaw: number) {
     const newQty = Number.isFinite(newQtyRaw) && newQtyRaw > 0 ? Math.floor(newQtyRaw) : 1;
     const target = activeSections[0];
-    if (!target || sizes.length === 0) return;
+    if (!target) return;
     // Si hay más de una sección visible (Multicolor con varios colores),
     // las demás mantienen exactamente lo que ya tenían -- solo la primera
     // sección absorbe la diferencia, repartida parejo entre SUS tallas.
-    const targetCurrentTotal = sizes.reduce((sum, size) => sum + getSizeQty(target.variant, size), 0);
+    const targetCurrentTotal = QTY_SIZES.reduce((sum, size) => sum + getSizeQty(target.variant, size), 0);
     const otherSectionsTotal = sizeSum - targetCurrentTotal;
     const targetNewTotal = Math.max(0, newQty - otherSectionsTotal);
 
@@ -1230,15 +1249,15 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     // para todas, y el residuo (si no divide exacto) se le suma a las
     // primeras tallas, una unidad de más cada una -- nunca todo apilado
     // en una sola talla.
-    const base = Math.floor(targetNewTotal / sizes.length);
-    const remainder = targetNewTotal % sizes.length;
-    const perSize = Object.fromEntries(sizes.map((size, i) => [size, base + (i < remainder ? 1 : 0)]));
+    const base = Math.floor(targetNewTotal / QTY_SIZES.length);
+    const remainder = targetNewTotal % QTY_SIZES.length;
+    const perSize = Object.fromEntries(QTY_SIZES.map((size, i) => [size, base + (i < remainder ? 1 : 0)]));
 
     setSizeQuantities((prev) => ({ ...prev, [sizeQtyKey(target.variant)]: perSize }));
   }
   function decrementMainQuantity() {
     for (const s of activeSections) {
-      for (const size of sizes) {
+      for (const size of QTY_SIZES) {
         const qty = getSizeQty(s.variant, size);
         if (qty > 0) {
           setSizeQty(s.variant, size, qty - 1);
