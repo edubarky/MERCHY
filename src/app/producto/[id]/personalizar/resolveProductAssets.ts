@@ -1,14 +1,51 @@
 import fs from "fs";
 import path from "path";
-import type { Product } from "@/types";
+import type { Product, ProductVariant } from "@/types";
 import {
   VIEW_ORDER,
   GARMENT_COLORS,
+  normalizeGarmentColorName,
   type ViewName,
   type GarmentColor,
   type ResolvedProductAssets,
   emptyResolvedAssets,
 } from "./types";
+
+// Variantes editables desde el admin (product_variants.views, ver charla
+// 2026-09-22 "Como lo acabo de hacer con las blancas") — se aplican DESPUÉS
+// del escaneo de carpetas de abajo y siempre ganan sobre él, color por
+// color y vista por vista: un producto que Diana todavía no ha migrado no
+// ve NINGÚN cambio (variant.views vacío/null dejai intacto lo que resolvió
+// el escaneo), y uno que ya migró usa la foto de la base de datos incluso
+// si por casualidad todavía existiera un archivo viejo en la carpeta.
+type ViewsVariant = Pick<ProductVariant, "color_name" | "views">;
+
+function applyDbViewOverrides(result: ResolvedProductAssets, variants: ViewsVariant[] | undefined) {
+  if (!variants) return;
+  for (const variant of variants) {
+    if (!variant.views) continue;
+    const color = normalizeGarmentColorName(variant.color_name);
+    if (!color) continue;
+    for (const view of VIEW_ORDER) {
+      const url = variant.views[view];
+      if (url) result[view][color] = url;
+    }
+  }
+}
+
+function applyDbModelShotOverrides(
+  result: Record<GarmentColor, string | null>,
+  variants: ViewsVariant[] | undefined
+) {
+  if (!variants) return;
+  for (const variant of variants) {
+    if (!variant.views) continue;
+    const color = normalizeGarmentColorName(variant.color_name);
+    if (!color) continue;
+    const url = variant.views["conModelo"];
+    if (url) result[color] = url;
+  }
+}
 
 // Real per-color photo subfolders (e.g.
 // public/VISTA DE PRODUCTOS/SUDADERA OCEAN/SUDADERA  OCEAN BLANCO/) — one
@@ -186,7 +223,10 @@ function log(...args: unknown[]) {
   if (DEBUG) console.log("[Personalizador][resolveProductAssets]", ...args);
 }
 
-export function resolveProductViewAssets(product: Pick<Product, "id" | "name">): ResolvedProductAssets {
+export function resolveProductViewAssets(
+  product: Pick<Product, "id" | "name">,
+  variants?: ViewsVariant[]
+): ResolvedProductAssets {
   const publicRoot = path.join(process.cwd(), "public");
   const productsRoot = path.join(publicRoot, PRODUCTS_ROOT_NAME);
   const naiveAttemptedPath = path.join(productsRoot, product.name);
@@ -211,6 +251,7 @@ export function resolveProductViewAssets(product: Pick<Product, "id" | "name">):
     } else {
       log("Motivo: ni siquiera existe la carpeta raíz", productsRoot);
     }
+    applyDbViewOverrides(result, variants);
     return result;
   }
   log("Carpeta encontrada: Sí —", productDir);
@@ -282,6 +323,8 @@ export function resolveProductViewAssets(product: Pick<Product, "id" | "name">):
     }
   }
 
+  applyDbViewOverrides(result, variants);
+
   return result;
 }
 
@@ -306,13 +349,19 @@ function findModeloFile(dir: string): string | null {
 // subcarpeta o su propio archivo "con modelo". null para un color sin
 // ninguna de las dos cosas -- nunca se inventa una foto, ni se reutiliza
 // la de otro color a propósito.
-export function resolveProductModelShots(product: Pick<Product, "id" | "name">): Record<GarmentColor, string | null> {
+export function resolveProductModelShots(
+  product: Pick<Product, "id" | "name">,
+  variants?: ViewsVariant[]
+): Record<GarmentColor, string | null> {
   const publicRoot = path.join(process.cwd(), "public");
   const productsRoot = path.join(publicRoot, PRODUCTS_ROOT_NAME);
   const result = Object.fromEntries(GARMENT_COLORS.map((c) => [c, null])) as Record<GarmentColor, string | null>;
 
   const productDir = findMatchingDir(productsRoot, product.name);
-  if (!productDir) return result;
+  if (!productDir) {
+    applyDbModelShotOverrides(result, variants);
+    return result;
+  }
 
   const rootFile = findModeloFile(productDir);
   const rootUrl = rootFile ? toPublicUrl(path.join(productDir, rootFile), publicRoot) : null;
@@ -327,6 +376,8 @@ export function resolveProductModelShots(product: Pick<Product, "id" | "name">):
     // subcarpeta, o null si esa subcarpeta no trae uno.
     result[color] = file ? toPublicUrl(path.join(colorDir, file), publicRoot) : null;
   }
+
+  applyDbModelShotOverrides(result, variants);
 
   return result;
 }

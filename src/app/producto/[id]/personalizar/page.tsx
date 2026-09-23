@@ -45,7 +45,7 @@ export default async function PersonalizarPage({
       .select(`
         id, sku, name, description, composition, sizes_available, costo, active,
         category:categories(id, name, slug, icon, sort_order, active, pzas_per_box),
-        variants:product_variants(id, product_id, sku, color_name, color_hex, images, stock, active)
+        variants:product_variants(id, product_id, sku, color_name, color_hex, images, views, stock, active)
       `)
       .eq("id", params.id)
       .eq("active", true)
@@ -62,7 +62,7 @@ export default async function PersonalizarPage({
   if (!product) notFound();
 
   const safeProduct = product as unknown as Product & { variants: ProductVariant[] };
-  const resolvedAssets = resolveProductViewAssets(safeProduct);
+  const resolvedAssets = resolveProductViewAssets(safeProduct, safeProduct.variants);
   // Confirma que el id recibido corresponde a una variante real de ESTE
   // producto antes de pasarlo -- un id inválido/de otro producto se
   // descarta aquí mismo (queda null), en vez de dejar que el cliente lo

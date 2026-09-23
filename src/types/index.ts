@@ -40,6 +40,12 @@ export interface ProductVariant {
   color_name: string;
   color_hex: string;
   images: string[];
+  // Fotos de vista del Personalizador (Frente/Reverso/etc + "conModelo"),
+  // editables desde el admin -- ver charla 2026-09-22 "Como lo acabo de
+  // hacer con las blancas". Clave = ViewName | "conModelo", valor = URL de
+  // Storage. Si una clave no está, resolveProductAssets.ts cae al sistema
+  // de carpetas de siempre (public/VISTA DE PRODUCTOS/...).
+  views?: Record<string, string> | null;
   stock: number;
   active: boolean;
 }

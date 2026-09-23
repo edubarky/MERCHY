@@ -24,7 +24,7 @@ export default async function ProductoPage({ params }: { params: { id: string } 
       .select(`
         id, sku, name, description, composition, sizes_available, costo, active,
         category:categories(id, name, slug, icon, sort_order, active),
-        variants:product_variants(id, product_id, sku, color_name, color_hex, images, stock, active)
+        variants:product_variants(id, product_id, sku, color_name, color_hex, images, views, stock, active)
       `)
       .eq("id", params.id)
       .eq("active", true)
@@ -41,8 +41,8 @@ export default async function ProductoPage({ params }: { params: { id: string } 
   // como miniaturas de galería en la ficha del producto. Ninguno de los
   // dos se inventa: un producto/color sin ejes/modelo reales simplemente
   // no los incluye (ver ProductDetail.tsx, que elige el color activo).
-  const resolvedGallery = resolveProductViewAssets(safeProduct);
-  const modelShots = resolveProductModelShots(safeProduct);
+  const resolvedGallery = resolveProductViewAssets(safeProduct, safeProduct.variants);
+  const modelShots = resolveProductModelShots(safeProduct, safeProduct.variants);
 
   return (
     <div

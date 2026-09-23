@@ -8,6 +8,7 @@ import {
   AdminSelect, AdminToggle, Btn, Badge, EmptyState,
 } from "@/components/admin/ui";
 import ImageUpload from "@/components/admin/ImageUpload";
+import ViewsUpload from "@/components/admin/ViewsUpload";
 import Link from "next/link";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Único"];
@@ -94,6 +95,10 @@ export default function EditProductoPage() {
 
   async function updateVariantImages(variantId: string, urls: string[]) {
     setVariants((prev) => prev.map((v) => v.id === variantId ? { ...v, images: urls } : v));
+  }
+
+  async function updateVariantViews(variantId: string, views: Record<string, string>) {
+    setVariants((prev) => prev.map((v) => v.id === variantId ? { ...v, views } : v));
   }
 
   async function toggleVariantActive(variantId: string, active: boolean) {
@@ -241,6 +246,12 @@ export default function EditProductoPage() {
                     variantId={v.id}
                     existingUrls={v.images ?? []}
                     onUpdate={(urls) => updateVariantImages(v.id, urls)}
+                  />
+                  <ViewsUpload
+                    productId={id}
+                    variantId={v.id}
+                    existingViews={v.views}
+                    onUpdate={(views) => updateVariantViews(v.id, views)}
                   />
                   {editingId === v.id && (
                     <div className="mt-3 pt-3 border-t border-ui-border space-y-3">
