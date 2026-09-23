@@ -155,22 +155,24 @@ export function emptyViewElements(): ViewElements {
 // scan); "azul"/"rosa" were added for Tapete Century (its real variant
 // colors — see detectColor in resolveProductAssets.ts, which needed its
 // own explicit AZUL/ROSA check the same way it already had BLANCO/NEGRO,
-// since neither is inferred automatically). The 12 colors below
+// since neither is inferred automatically). The 11 colors below
 // (canela...candy) were added for Player Premium, whose 16 real
 // product_variants colors barely overlap the original 8-value palette —
-// only blanco/negro/royal/gris matched; the rest ("Canela", "Matcha",
-// "Menta", "Paprika", "Almendra", "Cactus", "Sal Marina", "Olivo",
-// "Vino", "Azafran Claro", "Navy", "Candy") needed their own slot, each
-// resolved via that product's own per-color subfolder (see
-// findColorSubdir in resolveProductAssets.ts — "sal marina"/"azafran
-// claro" are the first two-word colors this matcher has seen, hence the
-// contiguous-subsequence tweak there instead of a single-token check).
-// For every other product any of these 12 simply stay null, same as
-// blanco/negro would if that product had no matching photos. Widening
-// this type does not change behavior for any other product: GarmentColor
-// is only ever the color the customer already picked on the product page
-// (see normalizeGarmentColorName below) — there is no selector inside
-// the Personalizador itself.
+// only blanco/negro/royal/gris/rojo matched (its dark-red variant is
+// named "Rojo", reusing that existing slot — it was briefly named "Vino"
+// with its own dedicated slot, since removed once renamed back); the
+// rest ("Canela", "Matcha", "Menta", "Paprika", "Almendra", "Cactus",
+// "Sal Marina", "Olivo", "Azafran Claro", "Navy", "Candy") needed their
+// own slot, each resolved via that product's own per-color subfolder
+// (see findColorSubdir in resolveProductAssets.ts — "sal marina"/
+// "azafran claro" are the first two-word colors this matcher has seen,
+// hence the contiguous-subsequence tweak there instead of a
+// single-token check). For every other product any of these 11 simply
+// stay null, same as blanco/negro would if that product had no matching
+// photos. Widening this type does not change behavior for any other
+// product: GarmentColor is only ever the color the customer already
+// picked on the product page (see normalizeGarmentColorName below) —
+// there is no selector inside the Personalizador itself.
 export type GarmentColor =
   | "blanco"
   | "negro"
@@ -188,7 +190,6 @@ export type GarmentColor =
   | "cactus"
   | "sal marina"
   | "olivo"
-  | "vino"
   | "azafran claro"
   | "navy"
   | "candy";
@@ -210,7 +211,6 @@ export const GARMENT_COLORS: GarmentColor[] = [
   "cactus",
   "sal marina",
   "olivo",
-  "vino",
   "azafran claro",
   "navy",
   "candy",
