@@ -491,12 +491,22 @@ export default function PersonalizerClient({
   const barVariants = (multicolorVariantIds ?? [])
     .map((id) => product.variants.find((v) => v.id === id))
     .filter((v): v is ProductVariant => !!v)
-    // Orden canónico fijo (blanco, negro, royal, marino, rojo, gris) --
-    // no el orden en que el usuario los fue tocando en la página del
-    // producto, para que la barra siempre se lea igual.
+    // Orden canónico -- no el orden en que el usuario los fue tocando en
+    // la página del producto, para que la barra siempre se lea igual.
+    // GARMENT_COLORS ya no es "la lista de colores válidos" (ver types.ts
+    // -- GarmentColor es libre ahora, cualquier producto puede tener
+    // colores propios que nunca estuvieron ahí), solo un puñado de
+    // colores comunes con una posición preferida; cualquier otro color va
+    // después, ordenado alfabéticamente entre sí para que el orden sea
+    // estable en vez de colapsar todos juntos.
     .sort((a, b) => {
-      const ia = GARMENT_COLORS.indexOf(normalizeGarmentColorName(a.color_name) ?? "blanco");
-      const ib = GARMENT_COLORS.indexOf(normalizeGarmentColorName(b.color_name) ?? "blanco");
+      const ca = normalizeGarmentColorName(a.color_name) ?? "";
+      const cb = normalizeGarmentColorName(b.color_name) ?? "";
+      const ia = GARMENT_COLORS.indexOf(ca);
+      const ib = GARMENT_COLORS.indexOf(cb);
+      if (ia === -1 && ib === -1) return ca.localeCompare(cb);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
       return ia - ib;
     });
   const showColorBar = barVariants.length > 1;
@@ -570,7 +580,7 @@ export default function PersonalizerClient({
   // canvas aspect-ratio only, never for its `src` or its `printArea` (print
   // area comes from printAreas.ts's per-product/per-view config now).
   function getViewSrc(view: ViewName, color: GarmentColor): string | null {
-    return resolvedAssets[view][color];
+    return resolvedAssets[view][color] ?? null;
   }
 
   // Qué pestañas de eje mostrar en el canvas -- no todo el catálogo es una

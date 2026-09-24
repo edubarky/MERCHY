@@ -146,113 +146,81 @@ export function emptyViewElements(): ViewElements {
   };
 }
 
-// ---- Per-product real photography (blanco/negro + per-product extra colors) ----
+// ---- Per-product real photography (scales to any product/color) ----
 
-// "blanco"/"negro" are resolved generically for EVERY product (see
-// resolveProductAssets.ts's flat-file scan). "royal"/"marino"/"rojo"/
-// "gris" are currently only ever resolved for Sudadera Ocean
-// specifically (see that same file's Sudadera-Ocean-only subfolder
-// scan); "azul"/"rosa" were added for Tapete Century (its real variant
-// colors — see detectColor in resolveProductAssets.ts, which needed its
-// own explicit AZUL/ROSA check the same way it already had BLANCO/NEGRO,
-// since neither is inferred automatically). The 11 colors below
-// (canela...candy) were added for Player Premium, whose 16 real
-// product_variants colors barely overlap the original 8-value palette —
-// only blanco/negro/royal/gris/rojo matched (its dark-red variant is
-// named "Rojo", reusing that existing slot — it was briefly named "Vino"
-// with its own dedicated slot, since removed once renamed back); the
-// rest ("Canela", "Matcha", "Menta", "Paprika", "Almendra", "Cactus",
-// "Sal Marina", "Olivo", "Azafran Claro", "Navy", "Candy") needed their
-// own slot, each resolved via that product's own per-color subfolder
-// (see findColorSubdir in resolveProductAssets.ts — "sal marina"/
-// "azafran claro" are the first two-word colors this matcher has seen,
-// hence the contiguous-subsequence tweak there instead of a
-// single-token check). For every other product any of these 11 simply
-// stay null, same as blanco/negro would if that product had no matching
-// photos. Widening this type does not change behavior for any other
-// product: GarmentColor is only ever the color the customer already
-// picked on the product page (see normalizeGarmentColorName below) —
-// there is no selector inside the Personalizador itself.
-export type GarmentColor =
-  | "blanco"
-  | "negro"
-  | "royal"
-  | "marino"
-  | "rojo"
-  | "gris"
-  | "azul"
-  | "rosa"
-  | "canela"
-  | "matcha"
-  | "menta"
-  | "paprika"
-  | "almendra"
-  | "cactus"
-  | "sal marina"
-  | "olivo"
-  | "azafran claro"
-  | "navy"
-  | "candy";
+// GarmentColor USED TO BE a small closed union (blanco/negro/royal/...),
+// hand-extended one product at a time every time a new product needed a
+// color it didn't already have -- that stopped scaling once real
+// products started needing dozens of distinct real color names each
+// (confirmed live: 21 catalog products, several with 20+ real variant
+// colors), and worse, it had a silent-data-loss bug: any variant whose
+// color_name wasn't already one of the enum literals was simply invisible
+// to the whole system -- e.g. Playera Vintage's "Azul Winkle" variant
+// already had real photos uploaded via the admin (product_variants.views)
+// that were being discarded on every request because "azul winkle" isn't
+// one of the ~19 hardcoded literals.
+//
+// Now: GarmentColor is just the normalized (accent/case/whitespace
+// -insensitive) form of whatever color a product's OWN variants/
+// photography actually use (see normalizeGarmentColorName below) --
+// there is no shared list to run out of or hand-maintain. Adding a new
+// product, or a new color to an existing product, never requires
+// touching this file again: resolveProductAssets.ts discovers colors by
+// listing what's actually on disk (per-color subfolder names, or
+// per-file B/N/color-word suffixes) and by reading that product's own
+// Supabase variants -- see the comment above resolveProductViewAssets.
+export type GarmentColor = string;
 
-export const GARMENT_COLORS: GarmentColor[] = [
-  "blanco",
-  "negro",
-  "royal",
-  "marino",
-  "rojo",
-  "gris",
-  "azul",
-  "rosa",
-  "canela",
-  "matcha",
-  "menta",
-  "paprika",
-  "almendra",
-  "cactus",
-  "sal marina",
-  "olivo",
-  "azafran claro",
-  "navy",
-  "candy",
-];
+// A small, deliberately short "known common colors" list -- NOT the set
+// of valid colors (there isn't one anymore), just a preferred display
+// order for PersonalizerClient's multicolor variant-picker bar (see its
+// sort there). Any color not in this list still works everywhere else;
+// it just sorts alphabetically after these, instead of in a specific
+// hand-picked position.
+export const GARMENT_COLORS: GarmentColor[] = ["blanco", "negro", "royal", "marino", "rojo", "gris", "azul", "rosa"];
 
-// Maps a real product_variants.color_name (Supabase — "Blanco", "Negro",
-// "Royal", "Marino", "Rojo " [note: has a trailing space in the real row],
-// "Gris") to the internal GarmentColor key used for asset resolution.
-// Accent/case/whitespace-insensitive, same tolerance level as every other
-// name-matcher in this feature (printAreas.ts, resolveProductAssets.ts).
-// Returns null for a variant color this product's photography doesn't
-// have a GarmentColor slot for. Shared between the personalizer page
-// (Server Component — resolves the color the customer already picked on
-// the product page) and PersonalizerClient (falls back to it if no color
-// was passed at all, e.g. an old bookmarked link).
+// Normalizes a real product_variants.color_name (Supabase — "Blanco",
+// "Azul Winkle", "Sal Marina", "Paprika " [note: real rows sometimes have
+// a trailing space], etc.) into the internal key used for asset
+// resolution. Accent/case/whitespace-insensitive, same tolerance level as
+// every other name-matcher in this feature (printAreas.ts,
+// resolveProductAssets.ts). Returns null only for a blank/empty name —
+// every real color name normalizes to a usable key now (see the
+// GarmentColor comment above for why this used to reject most of them).
+// Shared between the personalizer page (Server Component — resolves the
+// color the customer already picked on the product page) and
+// PersonalizerClient (falls back to it if no color was passed at all,
+// e.g. an old bookmarked link).
 export function normalizeGarmentColorName(colorName: string): GarmentColor | null {
   const key = colorName
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
-    .toLowerCase();
-  return (GARMENT_COLORS as string[]).includes(key) ? (key as GarmentColor) : null;
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+  return key.length > 0 ? key : null;
 }
 
-export type ResolvedViewAsset = Record<GarmentColor, string | null>;
+// Partial on purpose (not every product has every color for every view —
+// most products only have real photos for 1-2 colors so far): a color
+// simply absent from an object here means "no photo," exactly the same
+// as an explicit null would (every consumer only ever does a truthy
+// check), so resolveProductAssets.ts never needs to know the full set of
+// colors up front just to pre-fill nulls for the ones it doesn't have.
+export type ResolvedViewAsset = Partial<Record<GarmentColor, string | null>>;
 
 export type ResolvedProductAssets = Record<ViewName, ResolvedViewAsset>;
 
-function emptyResolvedViewAsset(): ResolvedViewAsset {
-  return Object.fromEntries(GARMENT_COLORS.map((c) => [c, null])) as ResolvedViewAsset;
-}
-
 export function emptyResolvedAssets(): ResolvedProductAssets {
   return {
-    frente: emptyResolvedViewAsset(),
-    reverso: emptyResolvedViewAsset(),
-    izquierda: emptyResolvedViewAsset(),
-    derecha: emptyResolvedViewAsset(),
-    fundaHorizontal: emptyResolvedViewAsset(),
-    fundaVertical: emptyResolvedViewAsset(),
-    bolsa: emptyResolvedViewAsset(),
-    ligaFrente: emptyResolvedViewAsset(),
-    ligaReverso: emptyResolvedViewAsset(),
+    frente: {},
+    reverso: {},
+    izquierda: {},
+    derecha: {},
+    fundaHorizontal: {},
+    fundaVertical: {},
+    bolsa: {},
+    ligaFrente: {},
+    ligaReverso: {},
   };
 }

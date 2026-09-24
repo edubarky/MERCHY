@@ -3,7 +3,6 @@ import path from "path";
 import type { Product, ProductVariant } from "@/types";
 import {
   VIEW_ORDER,
-  GARMENT_COLORS,
   normalizeGarmentColorName,
   type ViewName,
   type GarmentColor,
@@ -48,40 +47,39 @@ function applyDbModelShotOverrides(
 }
 
 // Real per-color photo subfolders (e.g.
-// public/VISTA DE PRODUCTOS/SUDADERA OCEAN/SUDADERA  OCEAN BLANCO/) — one
-// per garment color, holding its own view files (frente/reverso/izquierda/
-// derecha) plus an optional "... con modelo.png". Unlike the flat blanco/
-// negro files this product used to have directly in its root (still
-// supported below as the fallback for any product without color
-// subfolders), these need no color suffix in the filename — the folder
-// itself IS the color.
+// public/VISTA DE PRODUCTOS/SUDADERA OCEAN/SUDADERA  OCEAN BLANCO/, or
+// public/VISTA DE PRODUCTOS/PLAYER PREMIUM/CANELA/) — one per garment
+// color, holding its own view files (frente/reverso/izquierda/derecha)
+// plus an optional "... con modelo.png". Unlike the flat blanco/negro
+// files a product may have directly in its root (still supported below
+// as the fallback for any product without color subfolders), these need
+// no color suffix in the filename — the folder itself IS the color.
 //
-// This is a GENERIC mechanism, not hardcoded to one product: for every
-// product, every one of the GARMENT_COLORS is checked against that
-// product's own subfolders, matched by the color word(s) appearing as a
-// contiguous run of whitespace-separated tokens in the folder's normalized
-// name (accent/case/whitespace-insensitive, same tolerance as everywhere
-// else in this file) — so "SUDADERA  OCEAN BLANCO" (note the real double
-// space) matches "blanco" as cleanly as a folder named just "BLANCO"
-// would. Player Premium's "Sal Marina"/"Azafran Claro" are the first
-// two-word colors this needs to match (a folder just named "SAL MARINA"),
-// which is why this checks a run of N tokens rather than a single one —
-// still whole-word-safe (never a false substring hit like "GRISALDA"
-// matching "gris"), just generalized from N=1 to N=color.split(" ").length.
-// A product with no such subfolders (i.e. every other product today) sees
-// zero behavior change: findColorSubdir simply returns null for every
-// color and the flat scan's blanco/negro result (if any) is all that's
-// used, exactly as before.
-function findColorSubdir(productDir: string, color: GarmentColor): string | null {
-  const colorTokens = color.split(" ");
-  const match = listDirs(productDir).find((e) => {
-    const tokens = normalizeName(e.name).split(" ");
-    for (let i = 0; i <= tokens.length - colorTokens.length; i++) {
-      if (colorTokens.every((t, j) => tokens[i + j] === t)) return true;
-    }
-    return false;
-  });
-  return match ? path.join(productDir, match.name) : null;
+// This DISCOVERS colors instead of checking a fixed list against them:
+// it lists every subfolder a product actually has (skipping "ejes",
+// which is reserved for the flat-file convention below) and derives each
+// one's color by stripping the product's OWN name from the folder name,
+// if present — "SUDADERA  OCEAN BLANCO" (note the real double space,
+// collapsed by normalizeName) minus "SUDADERA OCEAN" leaves "BLANCO";
+// a folder that's just the bare color word, like Player Premium's
+// "CANELA" or "SAL MARINA", doesn't start with the product name at all,
+// so the whole (normalized) folder name is used as-is. This is what
+// makes adding a new product, or a new color to an existing one, purely
+// a matter of dropping in a folder — no code change, ever, regardless of
+// how many colors a product ends up needing. A product with no color
+// subfolders at all (most of the catalog today) simply gets an empty
+// list back — zero behavior change from before.
+function listColorSubdirs(productDir: string, productNameNormalized: string): { dir: string; color: string }[] {
+  return listDirs(productDir)
+    .filter((e) => normalizeName(e.name) !== "ejes")
+    .map((e) => {
+      const normalized = normalizeName(e.name);
+      const color = normalized.startsWith(productNameNormalized)
+        ? normalized.slice(productNameNormalized.length).trim()
+        : normalized;
+      return { dir: path.join(productDir, e.name), color };
+    })
+    .filter((entry) => entry.color.length > 0);
 }
 
 // NOTE on izquierda/derecha: every real file for Sudadera Ocean (blanco,
@@ -194,29 +192,54 @@ function findMatchingDir(parentDir: string, targetName: string): string | null {
   return match ? path.join(parentDir, match.name) : null;
 }
 
-function detectView(nameUpper: string): ViewName | null {
+function detectView(nameUpper: string): { view: ViewName; stem: string } | null {
   for (const [view, stems] of VIEW_STEMS) {
-    if (stems.some((s) => nameUpper.includes(s))) return view;
+    const stem = stems.find((s) => nameUpper.includes(s));
+    if (stem) return { view, stem };
   }
   return null;
 }
 
-function detectColor(baseNoExtUpper: string): GarmentColor | null {
+// Flat-file color suffix (no per-color subfolder): the real files look
+// like "FRENTE B.png"/"FRENTE N.png"/"FRENTE AZUL.png" — a view keyword
+// plus an optional trailing color suffix. The BLANCO/NEGRO/AZUL/ROSA (or
+// English) checks below are kept verbatim from before this function
+// became fully generic, so nothing that already worked can regress; the
+// generic fallback after them is what makes any OTHER real color word
+// work too, without ever hardcoding it here.
+//
+// Whole-WORD-relative, not substring-relative: splits the name into
+// tokens first, finds the token that contains the matched view stem, and
+// only ever looks at tokens AFTER it. Two real failure modes this avoids
+// (both confirmed live, not hypothetical):
+//   1. Several stems are deliberately partial words (e.g. "REVERS" to
+//      catch both REVERSO/REVERSA, "IZQUIERD" for izquierda/izquierdo) —
+//      naively removing just the matched substring from "LIGA REVERSO"
+//      leaves a stray trailing "O", which this function would otherwise
+//      misread as its own bogus color. Removing the WHOLE token that
+//      contains the stem avoids this regardless of which partial word
+//      matched.
+//   2. A file can have a real, meaningful word BEFORE the view stem that
+//      is not a color at all (e.g. Tapete de Yoga Minsk's "FUNDA
+//      FRENTE.png", a colorless file whose "FUNDA" just describes which
+//      accessory the front-view belongs to) — only ever treating tokens
+//      AFTER the stem as color candidates means such a prefix is safely
+//      ignored, exactly like the original narrower implementation did
+//      for anything it didn't recognize (colorless, not invented).
+function detectColor(baseNoExtUpper: string, matchedStem: string): GarmentColor | null {
   if (baseNoExtUpper.includes("BLANCO") || baseNoExtUpper.includes("WHITE")) return "blanco";
   if (baseNoExtUpper.includes("NEGRO") || baseNoExtUpper.includes("BLACK")) return "negro";
-  // AZUL/ROSA: agregados para Tapete Century (sus 3 archivos reales son
-  // "FRENTE AZUL.png"/"FRENTE NEGRO.png"/"FRENTE ROSA_.png" -- sin esto,
-  // AZUL/ROSA no calzaban con ningún caso de arriba ni con el fallback de
-  // B/N de abajo, así que se trataban como "sin color" y el catch-all de
-  // colorless (ver el loop principal) le asignaba a "rosa" la MISMA foto
-  // que a "azul" -- un bug real, confirmado antes de escribir esto.
   if (baseNoExtUpper.includes("AZUL") || baseNoExtUpper.includes("BLUE")) return "azul";
   if (baseNoExtUpper.includes("ROSA") || baseNoExtUpper.includes("PINK")) return "rosa";
   const tokens = baseNoExtUpper.split(/[\s_-]+/).filter(Boolean);
-  const last = tokens[tokens.length - 1];
+  const stemTokenIndex = tokens.findIndex((t) => t.includes(matchedStem));
+  if (stemTokenIndex === -1) return null;
+  const colorTokens = tokens.slice(stemTokenIndex + 1);
+  if (colorTokens.length === 0) return null;
+  const last = colorTokens[colorTokens.length - 1];
   if (last === "B") return "blanco";
   if (last === "N") return "negro";
-  return null;
+  return colorTokens.join(" ").toLowerCase();
 }
 
 function toPublicUrl(absPath: string, publicRoot: string): string {
@@ -247,6 +270,18 @@ export function resolveProductViewAssets(
   log("Ruta que se está utilizando:", naiveAttemptedPath);
 
   const result = emptyResolvedAssets();
+
+  // Known colors = every real variant color this product has in Supabase
+  // (so a colorless flat photo still applies to every one of them,
+  // exactly like before) UNION whatever colors are actually discoverable
+  // from this product's own files/subfolders below (covers any caller
+  // that doesn't pass `variants`, and any color that has real photos but
+  // isn't a live variant yet, e.g. mid-migration).
+  const knownColors = new Set<string>();
+  for (const v of variants ?? []) {
+    const color = normalizeGarmentColorName(v.color_name);
+    if (color) knownColors.add(color);
+  }
 
   const productDir = findMatchingDir(productsRoot, product.name);
   if (!productDir) {
@@ -280,58 +315,63 @@ export function resolveProductViewAssets(
       const ext = path.extname(file).slice(1).toLowerCase();
       if (!EXTENSIONS.includes(ext)) return null;
       const baseNoExt = stripAccents(file.slice(0, file.length - ext.length - 1)).toUpperCase();
-      const view = detectView(baseNoExt);
-      if (!view) return null;
-      return { file, view, color: detectColor(baseNoExt) };
+      const detected = detectView(baseNoExt);
+      if (!detected) return null;
+      const color = detectColor(baseNoExt, detected.stem);
+      if (color) knownColors.add(color);
+      return { file, view: detected.view, color };
     })
     .filter((m): m is { file: string; view: ViewName; color: GarmentColor | null } => m !== null);
+
+  const productNameNormalized = normalizeName(product.name);
+  const colorSubdirs = listColorSubdirs(productDir, productNameNormalized);
+  for (const { color } of colorSubdirs) knownColors.add(color);
+  log("Colores detectados para este producto:", Array.from(knownColors));
 
   for (const view of VIEW_ORDER) {
     log("Vista solicitada:", view);
     const viewMatches = matches.filter((m) => m.view === view);
     const colorless = viewMatches.find((m) => m.color === null);
-    // Antes esto solo llenaba blanco/negro (ver nota arriba) -- ahora se
-    // resuelve para los 6 colores reales: detectColor solo detecta blanco/
-    // negro desde el propio nombre de archivo, así que para cualquier otro
-    // color (gris, royal, marino, rojo) "explicit" siempre es undefined y
-    // cae directo al colorless, exactamente el comportamiento que ya
-    // describía este mismo comentario ("se usa para todos los colores").
-    for (const color of GARMENT_COLORS) {
+    // Se resuelve para cada color REALMENTE detectado arriba (variantes +
+    // archivos/carpetas propias) -- nunca una lista fija: para cualquier
+    // color sin archivo explícito, "explicit" es undefined y cae directo
+    // al colorless (si existe), el mismo "se usa para todos los colores"
+    // de siempre.
+    for (const color of Array.from(knownColors)) {
       const explicit = viewMatches.find((m) => m.color === color);
       const resolved = explicit ?? colorless;
-      result[view][color] = resolved ? toPublicUrl(path.join(baseDir, resolved.file), publicRoot) : null;
+      if (resolved) {
+        result[view][color] = toPublicUrl(path.join(baseDir, resolved.file), publicRoot);
+      }
       log(`  Imagen cargada — ${view} (${color}):`, resolved ? resolved.file : "no encontrada");
     }
   }
 
-  // Per-color subfolders, if this product has them (see findColorSubdir
-  // above) — checked for EVERY color, blanco/negro included, not just the
-  // 4 that historically lacked a flat-file source. When a subfolder exists
+  // Per-color subfolders, if this product has them (see listColorSubdirs
+  // above) — checked for every discovered color. When a subfolder exists
   // for a color, it fully REPLACES whatever the flat scan found for that
-  // color (reset to null, then refilled from the subfolder) — the
-  // subfolder is the authoritative source once it exists, so a stray/
-  // stale flat-file match never lingers. Colors without a matching
-  // subfolder keep exactly whatever the flat scan above already resolved
-  // (or null, same as always).
-  for (const color of GARMENT_COLORS) {
-    const colorDir = findColorSubdir(productDir, color);
-    if (!colorDir) continue;
+  // color (deleted, then refilled from the subfolder) — the subfolder is
+  // the authoritative source once it exists, so a stray/stale flat-file
+  // match never lingers. Colors without a matching subfolder keep exactly
+  // whatever the flat scan above already resolved (or nothing, same as
+  // always).
+  for (const { dir: colorDir, color } of colorSubdirs) {
     log(`Subcarpeta de color "${color}" encontrada —`, colorDir);
     const colorFiles = listFiles(colorDir);
     log(`  archivos:`, colorFiles);
     for (const view of VIEW_ORDER) {
-      result[view][color] = null;
+      delete result[view][color];
     }
     for (const file of colorFiles) {
       const ext = path.extname(file).slice(1).toLowerCase();
       if (!EXTENSIONS.includes(ext)) continue;
       const baseNoExt = stripAccents(file.slice(0, file.length - ext.length - 1)).toUpperCase();
-      const fileView = detectView(baseNoExt);
-      if (!fileView) continue;
+      const detected = detectView(baseNoExt);
+      if (!detected) continue;
       // No remap — this color's own IZQUIERDO*/DERECHO* name already
       // matches the real side of the wearer (see the note above).
-      result[fileView][color] = toPublicUrl(path.join(colorDir, file), publicRoot);
-      log(`    Imagen cargada — ${fileView} (${color}):`, file);
+      result[detected.view][color] = toPublicUrl(path.join(colorDir, file), publicRoot);
+      log(`    Imagen cargada — ${detected.view} (${color}):`, file);
     }
   }
 
@@ -351,23 +391,29 @@ function findModeloFile(dir: string): string | null {
 }
 
 // Foto "con modelo" -- por color, cuando el producto tiene subcarpetas de
-// color (ver findColorSubdir arriba): cada subcarpeta puede traer su
+// color (ver listColorSubdirs arriba): cada subcarpeta puede traer su
 // propia "... con modelo.png" (ej. "Sudadera Ocean Blanco con modelo.png"
 // dentro de la subcarpeta de blanco), así que al elegir un color distinto
 // en la ficha del producto también cambia la foto con modelo, no solo los
 // ejes. Un archivo suelto "MODELO" directo en la raíz del producto (sin
 // subcarpeta de color) sigue funcionando igual que antes -- se usa como
 // respaldo compartido para cualquier color que no tenga su propia
-// subcarpeta o su propio archivo "con modelo". null para un color sin
-// ninguna de las dos cosas -- nunca se inventa una foto, ni se reutiliza
-// la de otro color a propósito.
+// subcarpeta o su propio archivo "con modelo". Ausente (sin entrada) para
+// un color sin ninguna de las dos cosas -- nunca se inventa una foto, ni
+// se reutiliza la de otro color a propósito.
 export function resolveProductModelShots(
   product: Pick<Product, "id" | "name">,
   variants?: ViewsVariant[]
 ): Record<GarmentColor, string | null> {
   const publicRoot = path.join(process.cwd(), "public");
   const productsRoot = path.join(publicRoot, PRODUCTS_ROOT_NAME);
-  const result = Object.fromEntries(GARMENT_COLORS.map((c) => [c, null])) as Record<GarmentColor, string | null>;
+  const result: Record<GarmentColor, string | null> = {};
+
+  const knownColors = new Set<string>();
+  for (const v of variants ?? []) {
+    const color = normalizeGarmentColorName(v.color_name);
+    if (color) knownColors.add(color);
+  }
 
   const productDir = findMatchingDir(productsRoot, product.name);
   if (!productDir) {
@@ -375,18 +421,26 @@ export function resolveProductModelShots(
     return result;
   }
 
+  const productNameNormalized = normalizeName(product.name);
+  const colorSubdirs = listColorSubdirs(productDir, productNameNormalized);
+  for (const { color } of colorSubdirs) knownColors.add(color);
+
   const rootFile = findModeloFile(productDir);
   const rootUrl = rootFile ? toPublicUrl(path.join(productDir, rootFile), publicRoot) : null;
-  for (const color of GARMENT_COLORS) result[color] = rootUrl;
+  if (rootUrl) {
+    for (const color of Array.from(knownColors)) result[color] = rootUrl;
+  }
 
-  for (const color of GARMENT_COLORS) {
-    const colorDir = findColorSubdir(productDir, color);
-    if (!colorDir) continue;
+  for (const { dir: colorDir, color } of colorSubdirs) {
     const file = findModeloFile(colorDir);
     // Subcarpeta de color encontrada -> ese color ya no depende del
     // archivo suelto de la raíz (aunque exista): usa el propio de su
-    // subcarpeta, o null si esa subcarpeta no trae uno.
-    result[color] = file ? toPublicUrl(path.join(colorDir, file), publicRoot) : null;
+    // subcarpeta, o ninguno si esa subcarpeta no trae uno.
+    if (file) {
+      result[color] = toPublicUrl(path.join(colorDir, file), publicRoot);
+    } else {
+      delete result[color];
+    }
   }
 
   applyDbModelShotOverrides(result, variants);
