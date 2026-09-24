@@ -17,32 +17,63 @@ import {
 // ve NINGÚN cambio (variant.views vacío/null dejai intacto lo que resolvió
 // el escaneo), y uno que ya migró usa la foto de la base de datos incluso
 // si por casualidad todavía existiera un archivo viejo en la carpeta.
-type ViewsVariant = Pick<ProductVariant, "color_name" | "views">;
+type ViewsVariant = Pick<ProductVariant, "id" | "color_name" | "views">;
+
+// Alias por id de variante: el escaneo de carpetas SIEMPRE resuelve por
+// GarmentColor (los 6-8 nombres reconocidos), pero un color real de
+// catálogo puede llamarse cualquier cosa ("Azul Winkle", "Gris Fito"...) y
+// normalizeGarmentColorName regresa null para esos -- sin este alias, todo
+// lo que ya resolvió el escaneo quedaba inalcanzable para esas variantes
+// (los consumidores buscan por variant.id, nunca por el nombre libre). Se
+// corre ANTES de aplicar las vistas de la base de datos, para que estas
+// puedan pisarlo variante por variante (ver charla 2026-09-23: "el
+// Frente... pero las otras no me las muestra").
+function applyVariantIdAliases(result: ResolvedProductAssets, variants: ViewsVariant[] | undefined) {
+  if (!variants) return;
+  for (const variant of variants) {
+    const color = normalizeGarmentColorName(variant.color_name);
+    if (!color) continue;
+    for (const view of VIEW_ORDER) {
+      result[view][variant.id] = result[view][color];
+    }
+  }
+}
 
 function applyDbViewOverrides(result: ResolvedProductAssets, variants: ViewsVariant[] | undefined) {
   if (!variants) return;
   for (const variant of variants) {
     if (!variant.views) continue;
     const color = normalizeGarmentColorName(variant.color_name);
-    if (!color) continue;
     for (const view of VIEW_ORDER) {
       const url = variant.views[view];
-      if (url) result[view][color] = url;
+      if (!url) continue;
+      // Por id SIEMPRE (es la llave real que usan los consumidores) y
+      // además por GarmentColor cuando el nombre calza con uno de los 6-8
+      // reconocidos (compatibilidad con quien todavía busque por ahí).
+      result[view][variant.id] = url;
+      if (color) result[view][color] = url;
     }
   }
 }
 
-function applyDbModelShotOverrides(
-  result: Record<GarmentColor, string | null>,
-  variants: ViewsVariant[] | undefined
-) {
+function applyModelShotVariantIdAliases(result: Record<string, string | null>, variants: ViewsVariant[] | undefined) {
+  if (!variants) return;
+  for (const variant of variants) {
+    const color = normalizeGarmentColorName(variant.color_name);
+    if (!color) continue;
+    result[variant.id] = result[color];
+  }
+}
+
+function applyDbModelShotOverrides(result: Record<string, string | null>, variants: ViewsVariant[] | undefined) {
   if (!variants) return;
   for (const variant of variants) {
     if (!variant.views) continue;
-    const color = normalizeGarmentColorName(variant.color_name);
-    if (!color) continue;
     const url = variant.views["conModelo"];
-    if (url) result[color] = url;
+    if (!url) continue;
+    result[variant.id] = url;
+    const color = normalizeGarmentColorName(variant.color_name);
+    if (color) result[color] = url;
   }
 }
 
@@ -298,6 +329,7 @@ export function resolveProductViewAssets(
     } else {
       log("Motivo: ni siquiera existe la carpeta raíz", productsRoot);
     }
+    applyVariantIdAliases(result, variants);
     applyDbViewOverrides(result, variants);
     return result;
   }
@@ -375,6 +407,7 @@ export function resolveProductViewAssets(
     }
   }
 
+  applyVariantIdAliases(result, variants);
   applyDbViewOverrides(result, variants);
 
   return result;
@@ -404,10 +437,10 @@ function findModeloFile(dir: string): string | null {
 export function resolveProductModelShots(
   product: Pick<Product, "id" | "name">,
   variants?: ViewsVariant[]
-): Record<GarmentColor, string | null> {
+): Record<string, string | null> {
   const publicRoot = path.join(process.cwd(), "public");
   const productsRoot = path.join(publicRoot, PRODUCTS_ROOT_NAME);
-  const result: Record<GarmentColor, string | null> = {};
+  const result: Record<string, string | null> = {};
 
   const knownColors = new Set<string>();
   for (const v of variants ?? []) {
@@ -417,6 +450,7 @@ export function resolveProductModelShots(
 
   const productDir = findMatchingDir(productsRoot, product.name);
   if (!productDir) {
+    applyModelShotVariantIdAliases(result, variants);
     applyDbModelShotOverrides(result, variants);
     return result;
   }
@@ -443,6 +477,7 @@ export function resolveProductModelShots(
     }
   }
 
+  applyModelShotVariantIdAliases(result, variants);
   applyDbModelShotOverrides(result, variants);
 
   return result;

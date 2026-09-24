@@ -207,7 +207,17 @@ export function normalizeGarmentColorName(colorName: string): GarmentColor | nul
 // as an explicit null would (every consumer only ever does a truthy
 // check), so resolveProductAssets.ts never needs to know the full set of
 // colors up front just to pre-fill nulls for the ones it doesn't have.
-export type ResolvedViewAsset = Partial<Record<GarmentColor, string | null>>;
+//
+// Keyed by GarmentColor (now a free-form normalized string, not a closed
+// list — see above) during resolution, AND aliased by variant.id in
+// resolveProductAssets.ts (applyVariantIdAliases/applyDbViewOverrides):
+// the color-name key is what folder/file scanning can actually match
+// against, but variant.id is the one truly-unique, collision-proof key
+// every consumer (ProductDetail.tsx/PersonalizerClient.tsx/
+// PreviewModal.tsx) reads by — two variants of the same product could in
+// principle normalize to the same color string (never seen in real data,
+// but not guaranteed impossible), and id never can.
+export type ResolvedViewAsset = Partial<Record<string, string | null>>;
 
 export type ResolvedProductAssets = Record<ViewName, ResolvedViewAsset>;
 
