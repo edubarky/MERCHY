@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { Product, ProductVariant, PriceTier, CartItem } from "@/types";
 import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
-import { VIEW_ORDER, normalizeGarmentColorName, type ResolvedProductAssets, type GarmentColor } from "./personalizar/types";
+import { VIEW_ORDER, type ResolvedProductAssets } from "./personalizar/types";
 import { normalizeProductKey, isGarmentProduct } from "./personalizar/printAreas";
 
 interface Props {
@@ -20,7 +20,7 @@ interface Props {
   // principal (mismo mecanismo que ya usan productos como Tapete, solo que
   // ahí viene de product_variants.images en vez de estos archivos locales).
   resolvedGallery: ResolvedProductAssets;
-  modelShots: Record<GarmentColor, string | null>;
+  modelShots: Record<string, string | null>;
 }
 
 interface Review {
@@ -952,7 +952,13 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // si existe un editable custom.
   const sizeGuideSrc = PRODUCT_SIZE_GUIDES[normalizeProductKey(product.name)] ?? DEFAULT_SIZE_GUIDE;
   const sizeGuideLabel = isGarmentProduct(product.name) ? "Guía de Tallas" : "Medidas";
-  const selectedColorKey = selectedVariant ? normalizeGarmentColorName(selectedVariant.color_name) : null;
+  // Llave real: el id de la variante, no su GarmentColor -- un color de
+  // catálogo con nombre libre ("Azul Winkle", "Gris Fito"...) no calza con
+  // ninguno de los 8 reconocidos, y resolveProductAssets.ts ya alía todo lo
+  // resuelto (escaneo de carpetas + vistas de la base de datos) a esta
+  // misma llave para cualquier variante, sin excepción (ver charla
+  // 2026-09-23: "el Frente... pero las otras no me las muestra").
+  const selectedColorKey = selectedVariant?.id ?? null;
   const ejesForColor =
     selectedColorKey && !preferRealGallery
       ? VIEW_ORDER.map((v) => resolvedGallery[v][selectedColorKey]).filter((url): url is string => !!url)

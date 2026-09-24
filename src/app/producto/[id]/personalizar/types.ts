@@ -185,7 +185,13 @@ export function normalizeGarmentColorName(colorName: string): GarmentColor | nul
   return (GARMENT_COLORS as string[]).includes(key) ? (key as GarmentColor) : null;
 }
 
-export type ResolvedViewAsset = Record<GarmentColor, string | null>;
+// Además de los 8 GarmentColor reconocidos, también se indexa por
+// variant.id -- necesario para colores de catálogo con nombre libre ("Azul
+// Winkle", "Gris Fito"...) que normalizeGarmentColorName no puede mapear a
+// ninguno de los 8 (ver resolveProductAssets.ts's applyVariantIdAliases /
+// applyDbViewOverrides, y charla 2026-09-23: "el Frente... pero las otras
+// no me las muestra").
+export type ResolvedViewAsset = Record<string, string | null>;
 
 export type ResolvedProductAssets = Record<ViewName, ResolvedViewAsset>;
 

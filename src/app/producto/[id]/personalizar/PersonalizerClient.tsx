@@ -34,7 +34,6 @@ import {
   type ViewName,
   type DesignElement,
   type ViewElements,
-  type GarmentColor,
   type ResolvedProductAssets,
 } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
@@ -504,7 +503,12 @@ export default function PersonalizerClient({
   const fallbackVariant = product.variants.find((v) => v.active) ?? product.variants[0] ?? null;
   const [activeVariantId, setActiveVariantId] = useState<string | null>(initialVariantId ?? fallbackVariant?.id ?? null);
   const activeVariant = product.variants.find((v) => v.id === activeVariantId) ?? fallbackVariant;
-  const garmentColor: GarmentColor = (activeVariant && normalizeGarmentColorName(activeVariant.color_name)) ?? "blanco";
+  // Llave real de resolvedAssets: el id de la variante activa, no su
+  // GarmentColor -- resolveProductAssets.ts ya alía todo lo resuelto a esta
+  // misma llave para cualquier color, con nombre reconocido o libre ("Azul
+  // Winkle"...). "blanco" solo como último recurso si no hay variante
+  // activa (no debería pasar en la práctica, ver charla 2026-09-23).
+  const garmentColor: string = activeVariant?.id ?? "blanco";
 
   // "Clave de diseño" -- con "Mismo diseño" (default) siempre SHARED_KEY,
   // sin importar qué color esté activo en la barra: cambiar de color ahí
@@ -569,7 +573,7 @@ export default function PersonalizerClient({
   // mistaken for a different product. VIEW_ASSETS is still used below for
   // canvas aspect-ratio only, never for its `src` or its `printArea` (print
   // area comes from printAreas.ts's per-product/per-view config now).
-  function getViewSrc(view: ViewName, color: GarmentColor): string | null {
+  function getViewSrc(view: ViewName, color: string): string | null {
     return resolvedAssets[view][color];
   }
 

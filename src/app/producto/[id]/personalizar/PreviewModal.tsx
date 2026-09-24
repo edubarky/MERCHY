@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import type { PrintTechnique } from "@/types";
-import { VIEW_ORDER, VIEW_LABELS, type ViewElements, type DesignElement, type GarmentColor, type ResolvedProductAssets } from "./types";
+import { VIEW_ORDER, VIEW_LABELS, type ViewElements, type DesignElement, type ResolvedProductAssets } from "./types";
 import { resolveFontFamilyCss } from "./textFonts";
 import { DEFAULT_FONT_SIZE_RATIO } from "./DesignElementView";
 import { needsLogoProcessing, processLogoSrc } from "./logoImagePipeline";
@@ -76,7 +76,7 @@ function MiniView({
   view: (typeof VIEW_ORDER)[number];
   elements: ViewElements;
   resolvedAssets: ResolvedProductAssets;
-  garmentColor: GarmentColor;
+  garmentColor: string;
 }) {
   // No generic-mockup fallback here either — same rule as the live canvas:
   // only ever the selected product's own photography, or nothing.
@@ -189,7 +189,7 @@ export default function PreviewModal({
   // editor).
   technique?: PrintTechnique | null;
   resolvedAssets: ResolvedProductAssets;
-  garmentColor: GarmentColor;
+  garmentColor: string;
   onConfirm?: () => void;
   confirmDisabled?: boolean;
   confirmDisabledReason?: string;
