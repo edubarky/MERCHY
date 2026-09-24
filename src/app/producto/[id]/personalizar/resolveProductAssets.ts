@@ -88,18 +88,30 @@ function applyDbModelShotOverrides(result: Record<string, string | null>, varian
 // itself IS the color.
 //
 // This is a GENERIC mechanism, not hardcoded to one product: for every
-// product, every one of the 6 GARMENT_COLORS is checked against that
-// product's own subfolders, matched by the color word appearing as its own
-// whitespace-separated token in the folder's normalized name (accent/case/
-// whitespace-insensitive, same tolerance as everywhere else in this file)
-// — so "SUDADERA  OCEAN BLANCO" (note the real double space) matches
-// "blanco" as cleanly as a folder named just "BLANCO" would. A product with
-// no such subfolders (i.e. every other product today) sees zero behavior
-// change: findColorSubdir simply returns null for all 6 colors and the
-// flat scan's blanco/negro result (if any) is all that's used, exactly as
-// before.
+// product, every one of the GARMENT_COLORS is checked against that
+// product's own subfolders, matched by the color word(s) appearing as a
+// contiguous run of whitespace-separated tokens in the folder's normalized
+// name (accent/case/whitespace-insensitive, same tolerance as everywhere
+// else in this file) — so "SUDADERA  OCEAN BLANCO" (note the real double
+// space) matches "blanco" as cleanly as a folder named just "BLANCO"
+// would. Player Premium's "Sal Marina"/"Azafran Claro" are the first
+// two-word colors this needs to match (a folder just named "SAL MARINA"),
+// which is why this checks a run of N tokens rather than a single one —
+// still whole-word-safe (never a false substring hit like "GRISALDA"
+// matching "gris"), just generalized from N=1 to N=color.split(" ").length.
+// A product with no such subfolders (i.e. every other product today) sees
+// zero behavior change: findColorSubdir simply returns null for every
+// color and the flat scan's blanco/negro result (if any) is all that's
+// used, exactly as before.
 function findColorSubdir(productDir: string, color: GarmentColor): string | null {
-  const match = listDirs(productDir).find((e) => normalizeName(e.name).split(" ").includes(color));
+  const colorTokens = color.split(" ");
+  const match = listDirs(productDir).find((e) => {
+    const tokens = normalizeName(e.name).split(" ");
+    for (let i = 0; i <= tokens.length - colorTokens.length; i++) {
+      if (colorTokens.every((t, j) => tokens[i + j] === t)) return true;
+    }
+    return false;
+  });
   return match ? path.join(productDir, match.name) : null;
 }
 

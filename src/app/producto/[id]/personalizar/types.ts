@@ -155,16 +155,66 @@ export function emptyViewElements(): ViewElements {
 // scan); "azul"/"rosa" were added for Tapete Century (its real variant
 // colors — see detectColor in resolveProductAssets.ts, which needed its
 // own explicit AZUL/ROSA check the same way it already had BLANCO/NEGRO,
-// since neither is inferred automatically). For every other product any
-// of these simply stay null, same as blanco/negro would if that product
-// had no matching photos. Widening this type does not change behavior
-// for any other product: GarmentColor is only ever the color the
-// customer already picked on the product page (see
-// normalizeGarmentColorName below) — there is no selector inside the
-// Personalizador itself.
-export type GarmentColor = "blanco" | "negro" | "royal" | "marino" | "rojo" | "gris" | "azul" | "rosa";
+// since neither is inferred automatically). The 11 colors below
+// (canela...candy) were added for Player Premium, whose 16 real
+// product_variants colors barely overlap the original 8-value palette —
+// only blanco/negro/royal/gris/rojo matched (its dark-red variant is
+// named "Rojo", reusing that existing slot — it was briefly named "Vino"
+// with its own dedicated slot, since removed once renamed back); the
+// rest ("Canela", "Matcha", "Menta", "Paprika", "Almendra", "Cactus",
+// "Sal Marina", "Olivo", "Azafran Claro", "Navy", "Candy") needed their
+// own slot, each resolved via that product's own per-color subfolder
+// (see findColorSubdir in resolveProductAssets.ts — "sal marina"/
+// "azafran claro" are the first two-word colors this matcher has seen,
+// hence the contiguous-subsequence tweak there instead of a
+// single-token check). For every other product any of these 11 simply
+// stay null, same as blanco/negro would if that product had no matching
+// photos. Widening this type does not change behavior for any other
+// product: GarmentColor is only ever the color the customer already
+// picked on the product page (see normalizeGarmentColorName below) —
+// there is no selector inside the Personalizador itself.
+export type GarmentColor =
+  | "blanco"
+  | "negro"
+  | "royal"
+  | "marino"
+  | "rojo"
+  | "gris"
+  | "azul"
+  | "rosa"
+  | "canela"
+  | "matcha"
+  | "menta"
+  | "paprika"
+  | "almendra"
+  | "cactus"
+  | "sal marina"
+  | "olivo"
+  | "azafran claro"
+  | "navy"
+  | "candy";
 
-export const GARMENT_COLORS: GarmentColor[] = ["blanco", "negro", "royal", "marino", "rojo", "gris", "azul", "rosa"];
+export const GARMENT_COLORS: GarmentColor[] = [
+  "blanco",
+  "negro",
+  "royal",
+  "marino",
+  "rojo",
+  "gris",
+  "azul",
+  "rosa",
+  "canela",
+  "matcha",
+  "menta",
+  "paprika",
+  "almendra",
+  "cactus",
+  "sal marina",
+  "olivo",
+  "azafran claro",
+  "navy",
+  "candy",
+];
 
 // Maps a real product_variants.color_name (Supabase — "Blanco", "Negro",
 // "Royal", "Marino", "Rojo " [note: has a trailing space in the real row],
@@ -196,7 +246,7 @@ export type ResolvedViewAsset = Record<string, string | null>;
 export type ResolvedProductAssets = Record<ViewName, ResolvedViewAsset>;
 
 function emptyResolvedViewAsset(): ResolvedViewAsset {
-  return { blanco: null, negro: null, royal: null, marino: null, rojo: null, gris: null, azul: null, rosa: null };
+  return Object.fromEntries(GARMENT_COLORS.map((c) => [c, null])) as ResolvedViewAsset;
 }
 
 export function emptyResolvedAssets(): ResolvedProductAssets {
