@@ -426,7 +426,6 @@ export default function DesignElementView({
           throttleResize={0}
           throttleRotate={0}
           snappable
-          snapCenter
           // Oculta el punto rojo del centro (el pivote de rotación de
           // react-moveable) — no cumple ninguna función aquí, la rotación
           // ya se hace con el manijo de arriba (ver charla 2026-09-10:
