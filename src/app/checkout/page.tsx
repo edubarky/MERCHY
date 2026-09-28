@@ -828,8 +828,11 @@ export default function CheckoutPage() {
                             formato que ya usa CotizacionDoc.tsx. Sin snapshot (renglones
                             guardados antes de este campo) cae al nombre solo. */}
                         {(item.customization_snapshot?.selected_techniques ?? []).length > 0 ? (
-                          item.customization_snapshot!.selected_techniques!.map((t) => (
-                            <p key={t.technique_id} className="truncate text-ui-gray">
+                          item.customization_snapshot!.selected_techniques!.map((t, i) => (
+                            // Llave con vista incluida -- una misma técnica
+                            // puede repetirse en varias vistas de un mismo
+                            // renglón (ver charla 2026-09-25).
+                            <p key={`${t.technique_id}-${t.view ?? i}`} className="truncate text-ui-gray">
                               Impresión: {t.technique_name}
                               {t.positions?.length ? ` · ${t.positions.join(", ")}` : ""}
                               {t.tintas ? ` · ${t.tintas} ${t.tintas === 1 ? "tinta" : "tintas"}` : ""}

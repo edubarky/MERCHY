@@ -188,7 +188,12 @@ export function formatMXN(amount: number): string {
 // Solo se puede recalcular con seguridad la técnica que coincide con
 // item.technique (la única de la que se guarda price_table completo hoy,
 // ver CartItem) -- cualquier otra conserva su precio ya guardado tal cual
-// en vez de arriesgar un número inventado.
+// en vez de arriesgar un número inventado. Desde "1 técnica por Vista"
+// (charla 2026-09-25) un mismo renglón puede traer varias técnicas (una
+// por vista) -- item.num_elements/num_logo_elements son del renglón
+// ENTERO, ya no de una sola vista, así que by_qty/by_tintas tampoco se
+// recalculan con precisión en cuanto hay más de una técnica en el mismo
+// renglón (mismo criterio de "conservar el precio ya guardado").
 export function recomputeCartItemUnitPrice(
   item: CartItem,
   newQty: number,
@@ -218,10 +223,22 @@ export function recomputeCartItemUnitPrice(
       if (t.unit_price == null) needsQuote = true;
       continue;
     }
-    if (technique.pricing_type === "by_qty") {
+    if (technique.pricing_type === "by_qty" && techniques.length > 1) {
+      // item.num_elements es el total de TODO el renglón (todas las
+      // vistas, ver charla 2026-09-25: "1 técnica por Vista") -- ya no es
+      // exacto para ESTA técnica en particular en cuanto hay más de una
+      // vista/técnica en el mismo renglón. Se conserva su precio ya
+      // guardado en vez de inventar un número (mismo criterio que la
+      // técnica "no primaria" más arriba).
+      techniqueTotal += t.unit_price ?? 0;
+    } else if (technique.pricing_type === "by_qty") {
       const price = findQtyPrice(technique, newQty);
       if (price === null) { needsQuote = true; continue; }
       techniqueTotal += price * item.num_elements;
+    } else if (technique.pricing_type === "by_tintas" && techniques.length > 1) {
+      // Mismo motivo que by_qty arriba -- item.num_logo_elements es el
+      // total de todo el renglón, no de esta vista sola.
+      techniqueTotal += t.unit_price ?? 0;
     } else if (technique.pricing_type === "by_tintas") {
       const posiciones = item.num_logo_elements ?? 0;
       if (!t.tintas || posiciones === 0) { techniqueTotal += t.unit_price ?? 0; continue; }

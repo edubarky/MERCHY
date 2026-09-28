@@ -133,6 +133,15 @@ export interface CustomizationElement {
 export interface SelectedTechniqueDetail {
   technique_id: string;
   technique_name: string;
+  // Vista a la que aplica ESTA técnica (ver charla 2026-09-25: "solo 1
+  // técnica por Vista" -- cada vista con diseño elige la suya, así que un
+  // renglón de `selected_techniques` ahora representa "una técnica en una
+  // vista", no "una técnica para todo el producto"). `view` es el nombre
+  // interno (ViewName, ver personalizar/types.ts), `view_label` el mismo
+  // texto ya usado en `positions` (Frente/Reverso/...), para no depender de
+  // ViewName fuera del Personalizador.
+  view?: string;
+  view_label?: string;
   tintas?: number;
   logo_sizes?: Record<string, string>; // elementId -> "5x5" | "10x10" | "20x20" ya redondeado (solo pricing_type "by_size")
   // "positions" ya NO se escribe a mano -- son los ejes

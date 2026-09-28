@@ -161,8 +161,11 @@ export default function CotizacionDoc({
                           <td style={{ padding: "1px 0" }}>Producto</td>
                           <td style={{ padding: "1px 0", textAlign: "right" }}>{formatMXN(garmentUnit)}</td>
                         </tr>
-                        {(item.customization_snapshot?.selected_techniques ?? []).map((t) => (
-                          <tr key={t.technique_id} className="text-xs text-ui-gray">
+                        {(item.customization_snapshot?.selected_techniques ?? []).map((t, i) => (
+                          // Llave con vista incluida -- una misma técnica
+                          // puede repetirse en varias vistas de un mismo
+                          // renglón (ver charla 2026-09-25).
+                          <tr key={`${t.technique_id}-${t.view ?? i}`} className="text-xs text-ui-gray">
                             <td style={{ padding: "1px 0" }}>
                               {t.technique_name}
                               {t.positions?.length ? ` · ${t.positions.join(", ")}` : ""}

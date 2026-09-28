@@ -430,9 +430,17 @@ export default function CarritoPage() {
                           <span>Producto</span>
                           <span>{formatMXN(garmentUnit)}</span>
                         </div>
-                        {(item.customization_snapshot?.selected_techniques ?? []).map((t) => (
-                          <div key={t.technique_id} className="flex justify-between">
-                            <span className="truncate pr-2">{t.technique_name}</span>
+                        {(item.customization_snapshot?.selected_techniques ?? []).map((t, i) => (
+                          // Llave con vista incluida (no solo technique_id) --
+                          // ahora una misma técnica puede repetirse en varias
+                          // vistas de un mismo renglón (ver charla 2026-09-25:
+                          // "1 técnica por Vista"), technique_id solo ya no es
+                          // único aquí.
+                          <div key={`${t.technique_id}-${t.view ?? i}`} className="flex justify-between">
+                            <span className="truncate pr-2">
+                              {t.technique_name}
+                              {t.view_label ? ` · ${t.view_label}` : ""}
+                            </span>
                             <span className="shrink-0">{t.needs_quote || t.unit_price == null ? "Por cotizar" : formatMXN(t.unit_price)}</span>
                           </div>
                         ))}
