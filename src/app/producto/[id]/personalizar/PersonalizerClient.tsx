@@ -889,7 +889,24 @@ export default function PersonalizerClient({
         }
       }
 
-      // Sin imagen real en el portapapeles del SO -- si el usuario copió un
+      // Texto real del portapapeles del SO (copiado de otra página, Word,
+      // etc.) -- antes no se revisaba nada de esto, así que un Ctrl+V con
+      // texto de verdad caía derecho al "pega el último elemento copiado
+      // DENTRO del lienzo" de abajo: si alguna vez se había copiado una
+      // imagen del lienzo con Ctrl+C, pegar texto volvía a poner ESA
+      // imagen en vez del texto (bug real reportado, ver charla
+      // 2026-10-06: "estoy copiando y pegando un texto... y me pega otra
+      // imagen"). El texto real del SO manda sobre copiedElementRef --
+      // ese es solo el atajo para duplicar dentro del lienzo, no lo
+      // último que el usuario copió de verdad.
+      const text = e.clipboardData?.getData("text/plain")?.trim();
+      if (text) {
+        e.preventDefault();
+        handleAddText(text);
+        return;
+      }
+
+      // Sin imagen ni texto real en el portapapeles del SO -- si el usuario copió un
       // elemento del propio lienzo con Ctrl/Cmd+C (ver onKeyDown arriba),
       // este es el Ctrl/Cmd+V que lo pega: una copia nueva en la vista
       // activa ahora mismo (puede ser otra distinta a la que tenía cuando
@@ -1035,7 +1052,7 @@ export default function PersonalizerClient({
     await placeUploadedFile(file);
   }
 
-  function handleAddText() {
+  function handleAddText(text: string = "Tu texto aquí") {
     const z = zCounter + 1;
     setZCounter(z);
     const pa = getPrintArea(product.name, activeView);
@@ -1050,7 +1067,7 @@ export default function PersonalizerClient({
       id: uid(),
       type: "text",
       view: activeView,
-      text: "Tu texto aquí",
+      text,
       fontFamily: "DM Sans",
       fontSizePx: DEFAULT_FONT_SIZE_PX,
       color: "#1a1a1a",
@@ -1907,7 +1924,7 @@ export default function PersonalizerClient({
           <div className="relative flex justify-center">
             {/* Barra de herramientas flotante */}
             <div className="absolute left-3 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-3">
-              <ToolDockButton label="Texto" onClick={handleAddText}>
+              <ToolDockButton label="Texto" onClick={() => handleAddText()}>
                 <TextToolIcon className="h-5 w-5" />
               </ToolDockButton>
               <ToolDockButton label="Imagen" onClick={() => fileInputRef.current?.click()}>
@@ -2198,7 +2215,7 @@ export default function PersonalizerClient({
               </button>
               <button
                 type="button"
-                onClick={handleAddText}
+                onClick={() => handleAddText()}
                 className="group flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-ui-border px-2 text-center text-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5"
               >
                 <TextToolIcon className="h-5 w-5 shrink-0 text-ui-gray transition-colors duration-200 ease-out group-hover:text-primary" />
