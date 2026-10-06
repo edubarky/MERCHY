@@ -23,6 +23,11 @@ interface CartContextValue {
   // cierra entre una y otra.
   upsertItemSync: (item: CartItem, removeId?: string) => void;
   removeItem: (id: string) => void;
+  // Sustituye TODO el carrito de un golpe -- usado al abrir un link de
+  // "Compartir con mi cliente" (ver /carrito) para cargar exactamente el
+  // carrito que alguien más armó, en vez de ir agregando renglón por
+  // renglón encima de lo que ya hubiera.
+  replaceAll: (items: CartItem[]) => void;
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
@@ -141,6 +146,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  function replaceAll(newItems: CartItem[]) {
+    setItems(newItems);
+  }
+
   function clearCart() {
     setItems([]);
   }
@@ -150,7 +159,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const total = subtotal;
 
   return (
-    <CartContext.Provider value={{ items, addItem, upsertItem, upsertItemSync, removeItem, clearCart, totalItems, subtotal, total, justAdded, hydrated }}>
+    <CartContext.Provider value={{ items, addItem, upsertItem, upsertItemSync, removeItem, replaceAll, clearCart, totalItems, subtotal, total, justAdded, hydrated }}>
       {children}
     </CartContext.Provider>
   );

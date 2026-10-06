@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
 import PublicHeader from "@/components/PublicHeader";
@@ -41,6 +42,25 @@ function ChevronIcon({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function ShareIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="15" cy="5" r="2.2" />
+      <circle cx="5" cy="10" r="2.2" />
+      <circle cx="15" cy="15" r="2.2" />
+      <path d="m7 8.8 6-2.6M7 11.2l6 2.6" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 10.5 8 14l8-8" />
     </svg>
   );
 }
@@ -89,12 +109,61 @@ function generateCotizacionNumber() {
   return `COT-${y}${m}${d}-${rand}`;
 }
 
-export default function CarritoPage() {
-  const { items, removeItem, upsertItem, totalItems, total } = useCart();
+function CarritoPageInner() {
+  const { items, removeItem, upsertItem, replaceAll, totalItems, total } = useCart();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
   const [desgloseOpen, setDesgloseOpen] = useState(false);
   const [qtyErrors, setQtyErrors] = useState<Record<string, string>>({});
   const [downloadingCotizacion, setDownloadingCotizacion] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [loadingSharedCart, setLoadingSharedCart] = useState(false);
+
+  // Link de "Compartir con mi cliente" (?compartido=<id>, ver
+  // handleCompartir) -- carga ese carrito exacto en este navegador y
+  // limpia el query param para que recargar la página después no lo
+  // vuelva a sustituir solo (mismo criterio que ?propuesta= en ONPOINT).
+  useEffect(() => {
+    const sharedId = searchParams.get("compartido");
+    if (!sharedId) return;
+    setLoadingSharedCart(true);
+    const supabase = createClient();
+    supabase
+      .from("shared_carts")
+      .select("items")
+      .eq("id", sharedId)
+      .single()
+      .then(({ data, error }) => {
+        if (!error && data?.items) replaceAll(data.items as CartItem[]);
+        setLoadingSharedCart(false);
+        router.replace("/carrito");
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Guarda una copia del carrito actual y copia el link al portapapeles --
+  // quien lo abra ve exactamente este mismo carrito (mismos productos,
+  // colores, tallas, logos ya subidos) y puede completar su pago desde ahí
+  // sin tener que armar nada de nuevo (ver charla 2026-10-05).
+  async function handleCompartir() {
+    if (!items.length || sharing) return;
+    setSharing(true);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.from("shared_carts").insert({ items }).select("id").single();
+      if (error || !data) throw new Error(error?.message ?? "No se pudo crear el link.");
+      const url = `${window.location.origin}/carrito?compartido=${data.id}`;
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 3000);
+    } catch {
+      window.alert("No se pudo generar el link para compartir. Intenta de nuevo.");
+    } finally {
+      setSharing(false);
+    }
+  }
   const cotizacionRef = useRef<HTMLDivElement>(null);
   // Una sola vez por visita al carrito (no en cada re-render) -- lazy
   // initializer de useState, mismo criterio que cualquier valor que deba
@@ -252,7 +321,12 @@ export default function CarritoPage() {
       <div className="mx-auto max-w-4xl px-6 py-12">
         <h1 className="font-display text-3xl font-bold text-foreground">Tu carrito</h1>
 
-        {items.length === 0 ? (
+        {loadingSharedCart ? (
+          <div className="mt-16 flex flex-col items-center text-center">
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-ui-border border-t-primary" />
+            <p className="mt-4 text-sm text-ui-gray">Cargando el carrito que te compartieron...</p>
+          </div>
+        ) : items.length === 0 ? (
           <div className="mt-16 flex flex-col items-center text-center">
             <CartEmptyIcon className="mb-5 h-16 w-16 text-ui-gray" />
             <p className="text-lg font-semibold text-foreground">Tu carrito está vacío</p>
@@ -475,6 +549,25 @@ export default function CarritoPage() {
 
               <button
                 type="button"
+                onClick={handleCompartir}
+                disabled={sharing}
+                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full border-2 border-ui-border text-sm font-semibold text-foreground transition-all duration-180 ease-out hover:-translate-y-0.5 hover:border-primary disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+              >
+                {shareCopied ? (
+                  <>
+                    <CheckIcon className="h-4 w-4 text-primary" />
+                    ¡Enlace copiado!
+                  </>
+                ) : (
+                  <>
+                    <ShareIcon className="h-4 w-4" />
+                    {sharing ? "Generando enlace..." : "Compartir con mi cliente"}
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
                 onClick={handleDescargarCotizacion}
                 disabled={downloadingCotizacion}
                 className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full border-2 border-ui-border text-sm font-semibold text-foreground transition-all duration-180 ease-out hover:-translate-y-0.5 hover:border-primary disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
@@ -524,5 +617,13 @@ export default function CarritoPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function CarritoPage() {
+  return (
+    <Suspense>
+      <CarritoPageInner />
+    </Suspense>
   );
 }
