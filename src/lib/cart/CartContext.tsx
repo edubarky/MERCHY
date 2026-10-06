@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { deleteSavedLogoByUrl } from "@/lib/artLibrary/ArtLibraryContext";
 
 const STORAGE_KEY = "merchy_cart_v1";
+const SHARED_FLAG_KEY = "merchy_cart_is_shared";
 
 interface CartContextValue {
   items: CartItem[];
@@ -23,11 +24,15 @@ interface CartContextValue {
   // cierra entre una y otra.
   upsertItemSync: (item: CartItem, removeId?: string) => void;
   removeItem: (id: string) => void;
-  // Sustituye TODO el carrito de un golpe -- usado al abrir un link de
-  // "Compartir con mi cliente" (ver /carrito) para cargar exactamente el
-  // carrito que alguien más armó, en vez de ir agregando renglón por
-  // renglón encima de lo que ya hubiera.
+  // Sustituye TODO el carrito de un golpe -- usado al abrir un link
+  // "Compartir Link" (ver /carrito) para cargar exactamente el carrito que
+  // alguien más armó, en vez de ir agregando renglón por renglón encima de
+  // lo que ya hubiera. Marca isSharedCart=true -- ese carrito YA es un
+  // link compartido, así que /carrito oculta el botón de compartir de
+  // nuevo (ver charla 2026-10-05: "ya no debería aparecer... pq ya está en
+  // ese link").
   replaceAll: (items: CartItem[]) => void;
+  isSharedCart: boolean;
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
@@ -47,12 +52,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [isSharedCart, setIsSharedCart] = useState(false);
   const supabaseRef = useRef(createClient());
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) setItems(JSON.parse(raw));
+      setIsSharedCart(localStorage.getItem(SHARED_FLAG_KEY) === "1");
     } catch {
       // localStorage unavailable or corrupted payload — start from an empty cart
     }
@@ -148,10 +155,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   function replaceAll(newItems: CartItem[]) {
     setItems(newItems);
+    setIsSharedCart(true);
+    try {
+      localStorage.setItem(SHARED_FLAG_KEY, "1");
+    } catch {
+      // ver upsertItem -- no debe romper nada si storage no está disponible
+    }
   }
 
   function clearCart() {
     setItems([]);
+    setIsSharedCart(false);
+    try {
+      localStorage.removeItem(SHARED_FLAG_KEY);
+    } catch {
+      // ver upsertItem
+    }
   }
 
   const totalItems = items.reduce((sum, i) => sum + i.total_quantity, 0);
@@ -159,7 +178,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const total = subtotal;
 
   return (
-    <CartContext.Provider value={{ items, addItem, upsertItem, upsertItemSync, removeItem, replaceAll, clearCart, totalItems, subtotal, total, justAdded, hydrated }}>
+    <CartContext.Provider value={{ items, addItem, upsertItem, upsertItemSync, removeItem, replaceAll, isSharedCart, clearCart, totalItems, subtotal, total, justAdded, hydrated }}>
       {children}
     </CartContext.Provider>
   );

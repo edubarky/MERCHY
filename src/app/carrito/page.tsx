@@ -110,7 +110,7 @@ function generateCotizacionNumber() {
 }
 
 function CarritoPageInner() {
-  const { items, removeItem, upsertItem, replaceAll, totalItems, total } = useCart();
+  const { items, removeItem, upsertItem, replaceAll, isSharedCart, totalItems, total } = useCart();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
@@ -390,6 +390,11 @@ function CarritoPageInner() {
                               <p className="text-xs font-semibold text-foreground">
                                 {v.color_name} <span className="font-normal text-ui-gray">· {v.qty} pzas</span>
                               </p>
+                              {sizes.length > 0 && Object.values(v.sizes_breakdown).reduce((s, q) => s + q, 0) === 0 && v.qty > 0 && (
+                                <p className="mt-1 text-[11px] font-semibold text-accent-coral">
+                                  Faltan repartir las {v.qty} pzas por talla -- usa los + de abajo.
+                                </p>
+                              )}
                               <div className="mt-1.5 flex flex-wrap gap-1.5">
                                 {sizes.map((size) => {
                                   const qty = v.sizes_breakdown[size] ?? 0;
@@ -547,24 +552,26 @@ function CarritoPageInner() {
                 <span className="text-xl font-bold text-foreground">{formatMXN(total)} MXN</span>
               </div>
 
-              <button
-                type="button"
-                onClick={handleCompartir}
-                disabled={sharing}
-                className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full border-2 border-ui-border text-sm font-semibold text-foreground transition-all duration-180 ease-out hover:-translate-y-0.5 hover:border-primary disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-              >
-                {shareCopied ? (
-                  <>
-                    <CheckIcon className="h-4 w-4 text-primary" />
-                    ¡Enlace copiado!
-                  </>
-                ) : (
-                  <>
-                    <ShareIcon className="h-4 w-4" />
-                    {sharing ? "Generando enlace..." : "Compartir con mi cliente"}
-                  </>
-                )}
-              </button>
+              {!isSharedCart && (
+                <button
+                  type="button"
+                  onClick={handleCompartir}
+                  disabled={sharing}
+                  className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full border-2 border-ui-border text-sm font-semibold text-foreground transition-all duration-180 ease-out hover:-translate-y-0.5 hover:border-primary disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                >
+                  {shareCopied ? (
+                    <>
+                      <CheckIcon className="h-4 w-4 text-primary" />
+                      ¡Enlace copiado!
+                    </>
+                  ) : (
+                    <>
+                      <ShareIcon className="h-4 w-4" />
+                      {sharing ? "Generando enlace..." : "Compartir Link"}
+                    </>
+                  )}
+                </button>
+              )}
 
               <button
                 type="button"
