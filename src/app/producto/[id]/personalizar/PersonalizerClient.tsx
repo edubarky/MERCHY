@@ -579,6 +579,14 @@ export default function PersonalizerClient({
   // de React state a propósito: copiar/pegar no debe generar historial de
   // undo por sí solo, solo el pegado (que sí crea un elemento real).
   const copiedElementRef = useRef<DesignElement | null>(null);
+  // Cuándo se hizo ese Ctrl+C -- un Ctrl+V que llega poco después (ver
+  // COPIED_ELEMENT_PRIORITY_MS) gana sobre lo que haya en el portapapeles
+  // real del sistema operativo, aunque éste tenga una imagen (ej. un
+  // screenshot viejo tomado fuera del navegador) -- sin esto, copiar un
+  // elemento del lienzo y pegarlo de inmediato pegaba esa imagen vieja en
+  // vez de duplicar el elemento (bug real, ver charla 2026-10-06: "quiero
+  // copiar y pegar el texto Essen 2026... y me pega" la captura de pantalla).
+  const copiedElementAtRef = useRef(0);
 
   // No shared generic mockup fallback here on purpose: the Personalizador
   // must only ever show the actual selected product's own photography, per
@@ -842,6 +850,7 @@ export default function PersonalizerClient({
         const el = elementsRef.current[designKeyRef.current][activeView].find((item) => item.id === selectedId);
         if (el) {
           copiedElementRef.current = el;
+          copiedElementAtRef.current = Date.now();
           e.preventDefault();
         }
       }
@@ -874,6 +883,39 @@ export default function PersonalizerClient({
           (target.tagName === "INPUT" && (target as HTMLInputElement).type === "text"));
       if (isTypingFreeText) return;
 
+      // Pega una copia del elemento que se marcó con Ctrl/Cmd+C (ver
+      // onKeyDown) -- una copia nueva en la vista activa ahora mismo
+      // (puede ser otra distinta a la que tenía cuando se copió), con su
+      // propio id y ligeramente desplazada para que no quede exactamente
+      // encima del original.
+      function pasteCopiedElement(): boolean {
+        const copied = copiedElementRef.current;
+        if (!copied) return false;
+        e.preventDefault();
+        const z = zCounter + 1;
+        setZCounter(z);
+        addElement({
+          ...copied,
+          id: uid(),
+          view: activeView,
+          xPct: Math.min(copied.xPct + 4, 100 - copied.widthPct),
+          yPct: Math.min(copied.yPct + 4, 100 - copied.heightPct),
+          zIndex: z,
+        });
+        return true;
+      }
+
+      // Si el Ctrl+C de un elemento del lienzo pasó hace poco, gana sobre
+      // lo que haya en el portapapeles real del sistema operativo -- sin
+      // esto, copiar un elemento y pegarlo de inmediato podía pegar en su
+      // lugar una imagen vieja que ya estuviera en el portapapeles del SO
+      // (ej. un screenshot tomado fuera del navegador), porque Ctrl+C
+      // DENTRO del lienzo nunca toca el portapapeles real del SO, solo
+      // esta referencia local (ver charla 2026-10-06: "quiero copiar y
+      // pegar el texto Essen 2026... y me pega" otra cosa).
+      const COPIED_ELEMENT_PRIORITY_MS = 15000;
+      if (Date.now() - copiedElementAtRef.current < COPIED_ELEMENT_PRIORITY_MS && pasteCopiedElement()) return;
+
       const items = e.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
@@ -896,9 +938,7 @@ export default function PersonalizerClient({
       // imagen del lienzo con Ctrl+C, pegar texto volvía a poner ESA
       // imagen en vez del texto (bug real reportado, ver charla
       // 2026-10-06: "estoy copiando y pegando un texto... y me pega otra
-      // imagen"). El texto real del SO manda sobre copiedElementRef --
-      // ese es solo el atajo para duplicar dentro del lienzo, no lo
-      // último que el usuario copió de verdad.
+      // imagen").
       const text = e.clipboardData?.getData("text/plain")?.trim();
       if (text) {
         e.preventDefault();
@@ -906,26 +946,10 @@ export default function PersonalizerClient({
         return;
       }
 
-      // Sin imagen ni texto real en el portapapeles del SO -- si el usuario copió un
-      // elemento del propio lienzo con Ctrl/Cmd+C (ver onKeyDown arriba),
-      // este es el Ctrl/Cmd+V que lo pega: una copia nueva en la vista
-      // activa ahora mismo (puede ser otra distinta a la que tenía cuando
-      // se copió), con su propio id y ligeramente desplazada para que no
-      // quede exactamente encima del original.
-      const copied = copiedElementRef.current;
-      if (copied) {
-        e.preventDefault();
-        const z = zCounter + 1;
-        setZCounter(z);
-        addElement({
-          ...copied,
-          id: uid(),
-          view: activeView,
-          xPct: Math.min(copied.xPct + 4, 100 - copied.widthPct),
-          yPct: Math.min(copied.yPct + 4, 100 - copied.heightPct),
-          zIndex: z,
-        });
-      }
+      // Sin nada fresco que priorizar -- si de todos modos hay ALGO
+      // copiado del lienzo (aunque ya pasaron los 15s), se pega igual,
+      // mejor que no hacer nada.
+      pasteCopiedElement();
     }
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
