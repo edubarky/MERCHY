@@ -1511,10 +1511,21 @@ export default function PersonalizerClient({
 
   function buildCartItem(id: string, canvasDataUrl: string): CartItem {
     const variant = activeVariant ?? product.variants.find((v) => v.active) ?? product.variants[0];
+    // Sin sourceVariantsItem (debería ser rarísimo ahora que ProductDetail
+    // ya no deja entrar aquí sin tallas repartidas, ver canPersonalize) --
+    // si de todos modos pasa (ej. link directo al Personalizador), reparte
+    // `quantity` parejo entre las tallas reales del producto en vez de
+    // sizes_breakdown:{} fijo. Un total sin repartir quedaba "pegado" para
+    // siempre: cada guardado posterior reusaba ese mismo {} vacío (ver
+    // charla 2026-10-05, mismo reparto que ya usa ProductDetail.setMainQuantity).
+    const fallbackSizes = product.sizes_available;
+    const base = fallbackSizes.length ? Math.floor(quantity / fallbackSizes.length) : 0;
+    const remainder = fallbackSizes.length ? quantity % fallbackSizes.length : 0;
+    const fallbackBreakdown = Object.fromEntries(fallbackSizes.map((size, i) => [size, base + (i < remainder ? 1 : 0)]));
     const variantsForItem = sourceVariantsItem?.variants.length
       ? sourceVariantsItem.variants
       : variant
-      ? [{ variant_id: variant.id, color_name: variant.color_name, color_hex: variant.color_hex, qty: quantity, sizes_breakdown: {} }]
+      ? [{ variant_id: variant.id, color_name: variant.color_name, color_hex: variant.color_hex, qty: quantity, sizes_breakdown: fallbackBreakdown }]
       : [];
     const totalQty = sourceVariantsItem?.total_quantity ?? quantity;
     const slots = computeAllViewPricing();

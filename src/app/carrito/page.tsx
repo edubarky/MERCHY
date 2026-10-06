@@ -342,7 +342,15 @@ function CarritoPageInner() {
           <div className="mt-8 flex flex-col gap-8 lg:flex-row lg:items-start">
             <div className="flex-1 space-y-4">
               {items.map((item) => {
-                const thumb = item.customization_snapshot?.canvas_data_url || item.product.variants?.[0]?.images?.[0];
+                // Si no hay canvas_data_url (ej. la fila se guardó por el
+                // listener de pagehide, sin captura -- ver PersonalizerClient),
+                // antes caía a product.variants[0] (el PRIMER color del
+                // catálogo, por orden, sin relación con el color elegido) --
+                // podía mostrar una prenda negra en un renglón marcado
+                // "Blanco" (ver charla 2026-10-05). Ahora busca primero la
+                // foto del color que de verdad está en este renglón.
+                const ownVariantPhoto = item.product.variants?.find((pv) => pv.id === item.variants[0]?.variant_id)?.images?.[0];
+                const thumb = item.customization_snapshot?.canvas_data_url || ownVariantPhoto || item.product.variants?.[0]?.images?.[0];
                 const href = editarHref(item);
                 const sizes = item.product.sizes_available;
                 return (

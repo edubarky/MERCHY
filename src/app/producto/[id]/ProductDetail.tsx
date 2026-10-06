@@ -1226,7 +1226,16 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // sola talla Y un solo color activo (el caso original que se pidió
   // ocultar) sigue sin mostrar nada -- el stepper de arriba ya alcanza.
   const showSizes = sizes.length > 1 || activeSections.length > 1;
-  const canPersonalize = true;
+  // Antes siempre true -- dejaba entrar al Personalizador sin haber
+  // repartido ninguna talla (sizeSum=0). En ese momento no existe fila
+  // "en curso" en el carrito (ver el efecto de sync de abajo, que BORRA
+  // la fila si sizeSum<=0), así que sourceVariantsItem en PersonalizerClient
+  // no encuentra nada y cae a su fallback de sizes_breakdown:{} -- esa
+  // fila corrupta se queda para siempre, aunque el diseño sí se guarde
+  // bien (son campos distintos). Mismo criterio que ya usa "Agregar al
+  // carrito" (ver canPersonalize más abajo, charla 2026-10-05: "cuando le
+  // doy atrás no tiene guardada la distribución de tallas").
+  const canPersonalize = sizeSum > 0;
   function incrementMainQuantity() {
     const target = activeSections[0];
     if (!target) return;
@@ -1358,6 +1367,12 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   function handlePersonalizeClick(e: React.MouseEvent) {
     e.preventDefault();
     if (!canPersonalize || personalizeAnimating) return;
+    // Guarda la fila YA, aquí mismo -- no esperar al efecto con debounce
+    // (más abajo) que normalmente la escribe solo, por si el clic llega
+    // antes de que ese debounce dispare. Sin esto, el Personalizador
+    // podía montar sin encontrar sourceVariantsItem y caer a su fallback
+    // sin tallas (ver charla 2026-10-05).
+    upsertItem(buildDraftCartItem());
     setPersonalizeAnimating(true);
     window.setTimeout(() => {
       setPersonalizeAnimating(false);
