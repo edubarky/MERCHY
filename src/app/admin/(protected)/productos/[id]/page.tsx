@@ -42,7 +42,7 @@ export default function EditProductoPage() {
         supabase.from("products").select("*, category:categories(id,name), supplier:suppliers(id,name)").eq("id", id).single(),
         supabase.from("categories").select("id, name").eq("active", true).order("sort_order"),
         supabase.from("suppliers").select("id, name").eq("active", true).order("name"),
-        supabase.from("product_variants").select("*").eq("product_id", id).order("created_at"),
+        supabase.from("product_variants").select("*").eq("product_id", id).order("sort_order").order("created_at"),
         supabase.from("print_techniques").select("*").order("sort_order"),
         supabase.from("product_print_techniques").select("technique_id").eq("product_id", id),
       ]);
@@ -104,6 +104,21 @@ export default function EditProductoPage() {
   async function toggleVariantActive(variantId: string, active: boolean) {
     await supabase.from("product_variants").update({ active: !active }).eq("id", variantId);
     setVariants((prev) => prev.map((v) => v.id === variantId ? { ...v, active: !active } : v));
+  }
+
+  // Portada del producto: qué color aparece primero en la tarjeta del
+  // catálogo (ver charla 2026-10-09, "¿cómo escojo la portada?"). Un
+  // sort_order menor que el de todos los demás basta -- no hace falta
+  // renumerar la lista completa cada vez.
+  async function makeVariantCover(variantId: string) {
+    const minOrder = Math.min(...variants.map((v) => v.sort_order ?? 0));
+    const newOrder = minOrder - 1;
+    await supabase.from("product_variants").update({ sort_order: newOrder }).eq("id", variantId);
+    setVariants((prev) =>
+      prev
+        .map((v) => (v.id === variantId ? { ...v, sort_order: newOrder } : v))
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.created_at.localeCompare(b.created_at))
+    );
   }
 
   function startEditVariant(v: any) {
@@ -228,7 +243,7 @@ export default function EditProductoPage() {
       {tab === "variantes" && (
         <div className="space-y-4">
           {/* Existing variants */}
-          {variants.map((v) => (
+          {variants.map((v, variantIdx) => (
             <AdminCard key={v.id} className="p-4">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full border-2 border-white shadow flex-shrink-0 mt-0.5" style={{ backgroundColor: v.color_hex }} />
@@ -237,6 +252,7 @@ export default function EditProductoPage() {
                     <span className="font-semibold text-sm">{v.color_name}</span>
                     <span className="font-mono text-xs text-ui-gray bg-gray-100 px-2 py-0.5 rounded">{v.sku}</span>
                     {!v.active && <Badge color="#9CA3AF">Inactivo</Badge>}
+                    {variantIdx === 0 && <Badge color="#30BE52">Portada</Badge>}
                   </div>
                   <p className="text-xs text-ui-gray mb-3">
                     {v.stock_infinite ? "Stock infinito" : `${v.stock} unidades`}
@@ -283,6 +299,9 @@ export default function EditProductoPage() {
                   )}
                 </div>
                 <div className="flex flex-col gap-1">
+                  {variantIdx !== 0 && (
+                    <Btn variant="secondary" size="sm" onClick={() => makeVariantCover(v.id)}>Usar como portada</Btn>
+                  )}
                   <Btn variant="secondary" size="sm" onClick={() => startEditVariant(v)}>Editar</Btn>
                   <Btn variant="ghost" size="sm" onClick={() => toggleVariantActive(v.id, v.active)}>
                     {v.active ? "Desactivar" : "Activar"}

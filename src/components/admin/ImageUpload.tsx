@@ -68,20 +68,48 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
       .eq("id", variantId);
   }
 
+  // La portada del catálogo usa la PRIMERA foto de este color (ver charla
+  // 2026-10-09) -- promueve `url` al frente del arreglo, mismo patrón de
+  // persistencia que handleFiles/removeImage de arriba.
+  async function makeCover(url: string) {
+    const updated = [url, ...existingUrls.filter((u) => u !== url)];
+    onUpdate(updated);
+    await supabase
+      .from("product_variants")
+      .update({ images: updated })
+      .eq("id", variantId);
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        {existingUrls.map((url) => (
+        {existingUrls.map((url, idx) => (
           <div key={url} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-ui-border flex-shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={url} alt="" className="w-full h-full object-cover" />
-            <button
-              onClick={() => removeImage(url)}
-              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-lg"
-              title="Eliminar"
-            >
-              ×
-            </button>
+            {idx === 0 && (
+              <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[9px] font-semibold text-white">
+                Portada
+              </span>
+            )}
+            <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+              {idx !== 0 && (
+                <button
+                  onClick={() => makeCover(url)}
+                  className="text-white"
+                  title="Usar como portada"
+                >
+                  ★
+                </button>
+              )}
+              <button
+                onClick={() => removeImage(url)}
+                className="text-white text-lg"
+                title="Eliminar"
+              >
+                ×
+              </button>
+            </div>
           </div>
         ))}
 
