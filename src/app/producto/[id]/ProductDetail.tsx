@@ -81,11 +81,10 @@ const PRODUCT_SIZE_GUIDES: Record<string, string> = {
 };
 const DEFAULT_SIZE_GUIDE = "/Home/PAG 3/GUÍA DE TALLAS.svg";
 
-// Reseñas de muestra — no persisten en base de datos; viven en estado del cliente.
-const REVIEWS_SEED: Review[] = [
-  { id: "seed-1", name: "Juan Pérez", rating: 5, comment: "Excelente producto. Muy buena calidad y envío rápido.", date: new Date("2026-06-10") },
-  { id: "seed-2", name: "Ana López", rating: 5, comment: "Excelente producto. Muy buena calidad y envío rápido.", date: new Date("2026-05-02") },
-];
+// Sin reseñas de muestra -- hasta que haya reseñas reales de clientes
+// (charla 2026-10-09: las de "Juan Pérez"/"Ana López" eran de relleno,
+// las mismas 2 en TODOS los productos, y se podían confundir con reales).
+const REVIEWS_SEED: Review[] = [];
 
 function getInitials(name: string) {
   return name
@@ -1897,6 +1896,10 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
             </div>
           </div>
           <div>
+            {sortedReviews.length === 0 ? (
+              <p className="text-sm text-ui-gray">Sé el primero en dejar una reseña.</p>
+            ) : (
+              <>
             <div className="flex items-center justify-end mb-3">
               <select
                 value={reviewSort}
@@ -1932,6 +1935,8 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
                 </div>
               ))}
             </div>
+              </>
+            )}
           </div>
         </div>
       </div>
