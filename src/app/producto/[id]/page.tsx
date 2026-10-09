@@ -24,7 +24,7 @@ export default async function ProductoPage({ params }: { params: { id: string } 
       .select(`
         id, sku, name, description, composition, sizes_available, costo, active,
         category:categories(id, name, slug, icon, sort_order, active),
-        variants:product_variants(id, product_id, sku, color_name, color_hex, images, views, stock, active)
+        variants:product_variants(id, product_id, sku, color_name, color_hex, images, views, stock, active, gender, sizes_available)
       `)
       .eq("id", params.id)
       .eq("active", true)

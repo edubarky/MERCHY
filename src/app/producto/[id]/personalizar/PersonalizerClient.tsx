@@ -1559,7 +1559,7 @@ export default function PersonalizerClient({
     // sizes_breakdown:{} fijo. Un total sin repartir quedaba "pegado" para
     // siempre: cada guardado posterior reusaba ese mismo {} vacío (ver
     // charla 2026-10-05, mismo reparto que ya usa ProductDetail.setMainQuantity).
-    const fallbackSizes = product.sizes_available;
+    const fallbackSizes = variant?.sizes_available ?? product.sizes_available;
     const base = fallbackSizes.length ? Math.floor(quantity / fallbackSizes.length) : 0;
     const remainder = fallbackSizes.length ? quantity % fallbackSizes.length : 0;
     const fallbackBreakdown = Object.fromEntries(fallbackSizes.map((size, i) => [size, base + (i < remainder ? 1 : 0)]));

@@ -29,11 +29,11 @@ export default function EditProductoPage() {
   const [savingTechniques, setSavingTechniques] = useState(false);
   const [techniquesSaved, setTechniquesSaved] = useState(false);
   const [techniquesError, setTechniquesError] = useState<string | null>(null);
-  const [newVariant, setNewVariant] = useState({ color_name: "", color_hex: "#000000", stock_infinite: true, stock: 0 });
+  const [newVariant, setNewVariant] = useState({ color_name: "", color_hex: "#000000", stock_infinite: true, stock: 0, gender: "", sizes_available: [] as string[] });
   const [addingVariant, setAddingVariant] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ color_name: "", color_hex: "#000000", stock_infinite: true, stock: 0 });
+  const [editForm, setEditForm] = useState({ color_name: "", color_hex: "#000000", stock_infinite: true, stock: 0, gender: "", sizes_available: [] as string[] });
   const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
@@ -79,12 +79,16 @@ export default function EditProductoPage() {
     setAddingVariant(true);
     const { data, error: err } = await supabase
       .from("product_variants")
-      .insert({ product_id: id, ...newVariant, images: [] })
+      .insert({
+        product_id: id, ...newVariant, images: [],
+        gender: newVariant.gender || null,
+        sizes_available: newVariant.sizes_available.length ? newVariant.sizes_available : null,
+      })
       .select("*")
       .single();
     if (err) { setError("Error al agregar variante."); setAddingVariant(false); return; }
     setVariants((prev) => [...prev, data]);
-    setNewVariant({ color_name: "", color_hex: "#000000", stock_infinite: true, stock: 0 });
+    setNewVariant({ color_name: "", color_hex: "#000000", stock_infinite: true, stock: 0, gender: "", sizes_available: [] });
     setAddingVariant(false);
   }
 
@@ -123,14 +127,22 @@ export default function EditProductoPage() {
 
   function startEditVariant(v: any) {
     setEditingId(v.id);
-    setEditForm({ color_name: v.color_name, color_hex: v.color_hex, stock_infinite: v.stock_infinite ?? true, stock: v.stock ?? 0 });
+    setEditForm({
+      color_name: v.color_name, color_hex: v.color_hex, stock_infinite: v.stock_infinite ?? true, stock: v.stock ?? 0,
+      gender: v.gender ?? "", sizes_available: v.sizes_available ?? [],
+    });
   }
 
   async function saveVariantEdit() {
     if (!editingId) return;
     setSavingEdit(true);
-    await supabase.from("product_variants").update(editForm).eq("id", editingId);
-    setVariants((prev) => prev.map((v) => v.id === editingId ? { ...v, ...editForm } : v));
+    const payload = {
+      ...editForm,
+      gender: editForm.gender || null,
+      sizes_available: editForm.sizes_available.length ? editForm.sizes_available : null,
+    };
+    await supabase.from("product_variants").update(payload).eq("id", editingId);
+    setVariants((prev) => prev.map((v) => v.id === editingId ? { ...v, ...payload } : v));
     setEditingId(null);
     setSavingEdit(false);
   }
@@ -253,6 +265,7 @@ export default function EditProductoPage() {
                     <span className="font-mono text-xs text-ui-gray bg-gray-100 px-2 py-0.5 rounded">{v.sku}</span>
                     {!v.active && <Badge color="#9CA3AF">Inactivo</Badge>}
                     {variantIdx === 0 && <Badge color="#30BE52">Portada</Badge>}
+                    {v.gender && <Badge color="#00A7AB">{v.gender === "hombre" ? "Hombre" : "Mujer"}</Badge>}
                   </div>
                   <p className="text-xs text-ui-gray mb-3">
                     {v.stock_infinite ? "Stock infinito" : `${v.stock} unidades`}
@@ -284,6 +297,39 @@ export default function EditProductoPage() {
                           </div>
                         </div>
                       </div>
+                      <div>
+                        <FieldLabel>Género</FieldLabel>
+                        <AdminSelect value={editForm.gender} onChange={(e) => setEditForm((p) => ({ ...p, gender: e.target.value }))} className="w-48">
+                          <option value="">Unisex (aplica a todos)</option>
+                          <option value="hombre">Hombre</option>
+                          <option value="mujer">Mujer</option>
+                        </AdminSelect>
+                      </div>
+                      {editForm.gender && (
+                        <div>
+                          <FieldLabel>Tallas propias de este color (vacío = usa las del producto)</FieldLabel>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {SIZES.map((size) => (
+                              <label key={size} className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={editForm.sizes_available.includes(size)}
+                                  onChange={(e) =>
+                                    setEditForm((p) => ({
+                                      ...p,
+                                      sizes_available: e.target.checked
+                                        ? [...p.sizes_available, size]
+                                        : p.sizes_available.filter((s) => s !== size),
+                                    }))
+                                  }
+                                  className="accent-primary w-4 h-4"
+                                />
+                                <span className="text-sm">{size}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <AdminToggle checked={editForm.stock_infinite} onChange={(val) => setEditForm((p) => ({ ...p, stock_infinite: val }))} label="Stock infinito" />
                       {!editForm.stock_infinite && (
                         <div className="w-32">
@@ -342,6 +388,43 @@ export default function EditProductoPage() {
                 </div>
               </div>
             </div>
+            <div className="mb-4">
+              <FieldLabel>Género</FieldLabel>
+              <AdminSelect
+                value={newVariant.gender}
+                onChange={(e) => setNewVariant((p) => ({ ...p, gender: e.target.value, sizes_available: [] }))}
+                className="w-48"
+              >
+                <option value="">Unisex (aplica a todos)</option>
+                <option value="hombre">Hombre</option>
+                <option value="mujer">Mujer</option>
+              </AdminSelect>
+            </div>
+            {newVariant.gender && (
+              <div className="mb-4">
+                <FieldLabel>Tallas propias de este color (vacío = usa las del producto)</FieldLabel>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {SIZES.map((size) => (
+                    <label key={size} className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newVariant.sizes_available.includes(size)}
+                        onChange={(e) =>
+                          setNewVariant((p) => ({
+                            ...p,
+                            sizes_available: e.target.checked
+                              ? [...p.sizes_available, size]
+                              : p.sizes_available.filter((s) => s !== size),
+                          }))
+                        }
+                        className="accent-primary w-4 h-4"
+                      />
+                      <span className="text-sm">{size}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="mb-4">
               <AdminToggle
                 checked={newVariant.stock_infinite}

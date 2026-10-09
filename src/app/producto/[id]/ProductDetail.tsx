@@ -885,7 +885,21 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // vez, antes de navegar. El diseño PERMANENTE del botón (turquesa,
   // sin degradados) no cambia en nada -- ver handlePersonalizeClick.
   const [personalizeAnimating, setPersonalizeAnimating] = useState(false);
-  const activeVariants = product.variants.filter((v) => v.active);
+  // Género: un filtro sobre las variantes existentes, no un eje nuevo de
+  // estado -- así todo lo que ya opera sobre `activeVariants` (multicolor,
+  // tallas por color, el carrito "en curso") sigue funcionando igual, sin
+  // tocarlo, para un producto con un solo género (gender=null en todas sus
+  // variantes, el 100% de los productos antes de esto). Solo aparece el
+  // selector cuando el producto realmente separa 2+ géneros (ver charla
+  // 2026-10-09, Playera/Polo Infinity).
+  const availableGenders = Array.from(
+    new Set(product.variants.filter((v) => v.active && v.gender).map((v) => v.gender as string))
+  ).sort((a, b) => (a === "hombre" ? -1 : b === "hombre" ? 1 : 0));
+  const hasGenders = availableGenders.length > 1;
+  const [selectedGender, setSelectedGender] = useState<string | null>(availableGenders[0] ?? null);
+  const activeVariants = product.variants.filter(
+    (v) => v.active && (!hasGenders || v.gender === selectedGender)
+  );
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(activeVariants[0] ?? product.variants[0]);
   const [selectedImage, setSelectedImage] = useState(0);
   const [multicolor, setMulticolor] = useState(false);
@@ -903,6 +917,23 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   const [mismoDiseno, setMismoDiseno] = useState(true);
   // Cantidad por talla, independiente por color: { [variantId]: { [talla]: cantidad } }.
   const [sizeQuantities, setSizeQuantities] = useState<Record<string, Record<string, number>>>({});
+  // Cambiar de género es, en los hechos, cambiar de producto (otro set de
+  // colores y tallas) -- limpia todo lo elegido para el género anterior en
+  // vez de arrastrar colores/tallas que ya no existen en este. No corre en
+  // el montaje inicial (ya arranca correcto, ver activeVariants arriba).
+  const genderMountedRef = useRef(false);
+  useEffect(() => {
+    if (!genderMountedRef.current) {
+      genderMountedRef.current = true;
+      return;
+    }
+    setSelectedVariant(activeVariants[0] ?? product.variants[0]);
+    setMulticolor(false);
+    setSelectedColorIds([]);
+    setSizeQuantities({});
+    setSelectedImage(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedGender]);
   const [reviews, setReviews] = useState<Review[]>(REVIEWS_SEED);
   // Calificaciones "solo estrellas" — cuentan para el promedio y la
   // distribución, pero no generan una tarjeta de reseña visible.
@@ -967,7 +998,9 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
     ejesForColor.length > 0
       ? [modelShotUrl, ...ejesForColor].filter((url): url is string => !!url)
       : selectedVariant?.images ?? [];
-  const sizes = product.sizes_available;
+  // Tallas propias de la variante (ej. Playera Infinity Mujer sin XXL)
+  // ganan sobre las del producto cuando existen (ver Género arriba).
+  const sizes = selectedVariant?.sizes_available ?? product.sizes_available;
   // Un producto SIN tallas reales (sizes_available vacío -- "Deja vacío
   // si el producto no tiene tallas", ver el form de alta en /admin) de
   // todos modos necesita UN bucket donde guardar/leer la cantidad (ver
@@ -1526,6 +1559,29 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
               />
             </div>
           </div>
+
+          {/* Género — solo si el producto realmente separa 2+ géneros */}
+          {hasGenders && (
+            <div style={{ marginTop: GAP_LONG }}>
+              <p className="text-[13px] font-semibold text-foreground" style={{ marginBottom: GAP_SHORT }}>
+                Género
+              </p>
+              <div className="inline-flex rounded-full border border-ui-border bg-[#fafafa] p-1">
+                {availableGenders.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setSelectedGender(g)}
+                    className={`rounded-full px-5 py-2 text-[13px] font-semibold capitalize transition-colors ${
+                      selectedGender === g ? "bg-primary text-primary-dark" : "text-ui-gray"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Color selector */}
           {activeVariants.length > 0 && (

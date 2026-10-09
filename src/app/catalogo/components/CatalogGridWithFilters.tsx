@@ -60,7 +60,7 @@ export default function CatalogGridWithFilters({
           id, sku, name, description, category_id, composition,
           sizes_available, costo, active, created_at,
           category:categories(id, name, slug, icon, sort_order, active),
-          variants:product_variants(id, product_id, sku, color_name, color_hex, images, stock, active)
+          variants:product_variants(id, product_id, sku, color_name, color_hex, images, stock, active, gender, sizes_available)
         `
         )
         .eq("active", true)

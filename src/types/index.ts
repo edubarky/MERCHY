@@ -48,6 +48,14 @@ export interface ProductVariant {
   views?: Record<string, string> | null;
   stock: number;
   active: boolean;
+  // Género al que pertenece este color -- null = aplica sin importar
+  // género (default, comportamiento de siempre). "hombre"/"mujer" cuando
+  // el producto los separa (ver charla 2026-10-09, Playera/Polo Infinity).
+  gender?: "hombre" | "mujer" | null;
+  // Tallas propias de ESTA variante -- null = hereda Product.sizes_available
+  // (default). Se usa cuando el rango de tallas difiere por género (ej.
+  // Playera Infinity Mujer no tiene XXL).
+  sizes_available?: string[] | null;
 }
 
 export interface PriceTier {
