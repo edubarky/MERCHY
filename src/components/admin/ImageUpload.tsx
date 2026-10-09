@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 interface Props {
@@ -14,7 +14,21 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const supabase = createClient();
+
+  // Flechas de teclado / Escape para navegar la vista previa sin tener que
+  // apuntarle a los botones (pedido explícito, ver charla 2026-10-09).
+  useEffect(() => {
+    if (lightboxIdx === null) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setLightboxIdx(null);
+      if (e.key === "ArrowRight") setLightboxIdx((i) => (i === null ? i : (i + 1) % existingUrls.length));
+      if (e.key === "ArrowLeft") setLightboxIdx((i) => (i === null ? i : (i - 1 + existingUrls.length) % existingUrls.length));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxIdx, existingUrls.length]);
 
   async function handleFiles(files: FileList) {
     setError(null);
@@ -86,7 +100,12 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
         {existingUrls.map((url, idx) => (
           <div key={url} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-ui-border flex-shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt="" className="w-full h-full object-cover" />
+            <img
+              src={url}
+              alt=""
+              onClick={() => setLightboxIdx(idx)}
+              className="w-full h-full object-cover cursor-zoom-in"
+            />
             {idx === 0 && (
               <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[9px] font-semibold text-white">
                 Portada
@@ -138,6 +157,61 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
         className="hidden"
         onChange={(e) => e.target.files && handleFiles(e.target.files)}
       />
+
+      {lightboxIdx !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-8"
+          onClick={() => setLightboxIdx(null)}
+        >
+          <button
+            onClick={() => setLightboxIdx(null)}
+            className="absolute right-6 top-6 text-3xl text-white/80 hover:text-white"
+            title="Cerrar"
+          >
+            ×
+          </button>
+
+          {existingUrls.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIdx((i) => (i === null ? i : (i - 1 + existingUrls.length) % existingUrls.length));
+              }}
+              className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-2xl text-white hover:bg-white/20"
+              title="Anterior"
+            >
+              ‹
+            </button>
+          )}
+
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={existingUrls[lightboxIdx]}
+            alt=""
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain"
+          />
+
+          {existingUrls.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIdx((i) => (i === null ? i : (i + 1) % existingUrls.length));
+              }}
+              className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-2xl text-white hover:bg-white/20"
+              title="Siguiente"
+            >
+              ›
+            </button>
+          )}
+
+          {existingUrls.length > 1 && (
+            <span className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-white/70">
+              {lightboxIdx + 1} / {existingUrls.length}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
