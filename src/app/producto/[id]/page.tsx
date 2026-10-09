@@ -28,6 +28,8 @@ export default async function ProductoPage({ params }: { params: { id: string } 
       `)
       .eq("id", params.id)
       .eq("active", true)
+      .order("sort_order", { foreignTable: "variants" })
+      .order("created_at", { foreignTable: "variants" })
       .single(),
     supabase.from("price_tiers").select("*").order("qty_min"),
   ]);

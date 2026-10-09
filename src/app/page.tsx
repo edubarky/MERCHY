@@ -100,7 +100,10 @@ export default async function HomePage() {
       id, sku, name, description, category_id, composition, sizes_available, costo, active, created_at,
       category:categories(id, name, slug, icon, sort_order, active),
       variants:product_variants(id, product_id, sku, color_name, color_hex, images, stock, active)
-    `).eq("active", true).order("created_at", { ascending: false }).limit(8),
+    `).eq("active", true).order("created_at", { ascending: false })
+      .order("sort_order", { foreignTable: "variants" })
+      .order("created_at", { foreignTable: "variants" })
+      .limit(8),
     supabase.from("price_tiers").select("*").order("qty_min"),
   ]);
 

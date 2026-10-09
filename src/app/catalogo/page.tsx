@@ -60,6 +60,11 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
     )
     .eq("active", true)
     .order("created_at", { ascending: false })
+    // La portada del producto es la primera variante -- sin esto, el
+    // embed de product_variants vuelve en un orden sin garantía, ignorando
+    // "Usar como portada" (ver charla 2026-10-09).
+    .order("sort_order", { foreignTable: "variants" })
+    .order("created_at", { foreignTable: "variants" })
     .range(0, PAGE_SIZE - 1);
 
   // IDs de categoría reales a los que resuelve el ?categoria= actual (o

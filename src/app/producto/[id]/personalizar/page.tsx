@@ -49,6 +49,8 @@ export default async function PersonalizarPage({
       `)
       .eq("id", params.id)
       .eq("active", true)
+      .order("sort_order", { foreignTable: "variants" })
+      .order("created_at", { foreignTable: "variants" })
       .single(),
     supabase.from("price_tiers").select("*").order("qty_min"),
     // Qué técnicas están asignadas a ESTE producto (Productos → Editar →

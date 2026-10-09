@@ -63,7 +63,9 @@ export default function CatalogGridWithFilters({
           variants:product_variants(id, product_id, sku, color_name, color_hex, images, stock, active)
         `
         )
-        .eq("active", true);
+        .eq("active", true)
+        .order("sort_order", { foreignTable: "variants" })
+        .order("created_at", { foreignTable: "variants" });
       if (data) setFullCatalog(data as unknown as ProductWithVariants[]);
     } finally {
       setFullCatalogLoading(false);
