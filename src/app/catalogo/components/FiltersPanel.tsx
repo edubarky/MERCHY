@@ -544,6 +544,57 @@ export default function FiltersPanel({
   return (
     <div ref={barRef} className="mb-4">
       <div className="flex flex-wrap items-center gap-2.5">
+        {/* Palabra clave — a la izquierda, separada del resto (pedido
+            explícito, ver charla 2026-10-09: el buscador es una entrada de
+            texto, distinta en naturaleza a los filtros de selección que le
+            siguen). Input siempre visible, sin clic previo. */}
+        <div className="relative min-w-[190px] flex-1 sm:max-w-[280px]" ref={keywordWrapperRef}>
+          <SearchKeywordIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#00A7AB]" />
+          <input
+            type="text"
+            value={keyword}
+            onChange={(e) => {
+              updateFilters({ keyword: e.target.value });
+              setSuggestionsOpen(true);
+              if (!openedOnceRef.current) {
+                openedOnceRef.current = true;
+                onOpen?.();
+              }
+            }}
+            onFocus={() => setSuggestionsOpen(true)}
+            placeholder="Palabra clave, ej. sudadera"
+            className="w-full rounded-full border border-ui-border bg-[#fafafa] py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-ui-gray focus:border-primary focus:bg-white focus:outline-none"
+          />
+          {suggestionsOpen && keyword.trim() && (
+            <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-2xl border border-[#00C5C9]/40 bg-white shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
+              {keywordSuggestions.length > 0 ? (
+                <ul className="max-h-52 overflow-y-auto py-1">
+                  {keywordSuggestions.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateFilters({ keyword: p.name });
+                          setSuggestionsOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-foreground hover:bg-[#ECF9F9]"
+                      >
+                        <SearchKeywordIcon className="h-3.5 w-3.5 shrink-0 text-[#00C5C9]" />
+                        {p.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-4 py-4 text-sm text-ui-gray">No encontramos productos relacionados.</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Ordenar/Color/Material/Precio + conteo, agrupados y empujados a
+            la derecha con un solo ml-auto en el primer elemento del grupo. */}
+        <div className="ml-auto flex flex-wrap items-center gap-2.5">
         {/* Ordenar */}
         <FilterDropdown
           label={sortLabel}
@@ -694,52 +745,7 @@ export default function FiltersPanel({
           </div>
         </FilterDropdown>
 
-        {/* Palabra clave — input siempre visible, sin clic previo */}
-        <div className="relative min-w-[190px] flex-1 sm:max-w-[280px]" ref={keywordWrapperRef}>
-          <SearchKeywordIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#00A7AB]" />
-          <input
-            type="text"
-            value={keyword}
-            onChange={(e) => {
-              updateFilters({ keyword: e.target.value });
-              setSuggestionsOpen(true);
-              if (!openedOnceRef.current) {
-                openedOnceRef.current = true;
-                onOpen?.();
-              }
-            }}
-            onFocus={() => setSuggestionsOpen(true)}
-            placeholder="Palabra clave, ej. sudadera"
-            className="w-full rounded-full border border-ui-border bg-[#fafafa] py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-ui-gray focus:border-primary focus:bg-white focus:outline-none"
-          />
-          {suggestionsOpen && keyword.trim() && (
-            <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-2xl border border-[#00C5C9]/40 bg-white shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
-              {keywordSuggestions.length > 0 ? (
-                <ul className="max-h-52 overflow-y-auto py-1">
-                  {keywordSuggestions.map((p) => (
-                    <li key={p.id}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          updateFilters({ keyword: p.name });
-                          setSuggestionsOpen(false);
-                        }}
-                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-foreground hover:bg-[#ECF9F9]"
-                      >
-                        <SearchKeywordIcon className="h-3.5 w-3.5 shrink-0 text-[#00C5C9]" />
-                        {p.name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="px-4 py-4 text-sm text-ui-gray">No encontramos productos relacionados.</p>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <span className="whitespace-nowrap text-sm text-ui-gray">
             <span className="font-semibold text-foreground">{resultCount}</span> producto{resultCount !== 1 ? "s" : ""}
             {categoryLabel && !anyActive ? ` en ${categoryLabel}` : ""}
@@ -754,6 +760,7 @@ export default function FiltersPanel({
               Limpiar
             </button>
           )}
+        </div>
         </div>
       </div>
 
