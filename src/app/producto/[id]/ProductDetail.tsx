@@ -49,7 +49,21 @@ interface Review {
 // product_variants.images ya trae 4 fotos reales curadas del set
 // completo. Agregado de una vez (no después de detectar la regresión en
 // producción, como pasó con los dos tapetes) al introducir sus ejes.
-const PRODUCTS_PREFERRING_REAL_GALLERY = new Set(["tapete de yoga minsk", "tapete century", "set de ejercicio bor"]);
+// Playera Over: mismo síntoma otra vez, pero esta vez SÍ es una prenda
+// real -- "Negro"/"Blanco" calzan con los GarmentColor reconocidos, así
+// que la galería caía en la librería compartida de fotos de stock por
+// color en vez de las fotos propias recién subidas (ver charla
+// 2026-10-09, "acabo de cambiar todas estas imágenes... no se
+// actualizaron"). Este flag solo controla la GALERÍA de esta página --
+// los fondos de las vistas del Personalizador (Frente/Reverso para
+// colocar el logo) siguen resolviendo del sistema de ejes de siempre,
+// sin tocarse.
+const PRODUCTS_PREFERRING_REAL_GALLERY = new Set([
+  "tapete de yoga minsk",
+  "tapete century",
+  "set de ejercicio bor",
+  "playera over",
+]);
 
 // "Guía de Tallas" por defecto es la tabla de prenda (Ancho/Largo/Manga,
 // XS-XXXL) -- no aplica a un producto que no es ropa. Un producto agregado
