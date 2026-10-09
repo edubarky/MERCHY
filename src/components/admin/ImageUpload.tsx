@@ -107,15 +107,20 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
               className="w-full h-full object-cover cursor-zoom-in"
             />
             {idx === 0 && (
-              <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[9px] font-semibold text-white">
+              <span className="pointer-events-none absolute left-1 top-1 rounded bg-black/60 px-1 text-[9px] font-semibold text-white">
                 Portada
               </span>
             )}
-            <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+            {/* pointer-events-none: a opacity-0 el overlay sigue "encima" para
+                hit-testing -- sin esto se comía el clic de la miniatura antes
+                de que le llegara a <img> (ver charla 2026-10-09, "¿y la vista
+                previa en el admin?"). Los botones recuperan el clic con
+                pointer-events-auto. */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
               {idx !== 0 && (
                 <button
                   onClick={() => makeCover(url)}
-                  className="text-white"
+                  className="pointer-events-auto text-white"
                   title="Usar como portada"
                 >
                   ★
@@ -123,7 +128,7 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
               )}
               <button
                 onClick={() => removeImage(url)}
-                className="text-white text-lg"
+                className="pointer-events-auto text-white text-lg"
                 title="Eliminar"
               >
                 ×
