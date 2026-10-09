@@ -5,16 +5,23 @@ import type { Product, PriceTier } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import FavoritoProductCard from "@/components/home/FavoritoProductCard";
 import FiltersPanel, { applyFilters, sortProducts, DEFAULT_FILTERS, type AppliedFilters } from "./FiltersPanel";
+import { PAGE_SIZE } from "../constants";
 
 type ProductWithVariants = Product & { variants: NonNullable<Product["variants"]> };
 
 export default function CatalogGridWithFilters({
   products,
+  totalCount,
   priceTiers,
   categoryIds,
   categoryLabel,
 }: {
   products: ProductWithVariants[];
+  /** Total real de productos de esta categoría (viene de `count: "exact"`
+   * en el servidor, no depende de cuántos haya cargado "Cargar más"
+   * todavía) -- pedido explícito: el "N productos en X" de arriba debe
+   * reflejar el total real, no solo el primer lote cargado. */
+  totalCount: number;
   priceTiers: PriceTier[];
   /** IDs de categoría reales del ?categoria= actual (null = todo el
    * catálogo). El catálogo completo que trae ensureFullCatalog es de
@@ -24,6 +31,13 @@ export default function CatalogGridWithFilters({
   categoryLabel: string | null;
 }) {
   const [filters, setFilters] = useState<AppliedFilters>(DEFAULT_FILTERS);
+  // Cuántos productos mostrar de `filtered` -- empieza en el primer lote
+  // que ya trajo el servidor y sube de PAGE_SIZE en PAGE_SIZE con "Cargar
+  // más" (ver botón abajo), nunca navega a otra página ni pierde el
+  // scroll (pedido explícito: reemplaza la paginación numerada, ver
+  // investigación de Baymard sobre "Load more" vs paginación/scroll
+  // infinito, charla 2026-10-09).
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // `products` is only the current *page* (server-paginated, PAGE_SIZE=12)
   // — every filter here (material/price/color, and now keyword) needs to
@@ -63,6 +77,20 @@ export default function CatalogGridWithFilters({
     fullCatalog && categoryIds ? fullCatalog.filter((p) => categoryIds.includes(p.category_id)) : fullCatalog;
   const effectiveProducts = catalogInScope ?? products;
   const filtered = sortProducts(applyFilters(effectiveProducts, priceTiers, filters), priceTiers, filters.sort);
+  const visible = filtered.slice(0, visibleCount);
+  // Antes de que cargue el catálogo completo, `filtered.length` es solo el
+  // primer lote (PAGE_SIZE) -- el total real de la categoría ya lo trae el
+  // servidor (`count: "exact"`, sin el .range()) independientemente de
+  // cuánto se haya cargado en el cliente. Una vez cargado el catálogo
+  // completo, `filtered.length` ya refleja los filtros activos (color,
+  // material, etc.) y pasa a mandar.
+  const resultCount = fullCatalog ? filtered.length : totalCount;
+  const hasMore = visibleCount < filtered.length || (!fullCatalog && visibleCount < totalCount);
+
+  async function loadMore() {
+    await ensureFullCatalog();
+    setVisibleCount((v) => v + PAGE_SIZE);
+  }
 
   return (
     <>
@@ -73,7 +101,7 @@ export default function CatalogGridWithFilters({
       <FiltersPanel
         products={effectiveProducts}
         appliedFilters={filters}
-        resultCount={filtered.length}
+        resultCount={resultCount}
         categoryLabel={categoryLabel}
         onApply={setFilters}
         onOpen={ensureFullCatalog}
@@ -113,17 +141,31 @@ export default function CatalogGridWithFilters({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((product, index) => (
-            <FavoritoProductCard
-              key={product.id}
-              product={product}
-              priceTiers={priceTiers}
-              index={index}
-              activeColors={filters.colors}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            {visible.map((product, index) => (
+              <FavoritoProductCard
+                key={product.id}
+                product={product}
+                priceTiers={priceTiers}
+                index={index}
+                activeColors={filters.colors}
+              />
+            ))}
+          </div>
+          {hasMore && (
+            <div className="mt-8 flex justify-center">
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={fullCatalogLoading}
+                className="rounded-full border border-ui-border bg-white px-8 py-3 text-sm font-semibold text-foreground transition-transform duration-150 ease-out hover:scale-105 disabled:cursor-wait disabled:opacity-60"
+              >
+                {fullCatalogLoading ? "Cargando…" : "Cargar más"}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </>
   );

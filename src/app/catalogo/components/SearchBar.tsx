@@ -25,7 +25,6 @@ export default function SearchBar({ defaultValue = "" }: Props) {
       } else {
         params.delete("q");
       }
-      params.delete("pagina");
       startTransition(() => {
         router.push(`${pathname}?${params.toString()}`);
       });

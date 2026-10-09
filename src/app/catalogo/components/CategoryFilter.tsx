@@ -21,7 +21,6 @@ export default function CategoryFilter({ categories, selected, total }: Props) {
     } else {
       params.delete("categoria");
     }
-    params.delete("pagina");
     router.push(`${pathname}?${params.toString()}`);
   }
 

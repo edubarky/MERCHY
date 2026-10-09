@@ -1,12 +1,9 @@
-import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import PublicHeader from "@/components/PublicHeader";
 import type { Product, Category, PriceTier } from "@/types";
-import Pagination from "./components/Pagination";
 import CatalogGridWithFilters from "./components/CatalogGridWithFilters";
 import CategoryBar from "./components/CategoryBar";
-
-const PAGE_SIZE = 12;
+import { PAGE_SIZE } from "./constants";
 
 // Las tarjetas de categoría de la home (Bebidas/Textiles/Deportivo) agrupan
 // varias categorías reales de la base de datos bajo un slug más amplio.
@@ -26,7 +23,6 @@ interface PageProps {
   searchParams: {
     categoria?: string;
     q?: string;
-    pagina?: string;
   };
 }
 
@@ -39,9 +35,6 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
   const supabase = createClient();
   const categoria = searchParams.categoria ?? null;
   const query = searchParams.q ?? "";
-  const page = Math.max(1, parseInt(searchParams.pagina ?? "1", 10));
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
 
   // Fetch categories and price tiers in parallel
   const [{ data: categories }, { data: priceTiers }] = await Promise.all([
@@ -67,7 +60,7 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
     )
     .eq("active", true)
     .order("created_at", { ascending: false })
-    .range(from, to);
+    .range(0, PAGE_SIZE - 1);
 
   // IDs de categoría reales a los que resuelve el ?categoria= actual (o
   // null si no hay ninguno). Se pasa también al grid — cuando abre un
@@ -93,7 +86,6 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
 
   const { data: products, count } = await productsQuery;
 
-  const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE);
   const safeProducts = (products ?? []) as unknown as (Product & { variants: NonNullable<Product["variants"]> })[];
   const safeTiers = (priceTiers ?? []) as PriceTier[];
   const safeCategories = (categories ?? []) as Category[];
@@ -121,22 +113,13 @@ export default async function CatalogoPage({ searchParams }: PageProps) {
               </p>
             </div>
           ) : (
-            <>
-              <CatalogGridWithFilters
-                products={safeProducts}
-                priceTiers={safeTiers}
-                categoryIds={categoryIds}
-                categoryLabel={categoryLabel}
-              />
-              <Suspense>
-                <Pagination
-                  currentPage={page}
-                  totalPages={totalPages}
-                  total={count ?? 0}
-                  pageSize={PAGE_SIZE}
-                />
-              </Suspense>
-            </>
+            <CatalogGridWithFilters
+              products={safeProducts}
+              totalCount={count ?? 0}
+              priceTiers={safeTiers}
+              categoryIds={categoryIds}
+              categoryLabel={categoryLabel}
+            />
           )}
         </div>
       </div>
