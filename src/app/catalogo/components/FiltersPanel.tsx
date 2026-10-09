@@ -548,7 +548,7 @@ export default function FiltersPanel({
             explícito, ver charla 2026-10-09: el buscador es una entrada de
             texto, distinta en naturaleza a los filtros de selección que le
             siguen). Input siempre visible, sin clic previo. */}
-        <div className="relative min-w-[190px] flex-1 sm:max-w-[280px]" ref={keywordWrapperRef}>
+        <div className="relative w-full min-w-[190px] sm:w-64" ref={keywordWrapperRef}>
           <SearchKeywordIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#00A7AB]" />
           <input
             type="text"
