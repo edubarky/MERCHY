@@ -23,7 +23,7 @@ export const DEFAULT_FILTERS: AppliedFilters = {
   minPrice: 0,
   maxPrice: 1000,
   colors: [],
-  sort: "relevancia",
+  sort: "price-asc",
 };
 
 export const SORT_LABELS: Record<SortOption, string> = {
@@ -502,7 +502,7 @@ export default function FiltersPanel({
 
   const priceChanged = minPrice > DEFAULT_FILTERS.minPrice || maxPrice < DEFAULT_FILTERS.maxPrice;
   const activeCount = countActiveFilters(appliedFilters);
-  const anyActive = activeCount > 0 || sort !== "relevancia";
+  const anyActive = activeCount > 0 || sort !== DEFAULT_FILTERS.sort;
 
   const priceLabel = priceChanged
     ? minPrice > DEFAULT_FILTERS.minPrice && maxPrice < DEFAULT_FILTERS.maxPrice
@@ -516,8 +516,8 @@ export default function FiltersPanel({
   // quita individualmente. Se arma fresco en cada render.
   const chips = useMemo(() => {
     const list: { key: string; label: string; onRemove: () => void }[] = [];
-    if (sort !== "relevancia") {
-      list.push({ key: "sort", label: SORT_LABELS[sort], onRemove: () => updateFilters({ sort: "relevancia" }) });
+    if (sort !== DEFAULT_FILTERS.sort) {
+      list.push({ key: "sort", label: SORT_LABELS[sort], onRemove: () => updateFilters({ sort: DEFAULT_FILTERS.sort }) });
     }
     if (keyword.trim()) {
       list.push({ key: "keyword", label: `"${keyword}"`, onRemove: () => updateFilters({ keyword: "" }) });
@@ -539,7 +539,7 @@ export default function FiltersPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, keyword, colors, material, minPrice, maxPrice]);
 
-  const sortLabel = sort === "relevancia" ? "Ordenar" : SORT_LABELS[sort];
+  const sortLabel = sort === DEFAULT_FILTERS.sort ? "Ordenar" : SORT_LABELS[sort];
 
   return (
     <div ref={barRef} className="mb-4">
@@ -547,7 +547,7 @@ export default function FiltersPanel({
         {/* Ordenar */}
         <FilterDropdown
           label={sortLabel}
-          active={sort !== "relevancia"}
+          active={sort !== DEFAULT_FILTERS.sort}
           open={openMenu === "sort"}
           onToggle={() => toggleMenu("sort")}
           icon={<SortIcon className="h-4 w-4" />}
