@@ -29,6 +29,7 @@ export default function ProductosPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_P);
   const [sizes, setSizes] = useState<string[]>([]);
+  const [customSizeDraft, setCustomSizeDraft] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -62,6 +63,7 @@ export default function ProductosPage() {
   function openNew() {
     setForm(EMPTY_P);
     setSizes([]);
+    setCustomSizeDraft("");
     setSupplierId("");
     setShowModal(true);
   }
@@ -117,6 +119,16 @@ export default function ProductosPage() {
 
   function toggleSize(size: string) {
     setSizes((prev) => prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]);
+  }
+
+  // Tallas propias de un producto que no usa XS-XXL (ej. Playera Infantil
+  // con rangos de edad: 3-4, 5-6...) -- admite varias separadas por coma
+  // de un golpe (pegar "3-4, 5-6, 7-8, 9-11, 12-14") además de una por una.
+  function addCustomSizes() {
+    const nuevas = customSizeDraft.split(",").map((s) => s.trim()).filter(Boolean);
+    if (nuevas.length === 0) return;
+    setSizes((prev) => [...prev, ...nuevas.filter((s) => !prev.includes(s))]);
+    setCustomSizeDraft("");
   }
 
   const filtered = q
@@ -267,6 +279,39 @@ export default function ProductosPage() {
                   ))}
                 </div>
                 <p className="text-xs text-ui-gray mt-1">Deja vacío si el producto no tiene tallas</p>
+
+                {/* Tallas propias (ej. producto infantil con rangos de
+                    edad) -- lo que no sea uno de los checkboxes de arriba
+                    se agrega y se muestra aquí como chip removible. */}
+                {sizes.filter((s) => !SIZES.includes(s)).length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {sizes.filter((s) => !SIZES.includes(s)).map((size) => (
+                      <span key={size} className="flex items-center gap-1 rounded-full bg-primary/10 pl-3 pr-1.5 py-1 text-sm">
+                        {size}
+                        <button
+                          type="button"
+                          onClick={() => toggleSize(size)}
+                          className="flex h-4 w-4 items-center justify-center rounded-full text-ui-gray hover:text-foreground"
+                          aria-label={`Quitar talla ${size}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 mt-2">
+                  <AdminInput
+                    value={customSizeDraft}
+                    onChange={(e) => setCustomSizeDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); addCustomSizes(); }
+                    }}
+                    placeholder="Talla(s) propias, ej. 3-4, 5-6, 7-8"
+                    className="flex-1"
+                  />
+                  <Btn type="button" variant="secondary" onClick={addCustomSizes}>+ Agregar</Btn>
+                </div>
               </div>
 
               <div className="w-40">

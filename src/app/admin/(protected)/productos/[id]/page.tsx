@@ -60,7 +60,9 @@ export default function EditProductoPage() {
     e.preventDefault();
     setSaving(true);
     const fd = new FormData(e.currentTarget);
-    const sizes = fd.getAll("sizes") as string[];
+    const customSizes = (fd.get("custom_sizes") as string)
+      .split(",").map((s) => s.trim()).filter(Boolean);
+    const sizes = Array.from(new Set([...(fd.getAll("sizes") as string[]), ...customSizes]));
     await supabase.from("products").update({
       name: fd.get("name"),
       description: fd.get("description") || null,
@@ -239,6 +241,15 @@ export default function EditProductoPage() {
                     <span className="text-sm">{size}</span>
                   </label>
                 ))}
+              </div>
+              <p className="text-xs text-ui-gray mt-1">Deja vacío si el producto no tiene tallas</p>
+              <div className="mt-2">
+                <FieldLabel>Tallas propias (si no usa XS-XXL, ej. producto infantil)</FieldLabel>
+                <AdminInput
+                  name="custom_sizes"
+                  defaultValue={(product.sizes_available ?? []).filter((s: string) => !SIZES.includes(s)).join(", ")}
+                  placeholder="3-4, 5-6, 7-8, 9-11, 12-14"
+                />
               </div>
             </div>
             <div className="w-40">
