@@ -10,6 +10,8 @@ import {
   FieldLabel, AdminInput, AdminTextarea, AdminSelect, EmptyState, ModalOverlay,
 } from "@/components/admin/ui";
 import { money } from "@/lib/format";
+import { getProductUnitPrice, utilidadPct, formatMXN } from "@/lib/pricing";
+import type { PriceTier } from "@/types";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Único"];
 const EMPTY_P = { name: "", description: "", composition: "", category_id: "", costo: "" };
@@ -32,6 +34,8 @@ export default function ProductosPage() {
   const [customSizeDraft, setCustomSizeDraft] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
+  const [priceOverrides, setPriceOverrides] = useState<Record<string, string>>({});
 
   // Supplier sub-modal
   const [showSupModal, setShowSupModal] = useState(false);
@@ -50,12 +54,14 @@ export default function ProductosPage() {
   }, []);
 
   async function loadCatalogs() {
-    const [{ data: cats }, { data: sups }] = await Promise.all([
+    const [{ data: cats }, { data: sups }, { data: tiers }] = await Promise.all([
       supabase.from("categories").select("id, name").eq("active", true).order("sort_order"),
       supabase.from("suppliers").select("id, name").eq("active", true).order("name"),
+      supabase.from("price_tiers").select("*").order("qty_min"),
     ]);
     setCategories(cats ?? []);
     setSuppliers(sups ?? []);
+    setPriceTiers(tiers ?? []);
   }
 
   useEffect(() => { loadProducts(); loadCatalogs(); }, []);
@@ -65,12 +71,19 @@ export default function ProductosPage() {
     setSizes([]);
     setCustomSizeDraft("");
     setSupplierId("");
+    setPriceOverrides({});
     setShowModal(true);
   }
 
   async function saveProduct() {
     if (!form.name.trim() || !form.category_id || !form.costo) return;
     setSaving(true);
+    const overridesPayload = Object.fromEntries(
+      Object.entries(priceOverrides)
+        .filter(([, v]) => v.trim() !== "")
+        .map(([k, v]) => [k, parseFloat(v)])
+        .filter(([, v]) => Number.isFinite(v))
+    );
     const payload: Record<string, unknown> = {
       name: form.name,
       description: form.description || null,
@@ -78,6 +91,7 @@ export default function ProductosPage() {
       category_id: form.category_id,
       sizes_available: sizes,
       costo: parseFloat(form.costo),
+      price_overrides: overridesPayload,
       active: true,
     };
     if (supplierId) payload.supplier_id = supplierId;
@@ -325,6 +339,44 @@ export default function ProductosPage() {
                   placeholder="0.00"
                 />
               </div>
+
+              {priceTiers.length > 0 && !!parseFloat(form.costo) && (
+                <div>
+                  <FieldLabel>Precio por rango</FieldLabel>
+                  <div className="mt-1 overflow-hidden rounded-xl border border-ui-border">
+                    <div className="grid grid-cols-[1fr_1fr_90px] gap-2 bg-gray-50 px-3 py-2 text-xs font-semibold text-ui-gray">
+                      <span>Rango</span>
+                      <span>Precio (IVA incluido)</span>
+                      <span>% Utilidad</span>
+                    </div>
+                    {priceTiers.map((tier) => {
+                      const costoNum = parseFloat(form.costo) || 0;
+                      const autoPrice = getProductUnitPrice(costoNum, tier.qty_min, priceTiers);
+                      const overrideRaw = priceOverrides[tier.id] ?? "";
+                      const effectivePrice = overrideRaw.trim() !== "" && Number.isFinite(parseFloat(overrideRaw))
+                        ? parseFloat(overrideRaw)
+                        : autoPrice;
+                      const utilidad = utilidadPct(effectivePrice, costoNum);
+                      return (
+                        <div key={tier.id} className="grid grid-cols-[1fr_1fr_90px] items-center gap-2 border-t border-ui-border px-3 py-2">
+                          <span className="text-sm">{tier.label}</span>
+                          <AdminInput
+                            type="number" step="1" min="0"
+                            value={overrideRaw}
+                            placeholder={formatMXN(autoPrice)}
+                            onChange={(e) => setPriceOverrides((prev) => ({ ...prev, [tier.id]: e.target.value }))}
+                            className="text-sm"
+                          />
+                          <span className={`text-sm font-semibold ${utilidad < 0 ? "text-red-500" : "text-foreground"}`}>
+                            {(utilidad * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-ui-gray mt-1">Vacío = se calcula automático según el costo. Escribe un número para fijarlo manual en ese rango.</p>
+                </div>
+              )}
             </div>
 
             <div className="px-6 py-4 border-t border-ui-border flex justify-end gap-2">

@@ -25,6 +25,12 @@ export interface Product {
   composition: string | null;
   sizes_available: string[];
   costo: number;
+  // Precio final (IVA incluido) override por rango -- clave = price_tiers.id.
+  // Un rango sin entrada aquí sigue calculándose como siempre (costo ÷
+  // margen del rango, ver getProductUnitPrice). Simplificación explícita
+  // (ver charla 2026-10-10): el costo NO varía por color ni por talla,
+  // solo por rango de cantidad.
+  price_overrides?: Record<string, number> | null;
   supplier: string | null;
   supplier_link: string | null;
   active: boolean;

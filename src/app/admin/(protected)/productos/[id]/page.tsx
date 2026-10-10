@@ -10,6 +10,8 @@ import {
 import ImageUpload from "@/components/admin/ImageUpload";
 import ViewsUpload from "@/components/admin/ViewsUpload";
 import Link from "next/link";
+import { getProductUnitPrice, utilidadPct, formatMXN } from "@/lib/pricing";
+import type { PriceTier } from "@/types";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Único"];
 
@@ -35,16 +37,24 @@ export default function EditProductoPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ color_name: "", color_hex: "#000000", stock_infinite: true, stock: 0, gender: "", sizes_available: [] as string[] });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
+  // Costo controlado (no solo defaultValue) para que la tabla de precio por
+  // rango de abajo recalcule en vivo al escribir, sin esperar a Guardar
+  // (ver charla 2026-10-10). priceOverrides: tier.id -> precio en texto tal
+  // cual lo escribe el admin ("" = sin override, usa el cálculo automático).
+  const [costoDraft, setCostoDraft] = useState(0);
+  const [priceOverrides, setPriceOverrides] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function load() {
-      const [{ data: p }, { data: cats }, { data: sups }, { data: vars }, { data: techs }, { data: productTechs }] = await Promise.all([
+      const [{ data: p }, { data: cats }, { data: sups }, { data: vars }, { data: techs }, { data: productTechs }, { data: tiers }] = await Promise.all([
         supabase.from("products").select("*, category:categories(id,name), supplier:suppliers(id,name)").eq("id", id).single(),
         supabase.from("categories").select("id, name").eq("active", true).order("sort_order"),
         supabase.from("suppliers").select("id, name").eq("active", true).order("name"),
         supabase.from("product_variants").select("*").eq("product_id", id).order("sort_order").order("created_at"),
         supabase.from("print_techniques").select("*").order("sort_order"),
         supabase.from("product_print_techniques").select("technique_id").eq("product_id", id),
+        supabase.from("price_tiers").select("*").order("qty_min"),
       ]);
       setProduct(p);
       setCategories(cats ?? []);
@@ -52,6 +62,10 @@ export default function EditProductoPage() {
       setVariants(vars ?? []);
       setTechniques(techs ?? []);
       setSelectedTechniqueIds((productTechs ?? []).map((r: any) => r.technique_id));
+      setPriceTiers(tiers ?? []);
+      setCostoDraft(p?.costo ?? 0);
+      const overrides = (p?.price_overrides ?? {}) as Record<string, number>;
+      setPriceOverrides(Object.fromEntries(Object.entries(overrides).map(([k, v]) => [k, String(v)])));
     }
     load();
   }, [id]);
@@ -63,6 +77,12 @@ export default function EditProductoPage() {
     const customSizes = (fd.get("custom_sizes") as string)
       .split(",").map((s) => s.trim()).filter(Boolean);
     const sizes = Array.from(new Set([...(fd.getAll("sizes") as string[]), ...customSizes]));
+    const overridesPayload = Object.fromEntries(
+      Object.entries(priceOverrides)
+        .filter(([, v]) => v.trim() !== "")
+        .map(([k, v]) => [k, parseFloat(v)])
+        .filter(([, v]) => Number.isFinite(v))
+    );
     await supabase.from("products").update({
       name: fd.get("name"),
       description: fd.get("description") || null,
@@ -71,6 +91,7 @@ export default function EditProductoPage() {
       supplier_id: fd.get("supplier_id") || null,
       sizes_available: sizes,
       costo: parseFloat(fd.get("costo") as string),
+      price_overrides: overridesPayload,
     }).eq("id", id);
     setSaving(false);
   }
@@ -254,8 +275,55 @@ export default function EditProductoPage() {
             </div>
             <div className="w-40">
               <FieldLabel required>Costo (MXN)</FieldLabel>
-              <AdminInput name="costo" type="number" step="0.01" min="0" defaultValue={product.costo} required />
+              <AdminInput
+                name="costo" type="number" step="0.01" min="0" required
+                value={costoDraft}
+                onChange={(e) => setCostoDraft(parseFloat(e.target.value) || 0)}
+              />
             </div>
+
+            {/* Precio por rango: arranca en el cálculo automático (costo ÷
+                margen del rango, mismo criterio de siempre) pero se puede
+                sobreescribir por producto. % Utilidad se recalcula en vivo,
+                ya sin IVA (lo que de verdad queda de ganancia, no el margen
+                bruto) -- ver charla 2026-10-10. */}
+            {priceTiers.length > 0 && (
+              <div>
+                <FieldLabel>Precio por rango</FieldLabel>
+                <div className="mt-1 overflow-hidden rounded-xl border border-ui-border">
+                  <div className="grid grid-cols-[1fr_1fr_90px] gap-2 bg-gray-50 px-3 py-2 text-xs font-semibold text-ui-gray">
+                    <span>Rango</span>
+                    <span>Precio (IVA incluido)</span>
+                    <span>% Utilidad</span>
+                  </div>
+                  {priceTiers.map((tier) => {
+                    const autoPrice = getProductUnitPrice(costoDraft, tier.qty_min, priceTiers);
+                    const overrideRaw = priceOverrides[tier.id] ?? "";
+                    const effectivePrice = overrideRaw.trim() !== "" && Number.isFinite(parseFloat(overrideRaw))
+                      ? parseFloat(overrideRaw)
+                      : autoPrice;
+                    const utilidad = utilidadPct(effectivePrice, costoDraft);
+                    return (
+                      <div key={tier.id} className="grid grid-cols-[1fr_1fr_90px] items-center gap-2 border-t border-ui-border px-3 py-2">
+                        <span className="text-sm">{tier.label}</span>
+                        <AdminInput
+                          type="number" step="1" min="0"
+                          value={overrideRaw}
+                          placeholder={formatMXN(autoPrice)}
+                          onChange={(e) => setPriceOverrides((prev) => ({ ...prev, [tier.id]: e.target.value }))}
+                          className="text-sm"
+                        />
+                        <span className={`text-sm font-semibold ${utilidad < 0 ? "text-red-500" : "text-foreground"}`}>
+                          {(utilidad * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-ui-gray mt-1">Vacío = se calcula automático según el costo. Escribe un número para fijarlo manual en ese rango.</p>
+              </div>
+            )}
+
             <div className="pt-2 border-t border-ui-border flex justify-end">
               <Btn type="submit" disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</Btn>
             </div>

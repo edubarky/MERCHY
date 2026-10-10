@@ -445,11 +445,13 @@ function PriceRangeModal({
   onClose,
   costo,
   tiers,
+  overrides,
 }: {
   open: boolean;
   onClose: () => void;
   costo: number;
   tiers: PriceTier[];
+  overrides?: Record<string, number> | null;
 }) {
   const [entered, setEntered] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -545,7 +547,7 @@ function PriceRangeModal({
               }`}
             >
               <span className="flex-1 text-center">{tier.label}</span>
-              <span className="flex-1 text-center">{formatMXN(getProductUnitPrice(costo, tier.qty_min, tiers))}</span>
+              <span className="flex-1 text-center">{formatMXN(getProductUnitPrice(costo, tier.qty_min, tiers, overrides))}</span>
             </div>
           ))}
         </div>
@@ -1168,7 +1170,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // referencia (nunca $0) — apenas el usuario asigna algo (por cualquier
   // vía: tallas o el selector superior), la cantidad real manda.
   const quantity = sizeSum > 0 ? sizeSum : 1;
-  const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers);
+  const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers, product.price_overrides);
   const totalPrice = unitPrice * quantity;
   // Talla que absorbe los +/- del selector superior de cantidad: la
   // primera talla de la primera sección visible. Al bajar, se descuenta
@@ -2022,6 +2024,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         onClose={() => setQuantityDiscountOpen(false)}
         costo={product.costo}
         tiers={priceTiers}
+        overrides={product.price_overrides}
       />
       <ReviewModal
         open={reviewModalOpen}

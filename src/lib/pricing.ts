@@ -3,16 +3,32 @@ import type { PriceTier, PrintTechnique, CartItem } from "@/types";
 export function getProductUnitPrice(
   costo: number,
   totalQty: number,
-  tiers: PriceTier[]
+  tiers: PriceTier[],
+  // Precio manual por rango, por producto (ver Product.price_overrides) --
+  // gana sobre el cálculo automático cuando existe para el rango que
+  // aplica. Opcional: todo llamador que no lo pase sigue calculando como
+  // siempre (charla 2026-10-10).
+  overrides?: Record<string, number> | null
 ): number {
   const tier = tiers.find(
     (t) => totalQty >= t.qty_min && (t.qty_max === null || totalQty <= t.qty_max)
   );
   if (!tier) return 0;
+  if (overrides?.[tier.id] != null) return overrides[tier.id];
   // Redondeo siempre hacia arriba (nunca al más cercano): así lo define la
   // tabla de referencia del cliente — garantiza que el margen mínimo del
   // tramo nunca se erosione por redondear hacia abajo.
   return Math.ceil(costo / (1 - tier.margin_pct));
+}
+
+// Utilidad REAL de un rango (quitando el IVA, que no es ganancia): a
+// partir del precio final al público (auto o con override) y el costo.
+// Pensada para el admin -- "¿cuánto realmente gano en este rango?" (ver
+// charla 2026-10-10, "% de utilidad... IVA incluido").
+export function utilidadPct(precioConIva: number, costo: number): number {
+  if (precioConIva <= 0) return 0;
+  const subtotal = precioConIva / (1 + IVA_RATE);
+  return (subtotal - costo) / subtotal;
 }
 
 export function getTechniquePrice(
@@ -199,14 +215,14 @@ export function recomputeCartItemUnitPrice(
   newQty: number,
   priceTiers: PriceTier[]
 ): { unitPrice: number; needsQuote: boolean } {
-  const garmentUnit = getProductUnitPrice(item.product.costo, newQty, priceTiers);
+  const garmentUnit = getProductUnitPrice(item.product.costo, newQty, priceTiers, item.product.price_overrides);
   const techniques = item.customization_snapshot?.selected_techniques ?? [];
 
   if (!techniques.length) {
     // Sin personalizar, o snapshot guardado antes de que existiera este
     // detalle -- se conserva la parte de técnica tal cual estaba (ya no
     // hay con qué recalcularla), solo se actualiza el producto.
-    const oldGarmentUnit = getProductUnitPrice(item.product.costo, item.total_quantity || 1, priceTiers);
+    const oldGarmentUnit = getProductUnitPrice(item.product.costo, item.total_quantity || 1, priceTiers, item.product.price_overrides);
     const oldTechniqueTotal = Math.max(0, item.unit_price - oldGarmentUnit);
     return { unitPrice: garmentUnit + oldTechniqueTotal, needsQuote: false };
   }

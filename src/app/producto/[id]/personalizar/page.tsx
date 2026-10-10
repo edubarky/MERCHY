@@ -43,7 +43,7 @@ export default async function PersonalizarPage({
     supabase
       .from("products")
       .select(`
-        id, sku, name, description, composition, sizes_available, costo, active,
+        id, sku, name, description, composition, sizes_available, costo, price_overrides, active,
         category:categories(id, name, slug, icon, sort_order, active, pzas_per_box),
         variants:product_variants(id, product_id, sku, color_name, color_hex, images, views, stock, active, gender, sizes_available)
       `)
