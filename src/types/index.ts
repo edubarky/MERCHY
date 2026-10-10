@@ -31,6 +31,10 @@ export interface Product {
   // (ver charla 2026-10-10): el costo NO varía por color ni por talla,
   // solo por rango de cantidad.
   price_overrides?: Record<string, number> | null;
+  // Rangos de costo del PROVEEDOR (cuántas piezas compradas, no vendidas) --
+  // independientes de price_tiers. Vacío = sigue usando `costo` plano (ver
+  // resolveCosto en lib/pricing.ts).
+  costo_tiers?: { qty_min: number; qty_max: number | null; costo: number }[] | null;
   supplier: string | null;
   supplier_link: string | null;
   active: boolean;

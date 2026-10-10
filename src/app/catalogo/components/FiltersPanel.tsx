@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Product, PriceTier, ProductVariant } from "@/types";
-import { getProductUnitPrice } from "@/lib/pricing";
+import { getProductUnitPrice, resolveCosto } from "@/lib/pricing";
 
 type ProductWithVariants = Product & { variants: NonNullable<Product["variants"]> };
 
@@ -42,7 +42,7 @@ export function sortProducts(
   sort: SortOption
 ): ProductWithVariants[] {
   if (sort === "relevancia") return products;
-  const withPrice = products.map((p) => ({ p, price: getProductUnitPrice(p.costo, 1, priceTiers, p.price_overrides) }));
+  const withPrice = products.map((p) => ({ p, price: getProductUnitPrice(resolveCosto(p.costo, 1, p.costo_tiers), 1, priceTiers, p.price_overrides) }));
   withPrice.sort((a, b) => (sort === "price-asc" ? a.price - b.price : b.price - a.price));
   return withPrice.map((x) => x.p);
 }
@@ -153,7 +153,7 @@ export function applyFilters(
       if (!materials.some((m) => m.includes(filters.material.toLowerCase()))) return false;
     }
 
-    const price = getProductUnitPrice(p.costo, 1, priceTiers, p.price_overrides);
+    const price = getProductUnitPrice(resolveCosto(p.costo, 1, p.costo_tiers), 1, priceTiers, p.price_overrides);
     if (price < filters.minPrice || price > filters.maxPrice) return false;
 
     if (filters.colors.length > 0 && !resolvePreferredVariant(p.variants ?? [], filters.colors)) {

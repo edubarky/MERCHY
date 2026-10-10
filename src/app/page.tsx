@@ -97,7 +97,7 @@ export default async function HomePage() {
   const [{ data: categories }, { data: products }, { data: priceTiers }] = await Promise.all([
     supabase.from("categories").select("id, name, slug, icon, sort_order, active").eq("active", true).order("sort_order").limit(4),
     supabase.from("products").select(`
-      id, sku, name, description, category_id, composition, sizes_available, costo, price_overrides, active, created_at,
+      id, sku, name, description, category_id, composition, sizes_available, costo, price_overrides, costo_tiers, active, created_at,
       category:categories(id, name, slug, icon, sort_order, active),
       variants:product_variants(id, product_id, sku, color_name, color_hex, images, stock, active, gender, sizes_available)
     `).eq("active", true).order("created_at", { ascending: false })

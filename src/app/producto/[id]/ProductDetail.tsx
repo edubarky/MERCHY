@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Product, ProductVariant, PriceTier, CartItem } from "@/types";
-import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
+import { getProductUnitPrice, resolveCosto, formatMXN } from "@/lib/pricing";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
 import { VIEW_ORDER, type ResolvedProductAssets } from "./personalizar/types";
 import { normalizeProductKey, isGarmentProduct } from "./personalizar/printAreas";
@@ -444,12 +444,14 @@ function PriceRangeModal({
   open,
   onClose,
   costo,
+  costoTiers,
   tiers,
   overrides,
 }: {
   open: boolean;
   onClose: () => void;
   costo: number;
+  costoTiers?: Product["costo_tiers"];
   tiers: PriceTier[];
   overrides?: Record<string, number> | null;
 }) {
@@ -547,7 +549,7 @@ function PriceRangeModal({
               }`}
             >
               <span className="flex-1 text-center">{tier.label}</span>
-              <span className="flex-1 text-center">{formatMXN(getProductUnitPrice(costo, tier.qty_min, tiers, overrides))}</span>
+              <span className="flex-1 text-center">{formatMXN(getProductUnitPrice(resolveCosto(costo, tier.qty_min, costoTiers), tier.qty_min, tiers, overrides))}</span>
             </div>
           ))}
         </div>
@@ -1170,7 +1172,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
   // referencia (nunca $0) — apenas el usuario asigna algo (por cualquier
   // vía: tallas o el selector superior), la cantidad real manda.
   const quantity = sizeSum > 0 ? sizeSum : 1;
-  const unitPrice = getProductUnitPrice(product.costo, quantity, priceTiers, product.price_overrides);
+  const unitPrice = getProductUnitPrice(resolveCosto(product.costo, quantity, product.costo_tiers), quantity, priceTiers, product.price_overrides);
   const totalPrice = unitPrice * quantity;
   // Talla que absorbe los +/- del selector superior de cantidad: la
   // primera talla de la primera sección visible. Al bajar, se descuenta
@@ -2023,6 +2025,7 @@ export default function ProductDetail({ product, priceTiers, resolvedGallery, mo
         open={quantityDiscountOpen}
         onClose={() => setQuantityDiscountOpen(false)}
         costo={product.costo}
+        costoTiers={product.costo_tiers}
         tiers={priceTiers}
         overrides={product.price_overrides}
       />

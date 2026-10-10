@@ -1,4 +1,20 @@
-import type { PriceTier, PrintTechnique, CartItem } from "@/types";
+import type { PriceTier, PrintTechnique, CartItem, Product } from "@/types";
+
+// Costo real a usar para una cantidad dada -- si el producto define rangos
+// de costo del PROVEEDOR (costo comprado, no vendido; ver
+// Product.costo_tiers), usa el que aplique a esa cantidad; si no hay
+// rangos, o ninguno calza, cae al costo plano de siempre. Independiente de
+// price_tiers (el proveedor puede dar su descuento en otros cortes de
+// cantidad que los rangos de venta de MERCHY) -- charla 2026-10-10.
+export function resolveCosto(
+  costoBase: number,
+  totalQty: number,
+  costoTiers?: Product["costo_tiers"]
+): number {
+  if (!costoTiers || costoTiers.length === 0) return costoBase;
+  const tier = costoTiers.find((t) => totalQty >= t.qty_min && (t.qty_max === null || totalQty <= t.qty_max));
+  return tier ? tier.costo : costoBase;
+}
 
 export function getProductUnitPrice(
   costo: number,
@@ -215,14 +231,14 @@ export function recomputeCartItemUnitPrice(
   newQty: number,
   priceTiers: PriceTier[]
 ): { unitPrice: number; needsQuote: boolean } {
-  const garmentUnit = getProductUnitPrice(item.product.costo, newQty, priceTiers, item.product.price_overrides);
+  const garmentUnit = getProductUnitPrice(resolveCosto(item.product.costo, newQty, item.product.costo_tiers), newQty, priceTiers, item.product.price_overrides);
   const techniques = item.customization_snapshot?.selected_techniques ?? [];
 
   if (!techniques.length) {
     // Sin personalizar, o snapshot guardado antes de que existiera este
     // detalle -- se conserva la parte de técnica tal cual estaba (ya no
     // hay con qué recalcularla), solo se actualiza el producto.
-    const oldGarmentUnit = getProductUnitPrice(item.product.costo, item.total_quantity || 1, priceTiers, item.product.price_overrides);
+    const oldGarmentUnit = getProductUnitPrice(resolveCosto(item.product.costo, item.total_quantity || 1, item.product.costo_tiers), item.total_quantity || 1, priceTiers, item.product.price_overrides);
     const oldTechniqueTotal = Math.max(0, item.unit_price - oldGarmentUnit);
     return { unitPrice: garmentUnit + oldTechniqueTotal, needsQuote: false };
   }

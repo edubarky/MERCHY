@@ -16,6 +16,7 @@ import type {
 } from "@/types";
 import {
   getProductUnitPrice,
+  resolveCosto,
   findQtyPrice,
   findTintasPrice,
   findSizePrice,
@@ -1355,7 +1356,7 @@ export default function PersonalizerClient({
   // de todos los colores -- nunca cambia entre colores, ni con "Distinto
   // por color" (ver contexto del plan 2026-09-19): la tela escala igual
   // sin importar el diseño.
-  const garmentUnit = getProductUnitPrice(product.costo, quantity, priceTiers, product.price_overrides);
+  const garmentUnit = getProductUnitPrice(resolveCosto(product.costo, quantity, product.costo_tiers), quantity, priceTiers, product.price_overrides);
   // Cantidad a usar para el precio de IMPRESIÓN del diseño que se está
   // viendo/editando ahora mismo: con "Distinto por color" es la de ESE
   // color nada más (colorQty); con "Mismo diseño" (o producto no

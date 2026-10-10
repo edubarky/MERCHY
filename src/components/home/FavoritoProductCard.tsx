@@ -4,7 +4,7 @@ import { forwardRef, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Product, PriceTier } from "@/types";
-import { getProductUnitPrice, formatMXN } from "@/lib/pricing";
+import { getProductUnitPrice, resolveCosto, formatMXN } from "@/lib/pricing";
 import { resolvePreferredVariant } from "@/app/catalogo/components/FiltersPanel";
 
 interface Props {
@@ -121,7 +121,7 @@ export default function FavoritoProductCard({ product, priceTiers, index = 0, bo
   // El precio de la tarjeta se cotiza a 20 pzas (ver charla 2026-09-16):
   // el de 1 pza sale muy elevado y espanta al cliente antes de que vea
   // el rango completo de precios en el detalle del producto.
-  const precioDesde = getProductUnitPrice(product.costo, 20, priceTiers, product.price_overrides);
+  const precioDesde = getProductUnitPrice(resolveCosto(product.costo, 20, product.costo_tiers), 20, priceTiers, product.price_overrides);
   // El swatch activo (por filtro o por selección manual) siempre debe
   // quedar entre los visibles, aunque no esté entre los primeros 3 del
   // producto — si no, el círculo "seleccionado" nunca se vería.
