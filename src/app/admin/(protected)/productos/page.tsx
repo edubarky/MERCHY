@@ -329,7 +329,7 @@ export default function ProductosPage() {
               </div>
 
               <div className="w-40">
-                <FieldLabel required>Costo (MXN)</FieldLabel>
+                <FieldLabel required>Costo (sin IVA)</FieldLabel>
                 <AdminInput
                   type="number"
                   step="0.01"

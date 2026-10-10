@@ -274,7 +274,7 @@ export default function EditProductoPage() {
               </div>
             </div>
             <div className="w-40">
-              <FieldLabel required>Costo (MXN)</FieldLabel>
+              <FieldLabel required>Costo (sin IVA)</FieldLabel>
               <AdminInput
                 name="costo" type="number" step="0.01" min="0" required
                 value={costoDraft}
