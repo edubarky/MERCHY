@@ -10,7 +10,7 @@ import {
   FieldLabel, AdminInput, AdminTextarea, AdminSelect, EmptyState, ModalOverlay,
 } from "@/components/admin/ui";
 import { money } from "@/lib/format";
-import { getProductUnitPrice, utilidadPct, formatMXN } from "@/lib/pricing";
+import { getProductUnitPrice, resolveCosto, utilidadPct, formatMXN } from "@/lib/pricing";
 import type { PriceTier } from "@/types";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Único"];
@@ -36,6 +36,18 @@ export default function ProductosPage() {
   const [saving, setSaving] = useState(false);
   const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
   const [priceOverrides, setPriceOverrides] = useState<Record<string, string>>({});
+  type CostoTierRow = { qty_min: string; qty_max: string; costo: string };
+  const [costoTierRows, setCostoTierRows] = useState<CostoTierRow[]>([]);
+
+  function addCostoTierRow() {
+    setCostoTierRows((prev) => [...prev, { qty_min: "", qty_max: "", costo: "" }]);
+  }
+  function updateCostoTierRow(i: number, field: keyof CostoTierRow, value: string) {
+    setCostoTierRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
+  }
+  function removeCostoTierRow(i: number) {
+    setCostoTierRows((prev) => prev.filter((_, idx) => idx !== i));
+  }
 
   // Supplier sub-modal
   const [showSupModal, setShowSupModal] = useState(false);
@@ -72,6 +84,7 @@ export default function ProductosPage() {
     setCustomSizeDraft("");
     setSupplierId("");
     setPriceOverrides({});
+    setCostoTierRows([]);
     setShowModal(true);
   }
 
@@ -84,6 +97,15 @@ export default function ProductosPage() {
         .map(([k, v]) => [k, parseFloat(v)])
         .filter(([, v]) => Number.isFinite(v))
     );
+    const costoTiersPayload = costoTierRows
+      .filter((r) => r.qty_min.trim() !== "" && r.costo.trim() !== "")
+      .map((r) => ({
+        qty_min: parseInt(r.qty_min, 10),
+        qty_max: r.qty_max.trim() === "" ? null : parseInt(r.qty_max, 10),
+        costo: parseFloat(r.costo),
+      }))
+      .filter((r) => Number.isFinite(r.qty_min) && Number.isFinite(r.costo))
+      .sort((a, b) => a.qty_min - b.qty_min);
     const payload: Record<string, unknown> = {
       name: form.name,
       description: form.description || null,
@@ -92,6 +114,7 @@ export default function ProductosPage() {
       sizes_available: sizes,
       costo: parseFloat(form.costo),
       price_overrides: overridesPayload,
+      costo_tiers: costoTiersPayload,
       active: true,
     };
     if (supplierId) payload.supplier_id = supplierId;
@@ -340,6 +363,36 @@ export default function ProductosPage() {
                 />
               </div>
 
+              {!!parseFloat(form.costo) && (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <FieldLabel>Rango de costo del proveedor (opcional)</FieldLabel>
+                    <button type="button" onClick={addCostoTierRow} className="text-xs font-semibold text-primary-dark hover:underline">
+                      + Agregar rango
+                    </button>
+                  </div>
+                  {costoTierRows.length > 0 && (
+                    <div className="overflow-hidden rounded-xl border border-ui-border">
+                      <div className="grid grid-cols-[1fr_1fr_1fr_28px] gap-2 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-ui-gray">
+                        <span>Desde</span>
+                        <span>Hasta</span>
+                        <span>Costo</span>
+                        <span />
+                      </div>
+                      {costoTierRows.map((row, i) => (
+                        <div key={i} className="grid grid-cols-[1fr_1fr_1fr_28px] items-center gap-2 border-t border-ui-border px-3 py-1.5">
+                          <AdminInput type="number" min="1" placeholder="1" value={row.qty_min} onChange={(e) => updateCostoTierRow(i, "qty_min", e.target.value)} className="text-sm" />
+                          <AdminInput type="number" min="1" placeholder="sin límite" value={row.qty_max} onChange={(e) => updateCostoTierRow(i, "qty_max", e.target.value)} className="text-sm" />
+                          <AdminInput type="text" inputMode="decimal" placeholder="0.00" value={row.costo} onChange={(e) => updateCostoTierRow(i, "costo", e.target.value)} className="text-sm" />
+                          <button type="button" onClick={() => removeCostoTierRow(i)} className="text-ui-gray hover:text-red-500" aria-label="Quitar rango">×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-ui-gray mt-1">Si tu proveedor te cobra distinto según cuánto le compras, agrega sus rangos aquí -- no tienen que coincidir con los rangos de venta de abajo.</p>
+                </div>
+              )}
+
               {priceTiers.length > 0 && !!parseFloat(form.costo) && (
                 <div>
                   <FieldLabel>Precio por rango</FieldLabel>
@@ -351,12 +404,15 @@ export default function ProductosPage() {
                     </div>
                     {priceTiers.map((tier) => {
                       const costoNum = parseFloat(form.costo) || 0;
-                      const autoPrice = getProductUnitPrice(costoNum, tier.qty_min, priceTiers);
+                      const costoEfectivo = resolveCosto(costoNum, tier.qty_min, costoTierRows
+                        .filter((r) => r.qty_min.trim() !== "" && r.costo.trim() !== "")
+                        .map((r) => ({ qty_min: parseInt(r.qty_min, 10), qty_max: r.qty_max.trim() === "" ? null : parseInt(r.qty_max, 10), costo: parseFloat(r.costo) })));
+                      const autoPrice = getProductUnitPrice(costoEfectivo, tier.qty_min, priceTiers);
                       const overrideRaw = priceOverrides[tier.id] ?? "";
                       const effectivePrice = overrideRaw.trim() !== "" && Number.isFinite(parseFloat(overrideRaw))
                         ? parseFloat(overrideRaw)
                         : autoPrice;
-                      const utilidad = utilidadPct(effectivePrice, costoNum);
+                      const utilidad = utilidadPct(effectivePrice, costoEfectivo);
                       return (
                         <div key={tier.id} className="grid grid-cols-[1fr_1fr_90px] items-center gap-2 border-t border-ui-border px-3 py-2">
                           <span className="text-sm">{tier.label}</span>
