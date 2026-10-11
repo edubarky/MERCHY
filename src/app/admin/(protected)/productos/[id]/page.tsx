@@ -247,39 +247,41 @@ export default function EditProductoPage() {
 
       {tab === "detalles" && (
         <AdminCard className="p-5">
-          <form onSubmit={saveProduct} className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-            {/* Columna izquierda: identidad del producto */}
-            <div className="space-y-4">
+          <form onSubmit={saveProduct} className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3 text-xs">
+            {/* Columna izquierda: identidad del producto, Costo al final
+                (es un dato de apoyo, no el protagonista de esta columna --
+                pedido explícito, ver charla 2026-10-11). */}
+            <div className="space-y-3">
               <div>
-                <FieldLabel required>Nombre</FieldLabel>
-                <AdminInput name="name" defaultValue={product.name} required className="text-sm" />
+                <FieldLabel required className="text-xs">Nombre</FieldLabel>
+                <AdminInput name="name" defaultValue={product.name} required className="text-xs" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <FieldLabel required>Categoría</FieldLabel>
-                  <AdminSelect name="category_id" defaultValue={product.category_id ?? ""} required className="text-sm">
+                  <FieldLabel required className="text-xs">Categoría</FieldLabel>
+                  <AdminSelect name="category_id" defaultValue={product.category_id ?? ""} required className="text-xs">
                     <option value="">Seleccionar...</option>
                     {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </AdminSelect>
                 </div>
                 <div>
-                  <FieldLabel>Proveedor</FieldLabel>
-                  <AdminSelect name="supplier_id" defaultValue={product.supplier_id ?? ""} className="text-sm">
+                  <FieldLabel className="text-xs">Proveedor</FieldLabel>
+                  <AdminSelect name="supplier_id" defaultValue={product.supplier_id ?? ""} className="text-xs">
                     <option value="">Sin proveedor</option>
                     {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </AdminSelect>
                 </div>
               </div>
               <div>
-                <FieldLabel>Descripción</FieldLabel>
-                <AdminTextarea name="description" defaultValue={product.description ?? ""} className="text-sm" rows={2} />
+                <FieldLabel className="text-xs">Descripción</FieldLabel>
+                <AdminTextarea name="description" defaultValue={product.description ?? ""} className="text-xs" rows={4} />
               </div>
               <div>
-                <FieldLabel>Composición</FieldLabel>
-                <AdminInput name="composition" defaultValue={product.composition ?? ""} className="text-sm" />
+                <FieldLabel className="text-xs">Composición</FieldLabel>
+                <AdminInput name="composition" defaultValue={product.composition ?? ""} className="text-xs" />
               </div>
               <div>
-                <FieldLabel>Tallas disponibles</FieldLabel>
+                <FieldLabel className="text-xs">Tallas disponibles</FieldLabel>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
                   {SIZES.map((size) => (
                     <label key={size} className="flex items-center gap-1 cursor-pointer">
@@ -290,61 +292,29 @@ export default function EditProductoPage() {
                 </div>
                 <p className="text-xs text-ui-gray mt-1">Deja vacío si el producto no tiene tallas</p>
                 <div className="mt-2">
-                  <FieldLabel>Tallas propias (si no usa XS-XXL, ej. producto infantil)</FieldLabel>
+                  <FieldLabel className="text-xs">Tallas propias (si no usa XS-XXL, ej. producto infantil)</FieldLabel>
                   <AdminInput
                     name="custom_sizes"
                     defaultValue={(product.sizes_available ?? []).filter((s: string) => !SIZES.includes(s)).join(", ")}
                     placeholder="3-4, 5-6, 7-8, 9-11, 12-14"
-                    className="text-sm"
+                    className="text-xs"
                   />
                 </div>
               </div>
-            </div>
-
-            {/* Columna derecha: costo y precio */}
-            <div className="space-y-4">
               <div className="w-40">
-                <FieldLabel required>Costo (sin IVA)</FieldLabel>
+                <FieldLabel required className="text-xs">Costo (sin IVA)</FieldLabel>
                 <AdminInput
                   name="costo" type="text" inputMode="decimal" required
                   value={costoDraft}
                   onChange={(e) => setCostoDraft(e.target.value)}
-                  className="text-sm"
+                  className="text-xs"
                 />
               </div>
+            </div>
 
-              {/* Rango de costo del proveedor: independiente de los rangos
-                  de venta de abajo -- el proveedor puede dar su descuento en
-                  otros cortes de cantidad (ver charla 2026-10-10). Vacío =
-                  sigue usando el Costo plano de arriba para todo. */}
-              <div>
-                <div className="flex items-center justify-between">
-                  <FieldLabel>Rango de costo del proveedor (opcional)</FieldLabel>
-                  <button type="button" onClick={addCostoTierRow} className="text-xs font-semibold text-primary-dark hover:underline">
-                    + Agregar rango
-                  </button>
-                </div>
-                {costoTierRows.length > 0 && (
-                  <div className="overflow-hidden rounded-xl border border-ui-border">
-                    <div className="grid grid-cols-[1fr_1fr_1fr_28px] gap-2 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-ui-gray">
-                      <span>Desde</span>
-                      <span>Hasta</span>
-                      <span>Costo</span>
-                      <span />
-                    </div>
-                    {costoTierRows.map((row, i) => (
-                      <div key={i} className="grid grid-cols-[1fr_1fr_1fr_28px] items-center gap-2 border-t border-ui-border px-3 py-1.5">
-                        <AdminInput type="number" min="1" placeholder="1" value={row.qty_min} onChange={(e) => updateCostoTierRow(i, "qty_min", e.target.value)} className="text-sm" />
-                        <AdminInput type="number" min="1" placeholder="sin límite" value={row.qty_max} onChange={(e) => updateCostoTierRow(i, "qty_max", e.target.value)} className="text-sm" />
-                        <AdminInput type="text" inputMode="decimal" placeholder="0.00" value={row.costo} onChange={(e) => updateCostoTierRow(i, "costo", e.target.value)} className="text-sm" />
-                        <button type="button" onClick={() => removeCostoTierRow(i)} className="text-ui-gray hover:text-red-500" aria-label="Quitar rango">×</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <p className="text-xs text-ui-gray mt-1">Si tu proveedor te cobra distinto según cuánto le compras, agrega sus rangos aquí -- no tienen que coincidir con los rangos de venta de abajo.</p>
-              </div>
-
+            {/* Columna derecha: precio primero (es lo que se consulta más
+                seguido), rango de costo del proveedor después. */}
+            <div className="space-y-3">
               {/* Precio por rango: arranca en el cálculo automático (costo ÷
                   margen del rango, mismo criterio de siempre) pero se puede
                   sobreescribir por producto. % Utilidad se recalcula en vivo,
@@ -352,7 +322,7 @@ export default function EditProductoPage() {
                   bruto) -- ver charla 2026-10-10. */}
               {priceTiers.length > 0 && (
                 <div>
-                  <FieldLabel>Precio por rango</FieldLabel>
+                  <FieldLabel className="text-xs">Precio por rango</FieldLabel>
                   <div className="overflow-hidden rounded-xl border border-ui-border">
                     <div className="grid grid-cols-[1fr_1fr_60px] gap-2 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-ui-gray">
                       <span>Rango</span>
@@ -371,14 +341,14 @@ export default function EditProductoPage() {
                         : autoPrice;
                       const utilidad = utilidadPct(effectivePrice, costoEfectivo);
                       return (
-                        <div key={tier.id} className="grid grid-cols-[1fr_1fr_60px] items-center gap-2 border-t border-ui-border px-3 py-1.5">
+                        <div key={tier.id} className="grid grid-cols-[1fr_1fr_60px] items-center gap-2 border-t border-ui-border px-3 py-1">
                           <span className="text-xs">{tier.label}</span>
                           <AdminInput
                             type="number" step="1" min="0"
                             value={overrideRaw}
                             placeholder={formatMXN(autoPrice)}
                             onChange={(e) => setPriceOverrides((prev) => ({ ...prev, [tier.id]: e.target.value }))}
-                            className="text-sm placeholder:text-foreground placeholder:font-semibold"
+                            className="text-xs placeholder:text-foreground placeholder:font-semibold"
                           />
                           <span className={`text-xs font-semibold ${utilidad < 0 ? "text-red-500" : "text-foreground"}`}>
                             {(utilidad * 100).toFixed(0)}%
@@ -390,6 +360,38 @@ export default function EditProductoPage() {
                   <p className="text-xs text-ui-gray mt-1">Vacío = automático. Escribe un número para fijarlo manual en ese rango.</p>
                 </div>
               )}
+
+              {/* Rango de costo del proveedor: independiente de los rangos
+                  de venta de arriba -- el proveedor puede dar su descuento en
+                  otros cortes de cantidad (ver charla 2026-10-10). Vacío =
+                  sigue usando el Costo plano de la izquierda para todo. */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <FieldLabel className="text-xs">Rango de costo del proveedor (opcional)</FieldLabel>
+                  <button type="button" onClick={addCostoTierRow} className="text-xs font-semibold text-primary-dark hover:underline">
+                    + Agregar rango
+                  </button>
+                </div>
+                {costoTierRows.length > 0 && (
+                  <div className="overflow-hidden rounded-xl border border-ui-border">
+                    <div className="grid grid-cols-[1fr_1fr_1fr_28px] gap-2 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-ui-gray">
+                      <span>Desde</span>
+                      <span>Hasta</span>
+                      <span>Costo</span>
+                      <span />
+                    </div>
+                    {costoTierRows.map((row, i) => (
+                      <div key={i} className="grid grid-cols-[1fr_1fr_1fr_28px] items-center gap-2 border-t border-ui-border px-3 py-1">
+                        <AdminInput type="number" min="1" placeholder="1" value={row.qty_min} onChange={(e) => updateCostoTierRow(i, "qty_min", e.target.value)} className="text-xs" />
+                        <AdminInput type="number" min="1" placeholder="sin límite" value={row.qty_max} onChange={(e) => updateCostoTierRow(i, "qty_max", e.target.value)} className="text-xs" />
+                        <AdminInput type="text" inputMode="decimal" placeholder="0.00" value={row.costo} onChange={(e) => updateCostoTierRow(i, "costo", e.target.value)} className="text-xs" />
+                        <button type="button" onClick={() => removeCostoTierRow(i)} className="text-ui-gray hover:text-red-500" aria-label="Quitar rango">×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-ui-gray mt-1">Si tu proveedor te cobra distinto según cuánto le compras, agrega sus rangos aquí -- no tienen que coincidir con los rangos de venta de arriba.</p>
+              </div>
             </div>
 
             <div className="lg:col-span-2 pt-2 border-t border-ui-border flex justify-end">

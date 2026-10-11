@@ -28,9 +28,9 @@ export function AdminCard({ children, className = "" }: { children: React.ReactN
   );
 }
 
-export function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
+export function FieldLabel({ children, required, className = "" }: { children: React.ReactNode; required?: boolean; className?: string }) {
   return (
-    <label className="block text-sm font-medium text-foreground mb-1">
+    <label className={`block text-sm font-medium text-foreground mb-1 ${className}`}>
       {children}
       {required && <span className="text-red-500 ml-0.5">*</span>}
     </label>
