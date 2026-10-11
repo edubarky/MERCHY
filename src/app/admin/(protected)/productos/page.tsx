@@ -363,8 +363,7 @@ export default function ProductosPage() {
                 />
               </div>
 
-              {!!parseFloat(form.costo) && (
-                <div>
+              <div>
                   <div className="flex items-center justify-between">
                     <FieldLabel>Rango de costo del proveedor (opcional)</FieldLabel>
                     <button type="button" onClick={addCostoTierRow} className="text-xs font-semibold text-primary-dark hover:underline">
@@ -390,8 +389,7 @@ export default function ProductosPage() {
                     </div>
                   )}
                   <p className="text-xs text-ui-gray mt-1">Si tu proveedor te cobra distinto según cuánto le compras, agrega sus rangos aquí -- no tienen que coincidir con los rangos de venta de abajo.</p>
-                </div>
-              )}
+              </div>
 
               {priceTiers.length > 0 && !!parseFloat(form.costo) && (
                 <div>
