@@ -224,7 +224,7 @@ export default function EditProductoPage() {
   if (!product) return <div className="p-6 text-ui-gray">Cargando...</div>;
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="p-6 max-w-6xl">
       <PageHeader
         title={product.name}
         subtitle={`SKU: ${product.sku}`}
