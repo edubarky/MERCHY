@@ -419,7 +419,7 @@ export default function ProductosPage() {
                             value={overrideRaw}
                             placeholder={formatMXN(autoPrice)}
                             onChange={(e) => setPriceOverrides((prev) => ({ ...prev, [tier.id]: e.target.value }))}
-                            className="text-sm"
+                            className="text-sm placeholder:text-foreground placeholder:font-semibold"
                           />
                           <span className={`text-sm font-semibold ${utilidad < 0 ? "text-red-500" : "text-foreground"}`}>
                             {(utilidad * 100).toFixed(0)}%
