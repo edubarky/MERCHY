@@ -19,6 +19,10 @@ export const CATEGORIES: { key: string; icon: string; label: string; categoria: 
   // "Hoodies" is the label on the editable asset; the real matching DB
   // category is "sudaderas" (no separate "hoodies" category exists).
   { key: "hoodies", icon: "ICONO DE HOODIES.svg", label: "Hoodies", categoria: "sudaderas" },
+  // Pedido explícito (charla 2026-10-11): Bolsas va justo después de
+  // Hoodies, antes de Gorras -- la categoría real en la base es "Tote Bags"
+  // (slug tote-bags), renombrada a "Bolsas" (slug bolsas) para que calce.
+  { key: "bolsas", icon: "ICONO DE BOLSAS.svg", label: "Bolsas", categoria: "bolsas" },
   { key: "gorras", icon: "ICONO DE GORRAS.svg", label: "Gorras", categoria: "gorras" },
   // "Tazas" and "Termos" share one real category ("termos-y-bebidas" — the
   // catalog has no separate cups/bottles split) — narrowed with the
@@ -28,10 +32,6 @@ export const CATEGORIES: { key: string; icon: string; label: string; categoria: 
   { key: "tazas", icon: "ICONO DE TAZAS.svg", label: "Tazas", categoria: "termos-y-bebidas", q: "taza" },
   { key: "termos", icon: "ICONO DE TERMOS.svg", label: "Termos", categoria: "termos-y-bebidas", q: "termo" },
   { key: "mochilas", icon: "ICONO DE MOCHILAS.svg", label: "Mochilas", categoria: "mochilas" },
-  // No "bolsas" category/products exist yet — links through anyway (matches
-  // the reference bar exactly) and correctly resolves to an empty state
-  // rather than silently showing everything, once no category matches.
-  { key: "bolsas", icon: "ICONO DE BOLSAS.svg", label: "Bolsas", categoria: "bolsas" },
 ];
 
 export function iconSrc(file: string) {
