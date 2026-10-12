@@ -455,6 +455,8 @@ export default function EditProductoPage() {
                     variantId={v.id}
                     existingViews={v.views}
                     onUpdate={(views) => updateVariantViews(v.id, views)}
+                    existingImages={v.images ?? []}
+                    onImagesUpdate={(urls) => updateVariantImages(v.id, urls)}
                   />
                   {editingId === v.id && (
                     <div className="mt-3 pt-3 border-t border-ui-border space-y-3">
