@@ -94,6 +94,21 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
       .eq("id", variantId);
   }
 
+  // Reordenar fotos intercambiando con la vecina -- ★ ya cubre "mandar al
+  // frente", esto cubre mover una foto a cualquier otra posición de en medio
+  // (ver charla 2026-10-12, "¿se pueden cambiar de lugar?").
+  async function moveImage(idx: number, dir: -1 | 1) {
+    const target = idx + dir;
+    if (target < 0 || target >= existingUrls.length) return;
+    const updated = [...existingUrls];
+    [updated[idx], updated[target]] = [updated[target], updated[idx]];
+    onUpdate(updated);
+    await supabase
+      .from("product_variants")
+      .update({ images: updated })
+      .eq("id", variantId);
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
@@ -134,6 +149,24 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
                 ×
               </button>
             </div>
+            {idx !== 0 && (
+              <button
+                onClick={() => moveImage(idx, -1)}
+                className="pointer-events-none absolute left-0 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-r bg-black/60 text-xs text-white opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100"
+                title="Mover a la izquierda"
+              >
+                ‹
+              </button>
+            )}
+            {idx !== existingUrls.length - 1 && (
+              <button
+                onClick={() => moveImage(idx, 1)}
+                className="pointer-events-none absolute right-0 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-l bg-black/60 text-xs text-white opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100"
+                title="Mover a la derecha"
+              >
+                ›
+              </button>
+            )}
           </div>
         ))}
 
