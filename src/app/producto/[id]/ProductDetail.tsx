@@ -58,11 +58,17 @@ interface Review {
 // los fondos de las vistas del Personalizador (Frente/Reverso para
 // colocar el logo) siguen resolviendo del sistema de ejes de siempre,
 // sin tocarse.
+// Playera Infantil: mismo síntoma una vez más -- en cuanto se subió
+// Frente/Reverso/Izquierda/Derecha al Personalizador, la ficha dejó de
+// mostrar las fotos reales recién acomodadas en product_variants.images
+// y solo mostraba las plantillas planas del Personalizador (ver charla
+// 2026-10-12, "pq solo me salen las fotos del personalizador?").
 const PRODUCTS_PREFERRING_REAL_GALLERY = new Set([
   "tapete de yoga minsk",
   "tapete century",
   "set de ejercicio bor",
   "playera over",
+  "playera infantil",
 ]);
 
 // "Guía de Tallas" por defecto es la tabla de prenda (Ancho/Largo/Manga,
