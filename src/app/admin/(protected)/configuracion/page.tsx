@@ -12,7 +12,14 @@ const COSTO_EJEMPLO = 1000;
 
 // Orden fijo (no alfabético) — las que ya tienen precio real primero, en
 // el orden que pidió el usuario (ver charla 2026-09-16).
-const TECNICAS_ORDEN = ["DTF Textil", "DTF UV", "Serigrafía", "Tampografía", "Grabado en Láser", "Bordado"];
+// "DTF Textil" -> "Textil DTF": el nombre real en print_techniques tiene
+// las palabras al revés -- con el nombre viejo, el .find() de abajo
+// nunca encontraba la fila y la técnica (con tabla de precios completa,
+// sí usada por el Personalizador) se quedaba invisible en esta pantalla
+// sin ningún error (ver charla 2026-10-12, "no encontré DTF Textil").
+// "DTG" tampoco estaba en esta lista -- otra técnica real con su propia
+// tabla de precios que nunca se agregó aquí, mismo síntoma.
+const TECNICAS_ORDEN = ["Textil DTF", "DTG", "DTF UV", "Serigrafía", "Tampografía", "Grabado en Láser", "Bordado"];
 
 type QtyRange = { qty_min: number; qty_max: number | null };
 
