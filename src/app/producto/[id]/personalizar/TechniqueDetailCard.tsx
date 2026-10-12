@@ -2,6 +2,7 @@
 
 import type { PrintTechnique } from "@/types";
 import { formatMXN } from "@/lib/pricing";
+import { techniqueDisplayName } from "@/lib/techniqueDisplayName";
 import type { DesignElement, ViewName } from "./types";
 
 // Editables reales (carpeta "POSICIONES, TAMAÑOS Y TINTAS"): cada archivo
@@ -21,15 +22,6 @@ const ICON_SRC: Record<string, string> = {
   "DTG": "/Home/PERSONALIZADOR/TECNICAS/DETALLE/DTG.svg",
   "Grabado en Láser": "/Home/PERSONALIZADOR/TECNICAS/DETALLE/LÁSER.svg",
   "Tampografía": "/Home/PERSONALIZADOR/TECNICAS/DETALLE/TAMPOGRAFÍA.svg",
-};
-
-// El nombre real en la base de datos ("Textil DTF") quedó así por cómo se
-// dio de alta la técnica -- pero el editable/mockup y el resto de la app
-// la llaman "DTF Textil". Este mapa solo cambia lo que se MUESTRA en el
-// encabezado de la tarjeta; technique.name (usado para ICON_SRC, pricing,
-// el snapshot guardado, etc.) no se toca en ningún otro lado.
-const DISPLAY_NAME: Record<string, string> = {
-  "Textil DTF": "DTF Textil",
 };
 
 const NATIVE_W = 330;
@@ -241,7 +233,7 @@ export default function TechniqueDetailCard({
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <TechniqueIconBadge name={technique.name} />
-          <p className="truncate text-base font-bold text-primary-dark">{DISPLAY_NAME[technique.name] ?? technique.name}</p>
+          <p className="truncate text-base font-bold text-primary-dark">{techniqueDisplayName(technique.name)}</p>
         </div>
         <button
           type="button"

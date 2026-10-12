@@ -5,7 +5,7 @@ import { VIEW_LABELS, type ViewName, type ViewElements, type DesignElement, type
 import { resolveFontFamilyCss } from "./textFonts";
 import { DEFAULT_FONT_SIZE_RATIO } from "./DesignElementView";
 import { needsLogoProcessing, processLogoSrc } from "./logoImagePipeline";
-import { VIEW_ASSETS } from "./viewAssets";
+import { getViewAspect } from "./printAreas";
 
 // Extraído de PreviewModal.tsx (ver charla 2026-09-25) para reusarlo también
 // en el paso "Selecciona el Tipo de impresión" (miniatura por vista) — sin
@@ -66,17 +66,26 @@ export default function MiniView({
   elements,
   resolvedAssets,
   garmentColor,
+  productName,
 }: {
   view: ViewName;
   elements: ViewElements;
   resolvedAssets: ResolvedProductAssets;
   garmentColor: string;
+  productName: string;
 }) {
   // No generic-mockup fallback here either — same rule as the live canvas:
   // only ever the selected product's own photography, or nothing.
   const imgSrc = resolvedAssets[view][garmentColor];
   const viewElements = elements[view];
-  const asset = VIEW_ASSETS[view];
+  // Mismo aspect ratio por producto/eje que usa el lienzo real (ver
+  // PersonalizerClient) -- usar el VIEW_ASSETS[view].aspect genérico aquí
+  // distorsionaba la posición de los elementos para cualquier producto con
+  // override propio (ver charla 2026-10-12: "el logo no se ve donde lo
+  // puse" en Playera Infantil) -- los xPct/yPct se calcularon sobre el
+  // aspect REAL del lienzo, así que esta vista previa debe usar ese mismo
+  // aspect para que caigan en el mismo lugar relativo.
+  const aspect = getViewAspect(productName, view);
 
   return (
     <div
@@ -101,9 +110,9 @@ export default function MiniView({
       <div
         className="relative"
         style={{
-          aspectRatio: asset.aspect,
-          width: asset.aspect >= 1 ? "100%" : "auto",
-          height: asset.aspect >= 1 ? "auto" : "100%",
+          aspectRatio: aspect,
+          width: aspect >= 1 ? "100%" : "auto",
+          height: aspect >= 1 ? "auto" : "100%",
           maxWidth: "100%",
           maxHeight: "100%",
         }}

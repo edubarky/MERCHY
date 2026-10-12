@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader, AdminCard, FieldLabel, AdminInput, Btn, EmptyState } from "@/components/admin/ui";
+import { techniqueDisplayName } from "@/lib/techniqueDisplayName";
 
 // Precios de TÉCNICAS de impresión (print_techniques.price_table) —
 // distinto de la futura "Tabla de precios" de PRODUCTOS (price_tiers,
@@ -212,7 +213,7 @@ export default function TecnicasPage() {
                   className="w-full flex items-center gap-4 px-5 py-4 text-left"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-bold text-foreground">{t.name}</p>
+                    <p className="text-[15px] font-bold text-foreground">{techniqueDisplayName(t.name)}</p>
                     <p className="text-xs text-ui-gray truncate mt-0.5">{t.description ?? "Sin descripción"}</p>
                   </div>
                   {summary ? (

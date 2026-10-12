@@ -123,6 +123,7 @@ export default function PreviewModal({
                   elements={elements}
                   resolvedAssets={resolvedAssets}
                   garmentColor={garmentColor}
+                  productName={productName}
                 />
               ))}
             </div>

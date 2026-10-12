@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader, AdminCard, Table, Td, Btn, AdminInput, FieldLabel } from "@/components/admin/ui";
 import { formatMXN } from "@/lib/pricing";
+import { techniqueDisplayName } from "@/lib/techniqueDisplayName";
 import type { Category, PriceTier, PrintTechnique, ShippingZone, StoreSettings, TechniquePrice } from "@/types";
 
 // Costo base solo para la columna "Precio ejemplo" — un número redondo
@@ -12,13 +13,13 @@ const COSTO_EJEMPLO = 1000;
 
 // Orden fijo (no alfabético) — las que ya tienen precio real primero, en
 // el orden que pidió el usuario (ver charla 2026-09-16).
-// "DTF Textil" -> "Textil DTF": el nombre real en print_techniques tiene
-// las palabras al revés -- con el nombre viejo, el .find() de abajo
-// nunca encontraba la fila y la técnica (con tabla de precios completa,
-// sí usada por el Personalizador) se quedaba invisible en esta pantalla
-// sin ningún error (ver charla 2026-10-12, "no encontré DTF Textil").
-// "DTG" tampoco estaba en esta lista -- otra técnica real con su propia
-// tabla de precios que nunca se agregó aquí, mismo síntoma.
+// El nombre debe coincidir EXACTO con print_techniques.name -- un
+// desajuste aquí (ej. "DTF Textil" vs "Textil DTF" guardado en BD) hace
+// que el .find() de abajo nunca encuentre la fila y la técnica
+// desaparezca de esta pantalla sin ningún error, aunque sí tenga tabla de
+// precios y el Personalizador la use con normalidad (ver charla
+// 2026-10-12, "no encontré DTF Textil"). "DTG" tampoco estaba en esta
+// lista -- otra técnica real que nunca se agregó aquí, mismo síntoma.
 const TECNICAS_ORDEN = ["Textil DTF", "DTG", "DTF UV", "Serigrafía", "Tampografía", "Grabado en Láser", "Bordado"];
 
 type QtyRange = { qty_min: number; qty_max: number | null };
@@ -543,7 +544,7 @@ export default function ConfiguracionPage() {
                   className="w-full flex items-center gap-4 px-5 py-3.5 text-left hover:bg-gray-50"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                    <p className="text-sm font-semibold text-foreground">{techniqueDisplayName(t.name)}</p>
                     {t.description && <p className="text-xs text-ui-gray truncate mt-0.5">{t.description}</p>}
                   </div>
                   {t.price_table.length === 0 ? (

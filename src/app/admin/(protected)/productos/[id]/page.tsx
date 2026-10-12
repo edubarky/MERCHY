@@ -11,6 +11,7 @@ import ImageUpload from "@/components/admin/ImageUpload";
 import ViewsUpload from "@/components/admin/ViewsUpload";
 import Link from "next/link";
 import { getProductUnitPrice, resolveCosto, utilidadPct, formatMXN } from "@/lib/pricing";
+import { techniqueDisplayName } from "@/lib/techniqueDisplayName";
 import type { PriceTier } from "@/types";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Único"];
@@ -658,7 +659,7 @@ export default function EditProductoPage() {
                         <path d="M3.5 8.5 6.5 11.5 12.5 4.5" />
                       </svg>
                     )}
-                    <span>{t.name}</span>
+                    <span>{techniqueDisplayName(t.name)}</span>
                     {noPrice && (
                       <span className={`text-[10px] font-medium ${selected ? "text-white/75" : "text-ui-gray"}`}>
                         · Precio no configurado

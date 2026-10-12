@@ -149,6 +149,7 @@ export default function TechniqueStep({
                         elements={{ ...emptyViewElements(), [slot.view]: slot.logos }}
                         resolvedAssets={resolvedAssets}
                         garmentColor={garmentColorForDk(dk)}
+                        productName={productName}
                       />
                     </div>
                     <div className="min-w-0 flex-1">
