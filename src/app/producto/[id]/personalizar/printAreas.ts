@@ -123,6 +123,24 @@ export function getPrintArea(productName: string, view: ViewName): PrintAreaConf
   return DEFAULT_PRINT_AREAS[view];
 }
 
+// Mismo criterio que PRODUCT_PRINT_AREAS arriba, pero para el aspect ratio
+// del LIENZO (VIEW_ASSETS[view].aspect es un solo valor compartido por
+// TODO el catálogo, calibrado contra el mockup genérico 418x484 -- un
+// producto cuyas fotos reales tienen otra proporción se veía letterboxed
+// dentro de ese marco fijo, dejando la prenda chica con mucho margen
+// blanco arriba/abajo). Playera Infantil: sus 4 fotos reales (Frente/
+// Reverso/Izquierda/Derecha) son cuadradas (500x500 / 1254x1254,
+// confirmado bajando los archivos), nada que ver con 418:484 -- ver
+// charla 2026-10-12, "se ve muy chica la foto de la playera".
+const PRODUCT_VIEW_ASPECTS: Record<string, Partial<Record<ViewName, number>>> = {
+  "playera infantil": { frente: 1, reverso: 1, izquierda: 1, derecha: 1 },
+};
+
+export function getViewAspect(productName: string, view: ViewName): number {
+  const key = normalizeProductKey(productName);
+  return PRODUCT_VIEW_ASPECTS[key]?.[view] ?? VIEW_ASSETS[view].aspect;
+}
+
 // Los 4 costados clásicos de una prenda -- el default de getApplicableViews
 // para todo el catálogo excepto los productos agregados a mano abajo.
 // Lista explícita a propósito (no "VIEW_ORDER menos los ejes especiales"):

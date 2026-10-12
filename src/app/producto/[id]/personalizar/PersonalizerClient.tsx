@@ -38,7 +38,7 @@ import {
   type ResolvedProductAssets,
 } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
-import { getPrintArea, getApplicableViews, isGarmentProduct } from "./printAreas";
+import { getPrintArea, getApplicableViews, isGarmentProduct, getViewAspect } from "./printAreas";
 import DesignElementView, { DEFAULT_FONT_SIZE_PX, FONT_SIZE_MIN_PX, FONT_SIZE_MAX_PX } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
 
@@ -636,6 +636,10 @@ export default function PersonalizerClient({
   const showGroupToggle = activeGroupViews.length > 1;
 
   const asset = VIEW_ASSETS[activeView];
+  // Aspect ratio REAL del lienzo -- por producto/eje (ver getViewAspect),
+  // nunca el valor compartido de asset.aspect directo (ese sigue siendo
+  // el fallback genérico para todo producto sin override propio).
+  const viewAspect = getViewAspect(product.name, activeView);
   // Único eje que este Personalizador carga para la vista activa: el del
   // color ya elegido en la página del producto. No se resuelven ni cargan
   // los ejes de ningún otro color.
@@ -1817,11 +1821,11 @@ export default function PersonalizerClient({
   }
 
   return (
-    <div className="mx-auto flex max-w-[1680px] flex-col gap-8 px-6 py-6 lg:flex-row lg:items-start lg:gap-10">
+    <div className="mx-auto flex max-w-[1680px] flex-col gap-8 px-6 py-4 lg:flex-row lg:items-start lg:gap-10">
       {/* ── Canvas (izquierda, ~65%) ── */}
       <div className="w-full lg:w-[65%]">
-        <div className="relative rounded-[24px] bg-white p-6 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
-          <div className="mb-5 flex items-center justify-between">
+        <div className="relative rounded-[24px] bg-white p-5 shadow-[0_2px_28px_rgba(0,0,0,0.05)]">
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-8">
               {tabGroups.map((group) => {
                 const active = group.views.includes(activeView);
@@ -1991,12 +1995,14 @@ export default function PersonalizerClient({
                 // 2026-09-16): esa altura fija empujaba el hem de la prenda
                 // fuera del viewport en laptops típicas, obligando a hacer
                 // scroll para ver la imagen completa dentro del propio
-                // recuadro. Con esto cabe completa sin scroll junto con el
-                // resto del chrome (header + tabs + padding) en pantallas
-                // normales.
-                height: "min(58vh, 560px)",
-                aspectRatio: asset.aspect,
-                maxWidth: asset.aspect > 1 ? "min(100%, 600px)" : "100%",
+                // recuadro. Bajado de nuevo de min(58vh,560px) (ver charla
+                // 2026-10-12): el dock de deshacer/rehacer seguía quedando
+                // cortado por el borde inferior del navegador en pantallas
+                // típicas, junto con el padding recortado arriba (py-6→py-4,
+                // p-6→p-5, mb-5→mb-4).
+                height: "min(52vh, 500px)",
+                aspectRatio: viewAspect,
+                maxWidth: viewAspect > 1 ? "min(100%, 600px)" : "100%",
               }}
               onMouseDown={(e) => {
                 // react-moveable's own resize/rotate handles live inside this
