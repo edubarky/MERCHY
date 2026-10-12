@@ -42,6 +42,7 @@ export default function EditProductoPage() {
   // con parseFloat en cada tecla pierde el "." a medio escribir (ver charla
   // 2026-10-10, "no me deja hacer nada"). Se parsea solo al guardar/calcular.
   const [costoDraft, setCostoDraft] = useState("0");
+  const [supplierLinkDraft, setSupplierLinkDraft] = useState("");
   const [priceOverrides, setPriceOverrides] = useState<Record<string, string>>({});
   type CostoTierRow = { qty_min: string; qty_max: string; costo: string };
   const [costoTierRows, setCostoTierRows] = useState<CostoTierRow[]>([]);
@@ -65,6 +66,7 @@ export default function EditProductoPage() {
       setSelectedTechniqueIds((productTechs ?? []).map((r: any) => r.technique_id));
       setPriceTiers(tiers ?? []);
       setCostoDraft(String(p?.costo ?? 0));
+      setSupplierLinkDraft(p?.supplier_link ?? "");
       const overrides = (p?.price_overrides ?? {}) as Record<string, number>;
       setPriceOverrides(Object.fromEntries(Object.entries(overrides).map(([k, v]) => [k, String(v)])));
       const tierRows = (p?.costo_tiers ?? []) as { qty_min: number; qty_max: number | null; costo: number }[];
@@ -113,6 +115,7 @@ export default function EditProductoPage() {
       supplier_id: fd.get("supplier_id") || null,
       sizes_available: sizes,
       costo: parseFloat(fd.get("costo") as string),
+      supplier_link: supplierLinkDraft.trim() || null,
       price_overrides: overridesPayload,
       costo_tiers: costoTiersPayload,
     }).eq("id", id);
@@ -299,6 +302,28 @@ export default function EditProductoPage() {
                     placeholder="3-4, 5-6, 7-8, 9-11, 12-14"
                     className="text-xs"
                   />
+                </div>
+              </div>
+              <div>
+                <FieldLabel className="text-xs">Link de proveedor</FieldLabel>
+                <div className="flex items-center gap-2">
+                  <AdminInput
+                    type="url"
+                    value={supplierLinkDraft}
+                    onChange={(e) => setSupplierLinkDraft(e.target.value)}
+                    placeholder="https://..."
+                    className="text-xs flex-1"
+                  />
+                  {supplierLinkDraft.trim() && (
+                    <a
+                      href={supplierLinkDraft.trim()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-semibold text-primary-dark hover:underline flex-shrink-0"
+                    >
+                      Abrir ↗
+                    </a>
+                  )}
                 </div>
               </div>
               <div className="w-40">

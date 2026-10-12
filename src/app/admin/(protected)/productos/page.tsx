@@ -14,7 +14,7 @@ import { getProductUnitPrice, resolveCosto, utilidadPct, formatMXN } from "@/lib
 import type { PriceTier } from "@/types";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Único"];
-const EMPTY_P = { name: "", description: "", composition: "", category_id: "", costo: "" };
+const EMPTY_P = { name: "", description: "", composition: "", category_id: "", costo: "", supplier_link: "" };
 const EMPTY_S = { name: "", contact_name: "", phone: "", email: "", website: "", notes: "" };
 
 export default function ProductosPage() {
@@ -113,6 +113,7 @@ export default function ProductosPage() {
       category_id: form.category_id,
       sizes_available: sizes,
       costo: parseFloat(form.costo),
+      supplier_link: form.supplier_link.trim() || null,
       price_overrides: overridesPayload,
       costo_tiers: costoTiersPayload,
       active: true,
@@ -349,6 +350,16 @@ export default function ProductosPage() {
                   />
                   <Btn type="button" variant="secondary" onClick={addCustomSizes}>+ Agregar</Btn>
                 </div>
+              </div>
+
+              <div>
+                <FieldLabel>Link de proveedor</FieldLabel>
+                <AdminInput
+                  type="url"
+                  value={form.supplier_link}
+                  onChange={(e) => setForm((p) => ({ ...p, supplier_link: e.target.value }))}
+                  placeholder="https://..."
+                />
               </div>
 
               <div className="w-40">
