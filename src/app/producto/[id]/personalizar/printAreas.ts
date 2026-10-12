@@ -109,7 +109,29 @@ const PRODUCT_CATEGORY_MATCHERS: { keyword: string; areas: ProductPrintAreas }[]
 // "sudadera cap": {
 //   frente: { xPct: 26, yPct: 60, widthPct: 48, heightPct: 15, widthCm: 26, heightCm: 20 },
 // },
-const PRODUCT_PRINT_AREAS: Record<string, Partial<ProductPrintAreas>> = {};
+//
+// Playera Infantil: mismo criterio que HOODIE_PRINT_AREAS -- estimado
+// genérico (no medido de un SKU real) para una playera infantil típica
+// del mercado, representativo de un punto medio entre sus tallas 3-4 y
+// 12-14 -- sirve para SUGERIR el tamaño real del logo (getElementRealCm),
+// el cliente siempre puede corregirlo a mano si su diseño en particular
+// difiere. Posición/tamaño en % se dejan igual al default genérico (ya
+// calibrados visualmente contra la foto real) -- solo se agregan las
+// medidas físicas, ninguna existía todavía (ver charla 2026-10-12,
+// "calcula una medida aprox basado en la medida del producto"). Reverso
+// un poco más grande que Frente y mangas angostas (manga corta infantil,
+// no la manga larga de una sudadera) -- mismo criterio relativo que ya
+// usa HOODIE_PRINT_AREAS.
+const PLAYERA_INFANTIL_PRINT_AREAS: Partial<ProductPrintAreas> = {
+  frente: { ...DEFAULT_PRINT_AREAS.frente, widthCm: 18, heightCm: 22 },
+  reverso: { ...DEFAULT_PRINT_AREAS.reverso, widthCm: 20, heightCm: 24 },
+  izquierda: { ...DEFAULT_PRINT_AREAS.izquierda, widthCm: 6, heightCm: 7 },
+  derecha: { ...DEFAULT_PRINT_AREAS.derecha, widthCm: 6, heightCm: 7 },
+};
+
+const PRODUCT_PRINT_AREAS: Record<string, Partial<ProductPrintAreas>> = {
+  "playera infantil": PLAYERA_INFANTIL_PRINT_AREAS,
+};
 
 export function getPrintArea(productName: string, view: ViewName): PrintAreaConfig {
   const key = normalizeProductKey(productName);
