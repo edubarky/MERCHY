@@ -117,6 +117,7 @@ function CarritoPageInner() {
   const [desgloseOpen, setDesgloseOpen] = useState(false);
   const [qtyErrors, setQtyErrors] = useState<Record<string, string>>({});
   const [downloadingCotizacion, setDownloadingCotizacion] = useState(false);
+  const [cotizacionError, setCotizacionError] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [loadingSharedCart, setLoadingSharedCart] = useState(false);
@@ -290,6 +291,7 @@ function CarritoPageInner() {
   async function handleDescargarCotizacion() {
     if (!cotizacionRef.current || downloadingCotizacion || items.length === 0) return;
     setDownloadingCotizacion(true);
+    setCotizacionError(null);
     try {
       const node = cotizacionRef.current;
       const { default: html2canvas } = await import("html2canvas");
@@ -318,10 +320,14 @@ function CarritoPageInner() {
       const pdf = new jsPDF({ unit: "pt", format: [pageWidth, pageHeight] });
       pdf.addImage(dataUrl, "PNG", margin, margin, contentWidth, contentHeight);
       pdf.save("cotizacion-merchy.pdf");
-    } catch {
-      // Silencioso -- mismo criterio que el resto de descargas del sitio
-      // (Vista Previa del Personalizador): si falla, el cliente solo
-      // vuelve a intentar, no hay nada más que hacer aquí.
+    } catch (err) {
+      // Antes era silencioso (mismo criterio que la Vista Previa) -- pero
+      // un error silencioso no le dio a Eduardo ninguna pista de por qué
+      // "no pasaba absolutamente nada" al descargar (ver charla
+      // 2026-10-13). Se loguea y se muestra el mensaje real para poder
+      // diagnosticarlo en vez de adivinar.
+      console.error("Error al generar la cotización:", err);
+      setCotizacionError(err instanceof Error ? err.message : String(err));
     } finally {
       setDownloadingCotizacion(false);
     }
@@ -602,6 +608,9 @@ function CarritoPageInner() {
                 <DownloadIcon className={`h-4 w-4 ${downloadingCotizacion ? "animate-pulse" : ""}`} />
                 {downloadingCotizacion ? "Generando..." : "Descargar cotización"}
               </button>
+              {cotizacionError && (
+                <p className="mt-2 text-xs text-red-500">No se pudo generar la cotización: {cotizacionError}</p>
+              )}
 
               <Link
                 href="/checkout"

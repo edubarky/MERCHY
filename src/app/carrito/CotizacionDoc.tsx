@@ -80,8 +80,20 @@ export default function CotizacionDoc({
                   {/* ── Imagen, centrada -- mismo criterio que Vista Previa ── */}
                   <td style={{ width: 380, verticalAlign: "top", textAlign: "center" }}>
                     {thumb ? (
+                      // crossOrigin: thumb puede venir de Supabase Storage
+                      // (cross-origin real, a diferencia del data URL del
+                      // canvas del Personalizador) -- sin esto, html2canvas
+                      // pinta la imagen pero el canvas queda "tainted" y
+                      // canvas.toDataURL() truena en silencio al generar
+                      // el PDF (ver charla 2026-10-13, "no pasó
+                      // absolutamente nada").
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={thumb} alt={item.product.name} style={{ maxWidth: 320, maxHeight: 320, margin: "0 auto" }} />
+                      <img
+                        src={thumb}
+                        alt={item.product.name}
+                        crossOrigin="anonymous"
+                        style={{ maxWidth: 320, maxHeight: 320, margin: "0 auto" }}
+                      />
                     ) : null}
                   </td>
 
