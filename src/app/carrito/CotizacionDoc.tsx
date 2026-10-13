@@ -1,5 +1,6 @@
 import type { CartItem } from "@/types";
 import { formatMXN, splitIva } from "@/lib/pricing";
+import { techniqueDisplayName } from "@/lib/techniqueDisplayName";
 
 // Documento de cotización del carrito completo -- lo que se captura para
 // el PDF (ver "Descargar cotización" en carrito/page.tsx). Solo lectura,
@@ -39,7 +40,13 @@ export default function CotizacionDoc({
   const { subtotal, iva } = splitIva(subtotalConIva);
 
   return (
-    <div className="w-[920px] bg-white p-10 text-foreground" style={{ fontFamily: "inherit" }}>
+    // Ancho/padding/fondo en estilo inline, no clases de Tailwind -- una
+    // clase de valor arbitrario (w-[920px]) no siempre resuelve a tiempo
+    // en el clon fuera de pantalla que arma html-to-image, y el contenido
+    // alineado a la derecha (Precio por pieza/Total/Resumen, que dependen
+    // de que este contenedor SÍ mida 920px reales) se recortaba en el PDF
+    // descargado (ver charla 2026-10-12, PDF con los números cortados).
+    <div style={{ width: 920, backgroundColor: "#ffffff", padding: 40, color: "#1a1a1a", fontFamily: "inherit" }}>
       <table style={{ width: "100%", paddingBottom: 16 }}>
         <tbody>
           <tr>
@@ -167,7 +174,7 @@ export default function CotizacionDoc({
                           // renglón (ver charla 2026-09-25).
                           <tr key={`${t.technique_id}-${t.view ?? i}`} className="text-xs text-ui-gray">
                             <td style={{ padding: "1px 0" }}>
-                              {t.technique_name}
+                              {techniqueDisplayName(t.technique_name)}
                               {t.positions?.length ? ` · ${t.positions.join(", ")}` : ""}
                               {t.tintas ? ` · ${t.tintas} ${t.tintas === 1 ? "tinta" : "tintas"}` : ""}
                             </td>
