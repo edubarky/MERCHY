@@ -6,6 +6,7 @@ import { resolveFontFamilyCss } from "./textFonts";
 import { DEFAULT_FONT_SIZE_RATIO } from "./DesignElementView";
 import { needsLogoProcessing, processLogoSrc } from "./logoImagePipeline";
 import { getViewAspect } from "./printAreas";
+import { getAutoFrame } from "./autoFrame";
 
 // Extraído de PreviewModal.tsx (ver charla 2026-09-25) para reusarlo también
 // en el paso "Selecciona el Tipo de impresión" (miniatura por vista) — sin
@@ -78,14 +79,26 @@ export default function MiniView({
   // only ever the selected product's own photography, or nothing.
   const imgSrc = resolvedAssets[view][garmentColor];
   const viewElements = elements[view];
-  // Mismo aspect ratio por producto/eje que usa el lienzo real (ver
-  // PersonalizerClient) -- usar el VIEW_ASSETS[view].aspect genérico aquí
-  // distorsionaba la posición de los elementos para cualquier producto con
-  // override propio (ver charla 2026-10-12: "el logo no se ve donde lo
-  // puse" en Playera Infantil) -- los xPct/yPct se calcularon sobre el
-  // aspect REAL del lienzo, así que esta vista previa debe usar ese mismo
-  // aspect para que caigan en el mismo lugar relativo.
-  const aspect = getViewAspect(productName, view);
+  // Mismo aspect ratio que usa el lienzo real (ver PersonalizerClient) --
+  // los xPct/yPct de cada elemento se calcularon sobre ESE aspect, así que
+  // esta vista previa debe usar el mismo para que caigan en el mismo
+  // lugar relativo (ver charla 2026-10-12, "el logo no se ve donde lo
+  // puse"). Desde que PersonalizerClient mide el aspect real de la foto
+  // en vez de un valor fijo por eje (ver autoFrame.ts, charla 2026-10-13),
+  // esta vista previa hace la misma medición -- getViewAspect solo queda
+  // como respaldo mientras se mide la primera vez.
+  const [naturalAspect, setNaturalAspect] = useState<number | null>(null);
+  useEffect(() => {
+    if (!imgSrc) return;
+    let cancelled = false;
+    getAutoFrame(imgSrc).then((frame) => {
+      if (!cancelled) setNaturalAspect(frame.naturalAspect);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [imgSrc]);
+  const aspect = naturalAspect ?? getViewAspect(productName, view);
 
   return (
     <div

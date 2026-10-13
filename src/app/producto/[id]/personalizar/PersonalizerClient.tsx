@@ -116,6 +116,14 @@ const VIEW_TAB_ICON_GARMENT: Record<ViewName, typeof FrenteTabIcon> = {
 // con más de una orientación real es agregar una entrada aquí, no
 // duplicar este mecanismo entero.
 
+// Tamaño máximo (% del lienzo completo) con el que spawnea un logo/imagen
+// nueva -- ver placeAsset más abajo. Independiente de pa.widthPct/
+// heightPct (esa guía de posición es chica a propósito, pensada para un
+// logo de pecho) para que un logo nuevo se vea de entrada en un tamaño
+// razonable sin importar el producto.
+const SPAWN_MAX_WIDTH_PCT = 40;
+const SPAWN_MAX_HEIGHT_PCT = 40;
+
 const VIEW_GROUP_DEFS: { key: string; label: string; views: ViewName[]; subLabel: (v: ViewName) => string }[] = [
   {
     key: "funda",
@@ -648,15 +656,21 @@ export default function PersonalizerClient({
   const activeViewSrc = getViewSrc(activeView, garmentColor);
   const selectedElement = currentElements[activeView].find((e) => e.id === selectedId) ?? null;
 
-  // Zoom automático por foto (ver autoFrame.ts) -- mide el recuadro real
-  // que ocupa la prenda en la imagen y calcula el máximo zoom que cabe sin
-  // recortarla, centrado en su centro real (no en el centro geométrico de
-  // la foto). Un GARMENT_ZOOM fijo centrado rompió Gorra Gabardina (foto
-  // con la gorra pegada a un lado, no centrada) -- ver charla 2026-10-13,
-  // "necesito que se vea". scale:1 mientras se mide (primera vez que se ve
-  // esa foto) para no saltar de golpe; la transición suave en el <img> de
-  // abajo disimula el momento en que termina de calcularse.
-  const [garmentFrame, setGarmentFrame] = useState<AutoFrame>({ scale: 1, originXPct: 50, originYPct: 50 });
+  // Mide la foto real (ver autoFrame.ts) para dos cosas: el aspect ratio
+  // REAL del lienzo (causa raíz real de "la prenda se ve chica" en
+  // Playera Málaga/Gorra Gabardina -- ver charla 2026-10-13: el lienzo
+  // usaba VIEW_ASSETS[view].aspect, un valor FIJO por eje calibrado
+  // contra el mockup genérico viejo, compartido por TODO el catálogo; una
+  // foto real casi nunca tiene esa misma proporción, así que quedaba
+  // encogida dentro de un marco más angosto/ancho que ella, con aire
+  // sobrante en 2 lados aunque la prenda ya ocupara casi toda su propia
+  // foto -- ningún zoom arregla un marco mal proporcionado) y el zoom
+  // adicional dentro de esa foto ya bien encuadrada, para la que todavía
+  // tenga margen real. scale:1/aspect del catálogo genérico mientras se
+  // mide (primera vez que se ve esa foto) para no saltar de golpe; la
+  // transición suave en el <img> de abajo disimula el momento en que
+  // termina de calcularse.
+  const [garmentFrame, setGarmentFrame] = useState<AutoFrame>({ scale: 1, originXPct: 50, originYPct: 50, naturalAspect: null });
   useEffect(() => {
     if (!activeViewSrc) return;
     let cancelled = false;
@@ -667,6 +681,7 @@ export default function PersonalizerClient({
       cancelled = true;
     };
   }, [activeViewSrc]);
+  const effectiveAspect = garmentFrame.naturalAspect ?? viewAspect;
 
   // Fresh selection always starts "in bounds" (it was just placed/spawned
   // validly) — only an active drag/resize/rotate on it can mark it out.
@@ -1050,11 +1065,18 @@ export default function PersonalizerClient({
     const z = zCounter + 1;
     setZCounter(z);
     const pa = getPrintArea(product.name, activeView);
-    // Fallback (and the max footprint art is fit inside): used outright
-    // whenever the real natural size can't be read (no src — e.g. .ai/.pdf
-    // — or the image fails to decode).
-    let w = pa.widthPct * 0.6;
-    let h = pa.heightPct * 0.6;
+    // Fallback (and the max footprint art is fit inside): usado directo
+    // cuando no se puede leer el tamaño real (sin src -- .ai/.pdf -- o la
+    // imagen no decodifica). Tamaño máximo de spawn como % del LIENZO
+    // completo, no de pa.widthPct/heightPct -- ese recuadro es una guía
+    // de posición chica (pensada para un logo de pecho pequeño en el
+    // mockup genérico viejo), y usarlo también como referencia de tamaño
+    // hacía que CUALQUIER logo nuevo apareciera minúsculo sin importar el
+    // producto (ver charla 2026-10-13: "se debe ver mucho más grande a un
+    // tamaño normal"). El centro de spawn sigue anclado al centro de pa
+    // (abajo), solo el TAMAÑO deja de depender de ese recuadro.
+    let w = SPAWN_MAX_WIDTH_PCT;
+    let h = SPAWN_MAX_HEIGHT_PCT;
 
     if (asset.src) {
       const natural = await loadImageNaturalSizePx(asset.src);
@@ -2023,8 +2045,8 @@ export default function PersonalizerClient({
                 // típicas, junto con el padding recortado arriba (py-6→py-4,
                 // p-6→p-5, mb-5→mb-4).
                 height: "min(52vh, 500px)",
-                aspectRatio: viewAspect,
-                maxWidth: viewAspect > 1 ? "min(100%, 600px)" : "100%",
+                aspectRatio: effectiveAspect,
+                maxWidth: effectiveAspect > 1 ? "min(100%, 600px)" : "100%",
               }}
               onMouseDown={(e) => {
                 // react-moveable's own resize/rotate handles live inside this
