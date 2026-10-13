@@ -110,21 +110,24 @@ const PRODUCT_CATEGORY_MATCHERS: { keyword: string; areas: ProductPrintAreas }[]
 //   frente: { xPct: 26, yPct: 60, widthPct: 48, heightPct: 15, widthCm: 26, heightCm: 20 },
 // },
 //
-// Playera Infantil: mismo criterio que HOODIE_PRINT_AREAS -- estimado
-// genérico (no medido de un SKU real) para una playera infantil típica
-// del mercado, representativo de un punto medio entre sus tallas 3-4 y
-// 12-14 -- sirve para SUGERIR el tamaño real del logo (getElementRealCm),
-// el cliente siempre puede corregirlo a mano si su diseño en particular
-// difiere. Posición/tamaño en % se dejan igual al default genérico (ya
-// calibrados visualmente contra la foto real) -- solo se agregan las
-// medidas físicas, ninguna existía todavía (ver charla 2026-10-12,
-// "calcula una medida aprox basado en la medida del producto"). Reverso
-// un poco más grande que Frente y mangas angostas (manga corta infantil,
-// no la manga larga de una sudadera) -- mismo criterio relativo que ya
-// usa HOODIE_PRINT_AREAS.
+// Playera Infantil: medidas reales de la tabla de tallas del proveedor
+// (ver charla 2026-10-12, Ancho/Largo por talla):
+//   3-4: 32x45.5cm | 5-6: 36x47cm | 7-8: 39x50cm | 9-11: 43x54cm | 12-14: 44x63cm
+// El sistema solo admite UN área por producto (no por talla), así que se
+// toma 7-8 (39x50cm) como referencia -- la talla de en medio de las 5,
+// mismo criterio que HOODIE_PRINT_AREAS con su adulto M/L. Área de
+// impresión derivada de esa referencia (no medida directo del área
+// imprimible, que el proveedor no especifica): Frente ~72% del Ancho x
+// ~52% del Largo (deja margen de costura a los lados y espacio de cuello/
+// dobladillo arriba/abajo); Reverso un poco más generoso (~77% x ~60%,
+// la espalda no tiene cuello que esquivar) -- mismo criterio relativo que
+// ya usa HOODIE_PRINT_AREAS. Izquierda/Derecha (manga corta, sin dato en
+// la tabla) se dejan en su estimado genérico anterior. Sigue siendo una
+// SUGERENCIA (getElementRealCm) que el cliente puede corregir a mano, no
+// una medida tomada diseño por diseño.
 const PLAYERA_INFANTIL_PRINT_AREAS: Partial<ProductPrintAreas> = {
-  frente: { ...DEFAULT_PRINT_AREAS.frente, widthCm: 18, heightCm: 22 },
-  reverso: { ...DEFAULT_PRINT_AREAS.reverso, widthCm: 20, heightCm: 24 },
+  frente: { ...DEFAULT_PRINT_AREAS.frente, widthCm: 28, heightCm: 26 },
+  reverso: { ...DEFAULT_PRINT_AREAS.reverso, widthCm: 30, heightCm: 30 },
   izquierda: { ...DEFAULT_PRINT_AREAS.izquierda, widthCm: 6, heightCm: 7 },
   derecha: { ...DEFAULT_PRINT_AREAS.derecha, widthCm: 6, heightCm: 7 },
 };
