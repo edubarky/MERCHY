@@ -84,7 +84,7 @@ export function TechniqueConfirmedRow({
   onRemove: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-ui-border bg-white p-4 shadow-[0_6px_20px_rgba(0,0,0,0.05)]">
+    <div className="rounded-2xl border border-ui-border bg-white p-3 shadow-[0_6px_20px_rgba(0,0,0,0.05)]">
       <div className="flex items-center gap-2.5">
         <IconBadge name={technique.name} />
         <h4 className="flex-1 truncate font-display text-sm font-bold text-primary-dark">{techniqueDisplayName(technique.name)}</h4>
@@ -109,7 +109,7 @@ export function TechniqueConfirmedRow({
           </svg>
         </button>
       </div>
-      <div className="mt-2.5 flex items-end justify-between gap-2.5 border-t border-dashed border-ui-border pt-2.5">
+      <div className="mt-2 flex items-end justify-between gap-2.5 border-t border-dashed border-ui-border pt-2">
         <span className="text-[12.5px] font-semibold text-ui-gray">{resumen || "—"}</span>
         <span className="text-right">
           {needsQuote || unitPrice === null ? (

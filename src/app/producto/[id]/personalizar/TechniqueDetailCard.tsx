@@ -151,7 +151,7 @@ function PositionGroup({
           {logos.length} {logos.length === 1 ? "logo" : "logos"}
         </span>
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
         {logos.map((logo, i) => {
           const dims = logoSizeCm[logo.id] ?? { largo: "", alto: "" };
           const suggestion = suggestedSizeCm[logo.id];
@@ -159,7 +159,7 @@ function PositionGroup({
           return (
             <div
               key={logo.id}
-              className={`min-w-[150px] flex-1 rounded-xl border p-2.5 transition-colors duration-150 ease-out ${
+              className={`min-w-[150px] flex-1 rounded-xl border p-2 transition-colors duration-150 ease-out ${
                 isSelected ? "border-primary bg-primary/5" : "border-ui-border bg-gray-50/60"
               }`}
             >
@@ -167,7 +167,7 @@ function PositionGroup({
                 type="button"
                 onClick={() => onSelectLogo(view, logo.id)}
                 title="Ver este logo en el lienzo"
-                className="mb-2 flex w-full items-center gap-2 rounded-lg text-left"
+                className="mb-1.5 flex w-full items-center gap-2 rounded-lg text-left"
               >
                 <LogoThumb logo={logo} />
                 <span className="min-w-0 flex-1 truncate text-[10px] font-semibold text-ui-gray">Logo {i + 1}</span>
@@ -179,7 +179,7 @@ function PositionGroup({
                     <Field label="Alto (cm)" value={dims.alto} onChange={(v) => onLogoSizeCmChange(logo.id, { alto: v })} />
                   </div>
                   {suggestion && (
-                    <p className="mt-1.5 text-[10.5px] text-primary-dark">
+                    <p className="mt-1 text-[10.5px] text-primary-dark">
                       Sugerido: <b>{suggestion.largo}x{suggestion.alto} cm</b> (estimado según el tamaño en el lienzo)
                     </p>
                   )}
@@ -229,25 +229,25 @@ export default function TechniqueDetailCard({
 }) {
   const showSizeFields = technique.pricing_type !== "by_tintas";
   return (
-    <div className="rounded-2xl border border-ui-border bg-white p-5">
+    <div className="rounded-2xl border border-ui-border bg-white p-3.5">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <TechniqueIconBadge name={technique.name} />
-          <p className="truncate text-base font-bold text-primary-dark">{techniqueDisplayName(technique.name)}</p>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <TechniqueIconBadge name={technique.name} size={36} />
+          <p className="truncate text-sm font-bold text-primary-dark">{techniqueDisplayName(technique.name)}</p>
         </div>
         <button
           type="button"
           onClick={onRemove}
           aria-label={`Quitar ${technique.name}`}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-50 text-ui-gray shadow-sm transition-colors duration-150 ease-out hover:bg-accent-coral/10 hover:text-accent-coral"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-50 text-ui-gray shadow-sm transition-colors duration-150 ease-out hover:bg-accent-coral/10 hover:text-accent-coral"
         >
-          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.6}>
+          <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.6}>
             <path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6m-6 0 .6 9.2A1.5 1.5 0 0 0 8.1 16.5h3.8a1.5 1.5 0 0 0 1.5-1.3L14 6" />
           </svg>
         </button>
       </div>
 
-      <div className="my-4 h-px bg-ui-border" />
+      <div className="my-2.5 h-px bg-ui-border" />
 
       {/* Un bloque "Posición X" por cada eje con logos, cada uno con su
           conteo y (salvo Serigrafía/Tampografía) un panel de Largo/Alto
@@ -258,7 +258,7 @@ export default function TechniqueDetailCard({
           Agrega un logo para especificar sus posiciones{showSizeFields ? " y medidas" : ""}.
         </p>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {logosByView.map((g) => (
             <PositionGroup
               key={g.view}
@@ -277,10 +277,10 @@ export default function TechniqueDetailCard({
       )}
 
       {!showSizeFields && (
-        <Field label="Tintas" value={tintas} onChange={onTintasChange} className="mt-3 max-w-[140px]" />
+        <Field label="Tintas" value={tintas} onChange={onTintasChange} className="mt-2 max-w-[140px]" />
       )}
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="mt-3 flex items-center justify-between gap-3">
         <span className="text-xs text-ui-gray">Precio de esta técnica (sin IVA)</span>
         <span className={`text-sm font-bold ${needsQuote ? "text-accent-coral" : "text-primary-dark"}`}>
           {needsQuote ? "Por cotizar" : formatMXN(unitPrice ?? 0)}

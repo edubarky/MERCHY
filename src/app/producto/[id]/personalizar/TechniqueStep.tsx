@@ -126,9 +126,9 @@ export default function TechniqueStep({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {dks.map((dk) => (
-        <div key={dk} className="space-y-4">
+        <div key={dk} className="space-y-3">
           {distintoPorColor && (
             <p className="text-xs font-bold uppercase tracking-wide text-ui-gray">{colorLabelForDk(dk)}</p>
           )}
@@ -141,9 +141,9 @@ export default function TechniqueStep({
               const result = slot.pricing.techniqueResults[0] ?? null;
               const colorCount = colorCountByKey[key];
               return (
-                <div key={key} className="rounded-2xl border border-ui-border bg-gray-50/60 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-16 shrink-0 overflow-hidden rounded-xl border border-ui-border bg-white">
+                <div key={key} className="rounded-2xl border border-ui-border bg-gray-50/60 p-3">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-12 shrink-0 overflow-hidden rounded-xl border border-ui-border bg-white">
                       <MiniView
                         view={slot.view}
                         elements={{ ...emptyViewElements(), [slot.view]: slot.logos }}
@@ -162,7 +162,7 @@ export default function TechniqueStep({
                     </div>
                   </div>
 
-                  <div className="mt-3 -mx-1">
+                  <div className="mt-2 -mx-1">
                     <PrintTechniqueCards
                       techniques={techniques}
                       selectedIds={selectedId ? [selectedId] : []}
@@ -172,7 +172,7 @@ export default function TechniqueStep({
 
                   {selectedTechnique &&
                     (selectedTechnique.pricing_type === "by_tintas" ? (
-                      <div className="mt-3">
+                      <div className="mt-2">
                         <TechniqueConfirmedRow
                           technique={selectedTechnique}
                           resumen={result?.resumen ?? ""}
@@ -183,7 +183,7 @@ export default function TechniqueStep({
                         />
                       </div>
                     ) : (
-                      <div className="mt-3">
+                      <div className="mt-2">
                         <TechniqueDetailCard
                           technique={selectedTechnique}
                           unitPrice={result?.unitPrice ?? null}
