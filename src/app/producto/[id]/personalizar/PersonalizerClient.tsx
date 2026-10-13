@@ -39,6 +39,7 @@ import {
 } from "./types";
 import { VIEW_ASSETS } from "./viewAssets";
 import { getPrintArea, getApplicableViews, isGarmentProduct, getViewAspect } from "./printAreas";
+import { getAutoFrame, type AutoFrame } from "./autoFrame";
 import DesignElementView, { DEFAULT_FONT_SIZE_PX, FONT_SIZE_MIN_PX, FONT_SIZE_MAX_PX } from "./DesignElementView";
 import PrintAreaGuide from "./PrintAreaGuide";
 
@@ -114,13 +115,6 @@ const VIEW_TAB_ICON_GARMENT: Record<ViewName, typeof FrenteTabIcon> = {
 // grupo (ver activeGroupViews más abajo). Agregar un componente nuevo
 // con más de una orientación real es agregar una entrada aquí, no
 // duplicar este mecanismo entero.
-// Zoom fijo aplicado a la foto de la prenda en el lienzo (ver donde se usa,
-// más abajo) -- la mayoría de las fotos de producto traen margen blanco de
-// sobra alrededor de la prenda y no hay tiempo de recortarlas una por una
-// (pedido explícito, charla 2026-10-13). 1.35 = 35% más grande, un punto
-// medio razonable: suficiente para notarse en fotos con mucho margen, sin
-// recortar la prenda en fotos que ya venían más ajustadas.
-const GARMENT_ZOOM = 1.35;
 
 const VIEW_GROUP_DEFS: { key: string; label: string; views: ViewName[]; subLabel: (v: ViewName) => string }[] = [
   {
@@ -653,6 +647,26 @@ export default function PersonalizerClient({
   // los ejes de ningún otro color.
   const activeViewSrc = getViewSrc(activeView, garmentColor);
   const selectedElement = currentElements[activeView].find((e) => e.id === selectedId) ?? null;
+
+  // Zoom automático por foto (ver autoFrame.ts) -- mide el recuadro real
+  // que ocupa la prenda en la imagen y calcula el máximo zoom que cabe sin
+  // recortarla, centrado en su centro real (no en el centro geométrico de
+  // la foto). Un GARMENT_ZOOM fijo centrado rompió Gorra Gabardina (foto
+  // con la gorra pegada a un lado, no centrada) -- ver charla 2026-10-13,
+  // "necesito que se vea". scale:1 mientras se mide (primera vez que se ve
+  // esa foto) para no saltar de golpe; la transición suave en el <img> de
+  // abajo disimula el momento en que termina de calcularse.
+  const [garmentFrame, setGarmentFrame] = useState<AutoFrame>({ scale: 1, originXPct: 50, originYPct: 50 });
+  useEffect(() => {
+    if (!activeViewSrc) return;
+    let cancelled = false;
+    getAutoFrame(activeViewSrc).then((frame) => {
+      if (!cancelled) setGarmentFrame(frame);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeViewSrc]);
 
   // Fresh selection always starts "in bounds" (it was just placed/spawned
   // validly) — only an active drag/resize/rotate on it can mark it out.
@@ -2059,24 +2073,27 @@ export default function PersonalizerClient({
                 // ejemplo -- no se corten cerca del borde). Muchas fotos
                 // de producto traen bastante margen blanco alrededor de
                 // la prenda -- ningún aspect ratio arregla eso, es parte
-                // de la foto misma -- así que se le aplica un zoom fijo
-                // (GARMENT_ZOOM) en vez de tener que recortar la foto de
-                // cada producto a mano (pedido explícito, ver charla
-                // 2026-10-13: "no tengo tiempo de estar cambiando las
-                // imágenes de todos los productos... sí o sí"). Esto NO
-                // mueve xPct/yPct/widthPct/heightPct (siguen siendo % del
-                // mismo canvasRef de siempre) -- un diseño ya guardado en
-                // un producto con mucho margen puede verse desplazado
-                // relativo a la prenda ahora más grande; uno nuevo se
-                // coloca a ojo contra lo que se ve en pantalla, sin
-                // problema.
+                // de la foto misma -- así que se le aplica el zoom
+                // automático por foto (garmentFrame, ver autoFrame.ts) en
+                // vez de tener que recortar la foto de cada producto a
+                // mano (pedido explícito, ver charla 2026-10-13: "no
+                // tengo tiempo de estar cambiando las imágenes de todos
+                // los productos... sí o sí"). Esto NO mueve xPct/yPct/
+                // widthPct/heightPct (siguen siendo % del mismo canvasRef
+                // de siempre) -- un diseño ya guardado en un producto con
+                // mucho margen puede verse desplazado relativo a la
+                // prenda ahora más grande; uno nuevo se coloca a ojo
+                // contra lo que se ve en pantalla, sin problema.
                 <div className="pointer-events-none absolute inset-0 overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={activeViewSrc}
                     alt={`${product.name} — ${VIEW_LABELS[activeView]} — ${activeVariant?.color_name ?? ""}`}
-                    className="h-full w-full select-none object-contain"
-                    style={{ transform: `scale(${GARMENT_ZOOM})` }}
+                    className="h-full w-full select-none object-contain transition-transform duration-300 ease-out"
+                    style={{
+                      transform: `scale(${garmentFrame.scale})`,
+                      transformOrigin: `${garmentFrame.originXPct}% ${garmentFrame.originYPct}%`,
+                    }}
                     draggable={false}
                   />
                 </div>
