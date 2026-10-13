@@ -155,6 +155,19 @@ export default function EditProductoPage() {
     setVariants((prev) => prev.map((v) => v.id === variantId ? { ...v, views } : v));
   }
 
+  // El flujo real es Producto -> Personalizador (ver charla 2026-10-13):
+  // la portada de "Fotos del color" manda, y se propaga como "Frente" en
+  // Vistas del Personalizador -- al revés de como se había armado antes.
+  // A diferencia de ViewsUpload (que persiste sus propios cambios), este
+  // dispara desde ImageUpload (un componente hermano), así que aquí sí
+  // hace falta guardar en Supabase, no solo actualizar el estado local.
+  async function syncPortadaToFrente(variantId: string, url: string) {
+    const variant = variants.find((v) => v.id === variantId);
+    const updatedViews = { ...(variant?.views ?? {}), frente: url };
+    setVariants((prev) => prev.map((v) => v.id === variantId ? { ...v, views: updatedViews } : v));
+    await supabase.from("product_variants").update({ views: updatedViews }).eq("id", variantId);
+  }
+
   async function toggleVariantActive(variantId: string, active: boolean) {
     await supabase.from("product_variants").update({ active: !active }).eq("id", variantId);
     setVariants((prev) => prev.map((v) => v.id === variantId ? { ...v, active: !active } : v));
@@ -450,14 +463,13 @@ export default function EditProductoPage() {
                     variantId={v.id}
                     existingUrls={v.images ?? []}
                     onUpdate={(urls) => updateVariantImages(v.id, urls)}
+                    onPortadaChange={(url) => syncPortadaToFrente(v.id, url)}
                   />
                   <ViewsUpload
                     productId={id}
                     variantId={v.id}
                     existingViews={v.views}
                     onUpdate={(views) => updateVariantViews(v.id, views)}
-                    existingImages={v.images ?? []}
-                    onImagesUpdate={(urls) => updateVariantImages(v.id, urls)}
                   />
                   {editingId === v.id && (
                     <div className="mt-3 pt-3 border-t border-ui-border space-y-3">

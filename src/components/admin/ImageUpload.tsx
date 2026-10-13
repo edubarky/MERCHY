@@ -8,14 +8,31 @@ interface Props {
   variantId: string;
   existingUrls: string[];
   onUpdate: (urls: string[]) => void;
+  // El flujo real es Producto -> Personalizador, no al revés (ver charla
+  // 2026-10-13): la portada (primera foto de "Fotos del color") es la
+  // fuente de verdad; cuando cambia, se propaga como "Frente" en Vistas
+  // del Personalizador. Opcional porque no todo producto tiene Vistas del
+  // Personalizador activado.
+  onPortadaChange?: (url: string) => void;
 }
 
-export default function ImageUpload({ productId, variantId, existingUrls, onUpdate }: Props) {
+export default function ImageUpload({ productId, variantId, existingUrls, onUpdate, onPortadaChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const supabase = createClient();
+
+  // Única puerta de salida para las 4 operaciones de abajo (subir,
+  // eliminar, usar como portada, reordenar) -- si la PRIMERA foto del
+  // arreglo cambió respecto a antes, avisa. Nunca dispara en falso (no
+  // cambió la portada) ni se le inventa una portada a un arreglo vacío.
+  function notifyPortadaChange(updated: string[]) {
+    const newPortada = updated[0];
+    if (newPortada && newPortada !== existingUrls[0]) {
+      onPortadaChange?.(newPortada);
+    }
+  }
 
   // Flechas de teclado / Escape para navegar la vista previa sin tener que
   // apuntarle a los botones (pedido explícito, ver charla 2026-10-09).
@@ -63,6 +80,7 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
 
     const updated = [...existingUrls, ...newUrls];
     onUpdate(updated);
+    notifyPortadaChange(updated);
 
     // Persist to DB
     await supabase
@@ -76,6 +94,7 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
   async function removeImage(url: string) {
     const updated = existingUrls.filter((u) => u !== url);
     onUpdate(updated);
+    notifyPortadaChange(updated);
     await supabase
       .from("product_variants")
       .update({ images: updated })
@@ -88,6 +107,7 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
   async function makeCover(url: string) {
     const updated = [url, ...existingUrls.filter((u) => u !== url)];
     onUpdate(updated);
+    notifyPortadaChange(updated);
     await supabase
       .from("product_variants")
       .update({ images: updated })
@@ -103,6 +123,7 @@ export default function ImageUpload({ productId, variantId, existingUrls, onUpda
     const updated = [...existingUrls];
     [updated[idx], updated[target]] = [updated[target], updated[idx]];
     onUpdate(updated);
+    notifyPortadaChange(updated);
     await supabase
       .from("product_variants")
       .update({ images: updated })

@@ -9,12 +9,6 @@ interface Props {
   variantId: string;
   existingViews: Record<string, string> | null | undefined;
   onUpdate: (views: Record<string, string>) => void;
-  // "Frente" es la vista que primero se sube y la más representativa del
-  // producto -- al subirla se usa también como portada del catálogo (ver
-  // charla 2026-10-12), aunque después se pueda cambiar a mano con "Usar
-  // como portada" en ImageUpload.
-  existingImages?: string[];
-  onImagesUpdate?: (urls: string[]) => void;
 }
 
 // Slots fijos que puede tener CUALQUIER producto (ver types.ts) + "con
@@ -27,7 +21,7 @@ const SLOTS: { key: string; label: string }[] = [
   { key: "conModelo", label: "Con modelo" },
 ];
 
-export default function ViewsUpload({ productId, variantId, existingViews, onUpdate, existingImages, onImagesUpdate }: Props) {
+export default function ViewsUpload({ productId, variantId, existingViews, onUpdate }: Props) {
   const [open, setOpen] = useState(false);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,13 +57,6 @@ export default function ViewsUpload({ productId, variantId, existingViews, onUpd
     const updated = { ...views, [key]: publicUrl };
     onUpdate(updated);
     await supabase.from("product_variants").update({ views: updated }).eq("id", variantId);
-
-    if (key === "frente" && onImagesUpdate) {
-      const updatedImages = [publicUrl, ...(existingImages ?? []).filter((u) => u !== publicUrl)];
-      onImagesUpdate(updatedImages);
-      await supabase.from("product_variants").update({ images: updatedImages }).eq("id", variantId);
-    }
-
     setUploadingKey(null);
   }
 
