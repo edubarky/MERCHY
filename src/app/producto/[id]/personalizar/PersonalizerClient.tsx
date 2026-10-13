@@ -114,6 +114,14 @@ const VIEW_TAB_ICON_GARMENT: Record<ViewName, typeof FrenteTabIcon> = {
 // grupo (ver activeGroupViews más abajo). Agregar un componente nuevo
 // con más de una orientación real es agregar una entrada aquí, no
 // duplicar este mecanismo entero.
+// Zoom fijo aplicado a la foto de la prenda en el lienzo (ver donde se usa,
+// más abajo) -- la mayoría de las fotos de producto traen margen blanco de
+// sobra alrededor de la prenda y no hay tiempo de recortarlas una por una
+// (pedido explícito, charla 2026-10-13). 1.35 = 35% más grande, un punto
+// medio razonable: suficiente para notarse en fotos con mucho margen, sin
+// recortar la prenda en fotos que ya venían más ajustadas.
+const GARMENT_ZOOM = 1.35;
+
 const VIEW_GROUP_DEFS: { key: string; label: string; views: ViewName[]; subLabel: (v: ViewName) => string }[] = [
   {
     key: "funda",
@@ -2045,13 +2053,33 @@ export default function PersonalizerClient({
               }}
             >
               {activeViewSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={activeViewSrc}
-                  alt={`${product.name} — ${VIEW_LABELS[activeView]} — ${activeVariant?.color_name ?? ""}`}
-                  className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
-                  draggable={false}
-                />
+                // Envuelto en su propio overflow:hidden (no en canvasRef
+                // mismo, que necesita quedar sin recortar para que las
+                // manijas de Moveable -- el aro de rotación arriba, por
+                // ejemplo -- no se corten cerca del borde). Muchas fotos
+                // de producto traen bastante margen blanco alrededor de
+                // la prenda -- ningún aspect ratio arregla eso, es parte
+                // de la foto misma -- así que se le aplica un zoom fijo
+                // (GARMENT_ZOOM) en vez de tener que recortar la foto de
+                // cada producto a mano (pedido explícito, ver charla
+                // 2026-10-13: "no tengo tiempo de estar cambiando las
+                // imágenes de todos los productos... sí o sí"). Esto NO
+                // mueve xPct/yPct/widthPct/heightPct (siguen siendo % del
+                // mismo canvasRef de siempre) -- un diseño ya guardado en
+                // un producto con mucho margen puede verse desplazado
+                // relativo a la prenda ahora más grande; uno nuevo se
+                // coloca a ojo contra lo que se ve en pantalla, sin
+                // problema.
+                <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={activeViewSrc}
+                    alt={`${product.name} — ${VIEW_LABELS[activeView]} — ${activeVariant?.color_name ?? ""}`}
+                    className="h-full w-full select-none object-contain"
+                    style={{ transform: `scale(${GARMENT_ZOOM})` }}
+                    draggable={false}
+                  />
+                </div>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-gray-50">
                   <p className="text-sm text-ui-gray">Fotografías no disponibles aún</p>
