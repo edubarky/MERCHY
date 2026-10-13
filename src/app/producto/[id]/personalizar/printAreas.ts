@@ -2,15 +2,32 @@ import { VIEW_ASSETS } from "./viewAssets";
 import type { ViewName } from "./types";
 
 // Per-product, per-view print-area configuration. Each product/view gets
-// its OWN area — this is not a single shared rectangle. Position/size are
-// always required (% of that view's own image, so they stay correct
-// regardless of render size); physical dimensions (cm) are optional. When
-// provided, PersonalizerClient uses them to auto-measure each logo's real
-// printed size (see pricing.ts's getElementRealCm/roundUpToConfiguredSize)
-// for "by_size" technique pricing (DTF Textil, DTF UV) instead of asking
-// the customer to pick a size manually. Never invented: a product/view
-// with no widthCm/heightCm here simply keeps the manual size selector,
-// exactly as before this existed.
+// its OWN area — this is not a single shared rectangle. xPct/yPct/
+// widthPct/heightPct only draw the dashed guide rectangle on the live
+// canvas; they are NEVER used to scale a logo's cm size (see widthCm/
+// heightCm below for why).
+//
+// widthCm/heightCm are optional; when set, PersonalizerClient uses them to
+// auto-measure each logo's real printed size (getElementRealCm/
+// roundUpToConfiguredSize in pricing.ts) for "by_size" technique pricing
+// (DTF Textil, DTF UV) instead of asking the customer to pick a size
+// manually. CRITICAL: they must be the real-world size of the FULL CANVAS
+// (the whole photo frame, same extent as a logo at widthPct=100), NOT of
+// the small guide rectangle above -- a DesignElement's own widthPct/
+// heightPct are computed by Moveable against the full canvas (`canvasRef`
+// in PersonalizerClient), never against the guide rectangle, regardless of
+// what the guide rectangle's own xPct/widthPct happen to be. Confirmed bug
+// (ver charla 2026-10-12, "si la playera de 5-6 mide 36x47 entonces esto
+// está mal no crees?"): Playera Infantil and Sudadera Ocean both originally
+// had widthCm/heightCm set to the small guide-rectangle's own size (ej.
+// 28x26cm), which is only a fraction of the real canvas -- the "Sugerido"
+// field came out ~2x too small as a result. To size a product/view
+// correctly: measure how much of the actual uploaded photo's frame the
+// garment itself occupies (it's never edge-to-edge -- there's always
+// background margin) and divide the garment's real measurement by that
+// fraction to get the full-canvas equivalent. Never invented: a product/
+// view with no widthCm/heightCm here simply keeps the manual size
+// selector, exactly as before this existed.
 export interface PrintAreaConfig {
   xPct: number;
   yPct: number;
@@ -115,21 +132,26 @@ const PRODUCT_CATEGORY_MATCHERS: { keyword: string; areas: ProductPrintAreas }[]
 //   3-4: 32x45.5cm | 5-6: 36x47cm | 7-8: 39x50cm | 9-11: 43x54cm | 12-14: 44x63cm
 // El sistema solo admite UN área por producto (no por talla), así que se
 // toma 7-8 (39x50cm) como referencia -- la talla de en medio de las 5,
-// mismo criterio que HOODIE_PRINT_AREAS con su adulto M/L. Área de
-// impresión derivada de esa referencia (no medida directo del área
-// imprimible, que el proveedor no especifica): Frente ~72% del Ancho x
-// ~52% del Largo (deja margen de costura a los lados y espacio de cuello/
-// dobladillo arriba/abajo); Reverso un poco más generoso (~77% x ~60%,
-// la espalda no tiene cuello que esquivar) -- mismo criterio relativo que
-// ya usa HOODIE_PRINT_AREAS. Izquierda/Derecha (manga corta, sin dato en
-// la tabla) se dejan en su estimado genérico anterior. Sigue siendo una
+// mismo criterio que HOODIE_PRINT_AREAS con su adulto M/L.
+//
+// widthCm/heightCm de aquí abajo son el CANVAS COMPLETO, no un área de
+// logo chica (ver el porqué en el comentario de PrintAreaConfig arriba --
+// confirmado real: el primer intento, 28x26cm como si fuera solo la zona
+// del logo, dio un "Sugerido" ~2x más chico de lo real). Medido bajando
+// las 4 fotos reales (frente/reverso/izquierda) y viendo qué fracción del
+// cuadro ocupa la prenda (nunca llega borde a borde, siempre hay margen
+// blanco): Frente -- la prenda ocupa ~89% del alto del cuadro, así que
+// 50cm (Largo de la talla 7-8) / 0.89 ≈ 56cm de canvas completo. Reverso
+// ~84% de alto -> 50/0.84 ≈ 60cm. Izquierda/Derecha ~86% -> 50/0.86 ≈
+// 58cm. Las 4 fotos son cuadradas (1:1, ver PRODUCT_VIEW_ASPECTS), así
+// que el mismo valor aplica a ancho y alto en cada una. Sigue siendo una
 // SUGERENCIA (getElementRealCm) que el cliente puede corregir a mano, no
 // una medida tomada diseño por diseño.
 const PLAYERA_INFANTIL_PRINT_AREAS: Partial<ProductPrintAreas> = {
-  frente: { ...DEFAULT_PRINT_AREAS.frente, widthCm: 28, heightCm: 26 },
-  reverso: { ...DEFAULT_PRINT_AREAS.reverso, widthCm: 30, heightCm: 30 },
-  izquierda: { ...DEFAULT_PRINT_AREAS.izquierda, widthCm: 6, heightCm: 7 },
-  derecha: { ...DEFAULT_PRINT_AREAS.derecha, widthCm: 6, heightCm: 7 },
+  frente: { ...DEFAULT_PRINT_AREAS.frente, widthCm: 56, heightCm: 56 },
+  reverso: { ...DEFAULT_PRINT_AREAS.reverso, widthCm: 60, heightCm: 60 },
+  izquierda: { ...DEFAULT_PRINT_AREAS.izquierda, widthCm: 58, heightCm: 58 },
+  derecha: { ...DEFAULT_PRINT_AREAS.derecha, widthCm: 58, heightCm: 58 },
 };
 
 const PRODUCT_PRINT_AREAS: Record<string, Partial<ProductPrintAreas>> = {
