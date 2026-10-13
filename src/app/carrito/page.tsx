@@ -283,7 +283,22 @@ function CarritoPageInner() {
     if (!cotizacionRef.current || downloadingCotizacion || items.length === 0) return;
     setDownloadingCotizacion(true);
     try {
-      const dataUrl = await toPng(cotizacionRef.current, { pixelRatio: 2, backgroundColor: "#ffffff" });
+      const node = cotizacionRef.current;
+      // width/height explícitos (forzados al nodo clonado ANTES de
+      // renderizar, no solo leídos de getBoundingClientRect) -- sin esto,
+      // html-to-image a veces capturaba el documento recortado a la mitad
+      // (texto cortado a medio renglón, Precio/Total ni siquiera
+      // aparecían) para un documento de 920px de ancho, aunque el nodo
+      // oculto (position:fixed, opacity:0) ya tuviera ese ancho real en
+      // el DOM -- confirmado con un PDF real descargado (ver charla
+      // 2026-10-12, "todavía no sale bien"). scrollHeight porque el alto
+      // varía según cuántos productos trae el carrito.
+      const dataUrl = await toPng(node, {
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+        width: node.scrollWidth,
+        height: node.scrollHeight,
+      });
       const img = await new Promise<HTMLImageElement>((resolve, reject) => {
         const i = new Image();
         i.onload = () => resolve(i);
