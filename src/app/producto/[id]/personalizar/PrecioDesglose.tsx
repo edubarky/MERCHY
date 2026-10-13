@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import type { PrintTechnique } from "@/types";
 import { formatMXN, splitIva } from "@/lib/pricing";
+import { techniqueDisplayName } from "@/lib/techniqueDisplayName";
 
 // Desglose de precio estilo ONPOINT (charla 2026-09-10): renglones CON
 // IVA (producto + cada técnica), luego "Precio por pieza", y el Total
@@ -64,7 +65,7 @@ export default function PrecioDesglose({
           key={r.technique.id}
           label={
             <>
-              {r.technique.name}
+              {techniqueDisplayName(r.technique.name)}
               {r.resumen ? ` · ${r.resumen}` : ""}
             </>
           }

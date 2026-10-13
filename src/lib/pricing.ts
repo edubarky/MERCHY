@@ -215,8 +215,11 @@ export function formatMXN(amount: number): string {
 // respetar los mismos tramos por cantidad que ya se usaron al personalizar
 // -- nunca solo escalar el precio guardado. Reproduce, por técnica, la
 // MISMA fórmula que PersonalizerClient (ver ese archivo): by_qty ×
-// num_elements; by_tintas con posiciones × tintas (num_logo_elements) +
-// IVA de técnica; by_size sumando cada logo por su tamaño ya redondeado.
+// num_elements; by_tintas con posiciones × tintas (num_logo_elements);
+// by_size sumando cada logo por su tamaño ya redondeado -- las 3 tablas
+// de precio vienen sin IVA, así que las 3 se envuelven con
+// techniquePriceWithIva (confirmado 2026-10-12, antes solo by_tintas lo
+// llevaba).
 // Solo se puede recalcular con seguridad la técnica que coincide con
 // item.technique (la única de la que se guarda price_table completo hoy,
 // ver CartItem) -- cualquier otra conserva su precio ya guardado tal cual
@@ -266,7 +269,7 @@ export function recomputeCartItemUnitPrice(
     } else if (technique.pricing_type === "by_qty") {
       const price = findQtyPrice(technique, newQty);
       if (price === null) { needsQuote = true; continue; }
-      techniqueTotal += price * item.num_elements;
+      techniqueTotal += techniquePriceWithIva(price * item.num_elements);
     } else if (technique.pricing_type === "by_tintas" && techniques.length > 1) {
       // Mismo motivo que by_qty arriba -- item.num_logo_elements es el
       // total de todo el renglón, no de esta vista sola.
@@ -288,7 +291,7 @@ export function recomputeCartItemUnitPrice(
         else sum += price;
       }
       if (algunoPorCotizar) { needsQuote = true; continue; }
-      techniqueTotal += sum;
+      techniqueTotal += techniquePriceWithIva(sum);
     } else {
       techniqueTotal += t.unit_price ?? 0;
     }

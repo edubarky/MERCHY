@@ -1222,16 +1222,13 @@ export default function PersonalizerClient({
     const priceTechnique = (technique: PrintTechnique): TechniqueResult => {
       const logosTxt = `${posiciones} ${posiciones === 1 ? "logo" : "logos"}`;
       if (technique.pricing_type === "by_qty") {
-        // Nota: by_qty (DTG) y by_size (DTF) NO llevan el ×1.16 de IVA
-        // todavía -- solo se aplicó a by_tintas (Serigrafía/Tampografía),
-        // que es lo que se acordó. Cuando se confirme que esas tablas
-        // también vienen sin IVA se envuelven igual con
-        // techniquePriceWithIva.
+        // Confirmado (ver charla 2026-10-12): igual que by_tintas, la
+        // tabla de precios de by_qty (DTG) también viene sin IVA.
         if (numElements === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
         const price = findQtyPrice(technique, qtyForDesign);
         return price === null
           ? { technique, unitPrice: null, needsQuote: true, resumen: logosTxt }
-          : { technique, unitPrice: price * numElements, needsQuote: false, resumen: logosTxt };
+          : { technique, unitPrice: techniquePriceWithIva(price * numElements), needsQuote: false, resumen: logosTxt };
       }
       if (technique.pricing_type === "by_tintas") {
         if (posiciones === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
@@ -1251,7 +1248,10 @@ export default function PersonalizerClient({
         // Suma el precio de cada logo por separado -- cada uno puede
         // tener su propia medida (ver resolveLogoSize), a diferencia de
         // by_qty/by_tintas donde un solo precio se multiplica por el
-        // total de elementos.
+        // total de elementos. Confirmado (ver charla 2026-10-12): la
+        // tabla de precios de by_size (DTF Textil, DTF UV) también viene
+        // sin IVA, igual que by_tintas/by_qty -- se envuelve el total ya
+        // sumado, no cada logo por separado, para no acumular redondeos.
         if (allLogoElements.length === 0) return { technique, unitPrice: 0, needsQuote: false, resumen: "" };
         let sum = 0;
         let needsQuote = false;
@@ -1261,7 +1261,7 @@ export default function PersonalizerClient({
           if (price === null) needsQuote = true;
           else sum += price;
         }
-        return { technique, unitPrice: needsQuote ? null : sum, needsQuote, resumen: logosTxt };
+        return { technique, unitPrice: needsQuote ? null : techniquePriceWithIva(sum), needsQuote, resumen: logosTxt };
       }
       // pricing_type null -> sin datos suficientes configurados todavía.
       return { technique, unitPrice: null, needsQuote: true, resumen: "" };

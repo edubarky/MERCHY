@@ -1,6 +1,7 @@
 "use client";
 
 import type { PrintTechnique } from "@/types";
+import { techniqueDisplayName } from "@/lib/techniqueDisplayName";
 
 // Editables de diseño (carpeta "Técnicas"): cada SVG es la tarjeta completa
 // ya armada — fondo redondeado, sombra propia, el círculo selector de la
@@ -72,7 +73,7 @@ export default function PrintTechniqueCards({
             }`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={card.src} alt={`${technique.name} — ${technique.description}`} className="block h-auto w-full" />
+            <img src={card.src} alt={`${techniqueDisplayName(technique.name)} — ${technique.description}`} className="block h-auto w-full" />
             {/* Punto turquesa sobre el círculo selector ya dibujado en el
                 editable — aparece solo cuando está seleccionada. */}
             <span

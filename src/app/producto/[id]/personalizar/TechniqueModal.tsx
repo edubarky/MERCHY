@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { PrintTechnique } from "@/types";
 import { formatMXN } from "@/lib/pricing";
+import { techniqueDisplayName } from "@/lib/techniqueDisplayName";
 import type { DesignElement, ViewName } from "./types";
 import { suggestInkCount, MAX_TINTAS } from "./inkSuggest";
 
@@ -86,11 +87,11 @@ export function TechniqueConfirmedRow({
     <div className="rounded-2xl border border-ui-border bg-white p-4 shadow-[0_6px_20px_rgba(0,0,0,0.05)]">
       <div className="flex items-center gap-2.5">
         <IconBadge name={technique.name} />
-        <h4 className="flex-1 truncate font-display text-sm font-bold text-primary-dark">{technique.name}</h4>
+        <h4 className="flex-1 truncate font-display text-sm font-bold text-primary-dark">{techniqueDisplayName(technique.name)}</h4>
         <button
           type="button"
           onClick={onEdit}
-          aria-label={`Editar ${technique.name}`}
+          aria-label={`Editar ${techniqueDisplayName(technique.name)}`}
           className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-50 text-ui-gray transition-colors hover:bg-gray-100"
         >
           <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
@@ -100,7 +101,7 @@ export function TechniqueConfirmedRow({
         <button
           type="button"
           onClick={onRemove}
-          aria-label={`Quitar ${technique.name}`}
+          aria-label={`Quitar ${techniqueDisplayName(technique.name)}`}
           className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-50 text-ui-gray transition-colors hover:bg-accent-coral/10 hover:text-accent-coral"
         >
           <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.6}>
@@ -206,7 +207,7 @@ export default function TechniqueModal({
       >
         <div className="flex items-center gap-2.5 px-4 pb-3 pt-4">
           <IconBadge name={technique.name} />
-          <h3 className="flex-1 truncate font-display text-base font-bold text-primary-dark">{technique.name}</h3>
+          <h3 className="flex-1 truncate font-display text-base font-bold text-primary-dark">{techniqueDisplayName(technique.name)}</h3>
           <button
             type="button"
             onClick={onClose}
