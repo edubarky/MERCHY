@@ -3,13 +3,13 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
 import PublicHeader from "@/components/PublicHeader";
 import { createClient } from "@/lib/supabase/client";
 import { useCart, productDraftCartItemId } from "@/lib/cart/CartContext";
 import { formatMXN, recomputeCartItemUnitPrice, splitIva } from "@/lib/pricing";
 import { getShippingZone, computeEtaRange, formatEtaRange } from "@/lib/shipping";
+import { waitForImages, waitForFonts } from "@/lib/waitForImages";
 import CotizacionDoc from "./CotizacionDoc";
 import type { CartItem, PriceTier, ProductionTimeTier, ShippingZone } from "@/types";
 
@@ -274,31 +274,28 @@ function CarritoPageInner() {
     upsertItem({ ...item, variants: nextVariants, total_quantity: nextTotal, unit_price: unitPrice, total_price: unitPrice * nextTotal });
   }
 
-  // Aplana el documento completo del carrito (ver CotizacionDoc) a PNG y
+  // Aplana el documento completo del carrito (ver CotizacionDoc) a imagen y
   // lo envuelve en un PDF de una sola página del tamaño exacto de la
-  // imagen -- mismo método que toPng ya usa en la Vista Previa del
-  // Personalizador, solo que aquí se guarda como PDF (jsPDF) en vez de
-  // PNG, porque esto es para mandarle/imprimirle al cliente.
+  // imagen. html-to-image (el método anterior) capturaba este documento
+  // recortado a la mitad de forma consistente -- texto cortado a medio
+  // renglón, columnas de precio que ni siquiera aparecían -- sin importar
+  // qué tamaño se le forzara al nodo (ver charla 2026-10-12, "todavía no
+  // sale bien"); el documento tiene varias tablas anidadas y html-to-image
+  // (basado en SVG foreignObject) es conocido por fallar justo con ese
+  // patrón. Se cambia a html2canvas (dibuja el DOM directo a canvas, sin
+  // pasar por SVG) -- mismo método ya probado para los PDFs de ONPOINT
+  // (VisualFinalSection.tsx, propuestas) con documentos igual de
+  // complejos, incluyendo el mismo waitForImages/waitForFonts para no
+  // capturar antes de que la imagen/tipografía real haya cargado.
   async function handleDescargarCotizacion() {
     if (!cotizacionRef.current || downloadingCotizacion || items.length === 0) return;
     setDownloadingCotizacion(true);
     try {
       const node = cotizacionRef.current;
-      // width/height explícitos (forzados al nodo clonado ANTES de
-      // renderizar, no solo leídos de getBoundingClientRect) -- sin esto,
-      // html-to-image a veces capturaba el documento recortado a la mitad
-      // (texto cortado a medio renglón, Precio/Total ni siquiera
-      // aparecían) para un documento de 920px de ancho, aunque el nodo
-      // oculto (position:fixed, opacity:0) ya tuviera ese ancho real en
-      // el DOM -- confirmado con un PDF real descargado (ver charla
-      // 2026-10-12, "todavía no sale bien"). scrollHeight porque el alto
-      // varía según cuántos productos trae el carrito.
-      const dataUrl = await toPng(node, {
-        pixelRatio: 2,
-        backgroundColor: "#ffffff",
-        width: node.scrollWidth,
-        height: node.scrollHeight,
-      });
+      const { default: html2canvas } = await import("html2canvas");
+      await Promise.all([waitForImages(node), waitForFonts()]);
+      const canvas = await html2canvas(node, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+      const dataUrl = canvas.toDataURL("image/png");
       const img = await new Promise<HTMLImageElement>((resolve, reject) => {
         const i = new Image();
         i.onload = () => resolve(i);
