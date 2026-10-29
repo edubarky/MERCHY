@@ -34,7 +34,13 @@ function isWithinCanvas(target: HTMLElement, container: HTMLElement): boolean {
 // target's actual getBoundingClientRect() and has no notion of handles at
 // all. Base handle sizes (zoom = 1) are set in globals.css under
 // `.merchy-moveable .moveable-control`.
-const HANDLE_MIN_ZOOM = 0.6;
+// HANDLE_MIN_ZOOM was 0.6 (handles ~8px) -- still bigger than a logo
+// scaled down very small, so the 8 resize handles + rotation line ended up
+// fully covering/hiding it (ver charla 2026-10-29: "ya no puedo ver el
+// logo"). Dropped much further so true tiny art gets near-invisible
+// handles (~2.5px) instead of a solid blob on top of it -- still grabbable
+// (react-moveable's hit area is independent of the visual handle size).
+const HANDLE_MIN_ZOOM = 0.18;
 const HANDLE_MAX_ZOOM = 1.6;
 const HANDLE_ZOOM_MIN_REF_PX = 40; // art this small or smaller -> smallest handles
 const HANDLE_ZOOM_MAX_REF_PX = 280; // art this large or larger -> largest handles
@@ -434,6 +440,13 @@ export default function DesignElementView({
           origin={false}
           className="merchy-moveable"
           zoom={handleZoom}
+          // The handles themselves can shrink to near-invisible for tiny
+          // art (see HANDLE_MIN_ZOOM above) without becoming hard to grab —
+          // these pad the actual click/touch hit area independently of the
+          // visual control size (react-moveable's own mechanism for this,
+          // not a visual change).
+          controlPadding={10}
+          linePadding={10}
           onDragStart={({ target }) => {
             draggedRef.current = false;
             reportBounds(target as HTMLElement);
