@@ -73,18 +73,23 @@
 }
 
 /* Personalizador — smaller, lighter react-moveable selection handles,
-   scaled by the art's own rendered size via react-moveable's `zoom` prop
-   (see DesignElementView.tsx's computeHandleZoom). Scoped to
-   `.merchy-moveable` (set via the <Moveable className> prop) so this can
-   never affect a Moveable instance used anywhere else in the app. Only
-   appearance changes here — react-moveable itself still drives every
-   drag/resize/rotate.
+   scaled by the art's own rendered size via a DEDICATED CSS custom
+   property, `--handle-zoom` (set on <html> in DesignElementView.tsx, next
+   to computeHandleZoom). Scoped to `.merchy-moveable` (set via the
+   <Moveable className> prop) so this can never affect a Moveable instance
+   used anywhere else in the app. Only appearance changes here —
+   react-moveable itself still drives every drag/resize/rotate.
 
-   react-moveable exposes the current zoom as the `--zoom` CSS custom
-   property on its own root (confirmed in its source — its *own* base
-   stylesheet doesn't use `--zoom` for control-dot sizing, only for
-   internal padding/guideline math, so referencing it ourselves in a
-   calc() is required to actually get size scaling, not optional).
+   This is deliberately NOT react-moveable's own `--zoom` (which its `zoom`
+   PROP sets): that prop is read deep in react-moveable's internal
+   drag/resize math (confirmed in its source, ~100+ reads outside the
+   render/CSS-var code), not purely cosmetic — feeding it a value that
+   tracks the art's size corrupted real resize behavior (a hard floor well
+   above the actual minimum) while the handles never even looked smaller,
+   since the box driving the computation wasn't really shrinking either
+   (ver charla 2026-10-29). `--handle-zoom` never touches that prop, so
+   react-moveable's own `--zoom` stays at its default `1` and its math
+   stays correct; this variable is purely for the calc()s below.
 
    !important is required regardless of the above: react-moveable injects
    its own <style> tag at runtime, scoped with a per-instance generated
@@ -93,30 +98,32 @@
    selector — and since it's injected after this stylesheet loads, it
    wins the cascade tie without !important. */
 .merchy-moveable .moveable-control {
-  width: calc(14px * var(--zoom, 1)) !important;
-  height: calc(14px * var(--zoom, 1)) !important;
-  margin-top: calc(-7px * var(--zoom, 1)) !important;
-  margin-left: calc(-7px * var(--zoom, 1)) !important;
+  width: calc(14px * var(--handle-zoom, 1)) !important;
+  height: calc(14px * var(--handle-zoom, 1)) !important;
+  margin-top: calc(-7px * var(--handle-zoom, 1)) !important;
+  margin-left: calc(-7px * var(--handle-zoom, 1)) !important;
   border-width: 2px !important;
   box-shadow: none !important;
 }
 
 .merchy-moveable .moveable-control.moveable-origin {
-  width: calc(12px * var(--zoom, 1)) !important;
-  height: calc(12px * var(--zoom, 1)) !important;
-  margin-top: calc(-6px * var(--zoom, 1)) !important;
-  margin-left: calc(-6px * var(--zoom, 1)) !important;
+  width: calc(12px * var(--handle-zoom, 1)) !important;
+  height: calc(12px * var(--handle-zoom, 1)) !important;
+  margin-top: calc(-6px * var(--handle-zoom, 1)) !important;
+  margin-left: calc(-6px * var(--handle-zoom, 1)) !important;
   border-width: 2px !important;
   box-shadow: none !important;
 }
 
 /* The line connecting the box to the rotation handle defaults to 40px
    (react-moveable's own base stylesheet: `.rotation { height: 40px; ...
-   height: calc(40px * var(--zoom)); }`) — same !important-required
+   height: calc(40px * var(--zoom)); }`, which stays 40px now that
+   react-moveable's own --zoom is untouched) — same !important-required
    override-tie situation as `.moveable-control` above. Cut down well
    below half per explicit request ("mucho más chica ... la mitad o
-   más"). Still scales with the same --zoom the handles use, so it stays
-   proportionate to small vs large art. */
+   más"), and scaled with --handle-zoom (not --zoom) so it stays
+   proportionate to small vs large art without touching react-moveable's
+   own math. */
 .merchy-moveable .moveable-rotation {
-  height: calc(16px * var(--zoom, 1)) !important;
+  height: calc(16px * var(--handle-zoom, 1)) !important;
 }

@@ -26,20 +26,32 @@ function isWithinCanvas(target: HTMLElement, container: HTMLElement): boolean {
 
 // Handles scale visually with the selected art's own rendered size — a
 // tiny logo gets tiny handles, a large one gets slightly bigger (never
-// huge) ones, clamped at both ends. This ONLY changes react-moveable's
-// `zoom` prop, which scales the control-box overlay via a CSS transform —
-// it never touches the target's real width/height/position (those stay
-// driven purely by element.xPct/yPct/widthPct/heightPct, same as always),
-// so this can't affect the print-area validation above, which reads the
-// target's actual getBoundingClientRect() and has no notion of handles at
-// all. Base handle sizes (zoom = 1) are set in globals.css under
-// `.merchy-moveable .moveable-control`.
-// HANDLE_MIN_ZOOM was 0.6 (handles ~8px) -- still bigger than a logo
-// scaled down very small, so the 8 resize handles + rotation line ended up
-// fully covering/hiding it (ver charla 2026-10-29: "ya no puedo ver el
-// logo"). Dropped much further so true tiny art gets near-invisible
-// handles (~2.5px) instead of a solid blob on top of it -- still grabbable
-// (react-moveable's hit area is independent of the visual handle size).
+// huge) ones, clamped at both ends.
+//
+// IMPORTANT: this must NEVER be wired through react-moveable's own `zoom`
+// PROP. That prop isn't a cosmetic multiplier — react-moveable uses it
+// internally to convert between screen pixels and its own coordinate space
+// (it's meant to compensate for a REAL page/container zoom), so feeding it
+// a value that tracks the art's size instead corrupts drag/resize math
+// itself. That was the actual bug behind three reports that looked
+// unrelated (ver charla 2026-10-29): mouse-drag resize hitting a hard
+// floor well above the real minimum, the handles never visibly shrinking
+// (because the box they're computed from wasn't actually shrinking either,
+// for the same reason), and even keyboard Shift+arrow resize looking like
+// it affected the product photo (a knock-on render glitch from Moveable's
+// own corrupted internal scale). Confirmed by grepping react-moveable's
+// own bundle: `zoom` is read ~100+ times outside the render/CSS-var code,
+// deep in its gesture math.
+//
+// The actual fix: leave Moveable's `zoom` prop untouched (defaults to 1,
+// so its math stays correct) and drive the cosmetic shrink through a
+// SEPARATE CSS custom property (`--handle-zoom`, set via plain DOM API
+// below, not through any Moveable prop) that globals.css reads instead of
+// Moveable's own `--zoom`. This never touches the target's real width/
+// height/position (those stay driven purely by element.xPct/yPct/
+// widthPct/heightPct, same as always), so it can't affect the print-area
+// validation above either. Base handle sizes (zoom = 1) are set in
+// globals.css under `.merchy-moveable .moveable-control`.
 const HANDLE_MIN_ZOOM = 0.18;
 const HANDLE_MAX_ZOOM = 1.6;
 const HANDLE_ZOOM_MIN_REF_PX = 40; // art this small or smaller -> smallest handles
@@ -308,6 +320,21 @@ export default function DesignElementView({
   const elementWidthPx = containerRect ? (element.widthPct / 100) * containerRect.width : 0;
   const elementHeightPx = containerRect ? (element.heightPct / 100) * containerRect.height : 0;
   const handleZoom = computeHandleZoom(Math.min(elementWidthPx, elementHeightPx));
+  const mostrarManijas = selected && interactive && !editingText;
+
+  // Pushes the cosmetic handle size through a plain CSS custom property on
+  // <html> instead of any react-moveable prop (see the big comment on
+  // computeHandleZoom above for why) -- :root so it reaches Moveable's
+  // control box no matter where in the DOM it actually mounts (it renders
+  // outside this component's own tree). Only one element is ever
+  // interactively selected at a time, so a single global variable is safe.
+  // Reset to "1" on cleanup so a leftover value never lingers after
+  // deselecting.
+  useEffect(() => {
+    if (!mostrarManijas) return;
+    document.documentElement.style.setProperty("--handle-zoom", String(handleZoom));
+    return () => { document.documentElement.style.setProperty("--handle-zoom", "1"); };
+  }, [mostrarManijas, handleZoom]);
 
   const textFontSize = `${(element.fontSizeRatio ?? DEFAULT_FONT_SIZE_RATIO) * 100}cqw`;
   const textFontFamilyCss = resolveFontFamilyCss(element.fontFamily);
@@ -415,7 +442,7 @@ export default function DesignElementView({
         )}
       </div>
 
-      {selected && interactive && !editingText && (
+      {mostrarManijas && (
         <Moveable
           ref={moveableRef}
           target={targetRef}
@@ -439,7 +466,11 @@ export default function DesignElementView({
           // no cambia nada del drag/resize/rotate real.
           origin={false}
           className="merchy-moveable"
-          zoom={handleZoom}
+          // NO `zoom` prop aquí -- ver el comentario grande sobre
+          // computeHandleZoom más arriba (ese prop corrompe el cálculo real
+          // de drag/resize de react-moveable; el tamaño cosmético de las
+          // manijas se maneja aparte, vía --handle-zoom en el effect de
+          // arriba).
           // The handles themselves can shrink to near-invisible for tiny
           // art (see HANDLE_MIN_ZOOM above) without becoming hard to grab —
           // these pad the actual click/touch hit area independently of the
